@@ -1,0 +1,48 @@
+{
+  "name": "fullcalendar-reactwrapper",
+  "version": "1.0.7",
+  "description": "A React Calendar with events",
+  "main": "lib/index.js",
+  "scripts": {
+    "dev": "NODE_ENV=development npm start",
+    "start": "webpack --config webpack.config.dev.js && node devServer.js",
+    "build": "NODE_ENV=production webpack --config webpack.config.js",
+    "prepublish": "npm run build"
+  },
+  "keywords": [
+      "react-component",
+      "react",
+      "calendar",
+      "events",
+      "fullcalendar",
+      "react-fullcalendar"
+  ],
+  "author": "Sanjeev Pradhan <csesanjeev07@gmail.com>",
+  "license": "MIT",
+  "repository": "https://github.com/sanjeev07/fullcalendar-reactWrapper",
+  "dependencies": {
+    "fullcalendar": "^3.4.0",
+    "jquery": "^3.2.1",
+    "moment": "^2.18.1",
+    "react": "^15.5.4",
+    "react-dom": "^15.5.4"
+  },
+  "devDependencies": {
+    "babel-cli": "6.24.1",
+    "babel-core": "^6.24.1",
+    "babel-eslint": "7.2.3",
+    "babel-loader": "^7.0.0",
+    "babel-polyfill": "^6.23.0",
+    "babel-plugin-add-module-exports": "0.2.1",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-react": "^6.24.1",
+    "css-loader": "^0.28.3",
+    "style-loader": "^0.18.1",
+    "webpack": "^2.7.0",
+    "chai": "3.5.0",
+    "eslint": "3.19.0",
+    "eslint-loader": "1.7.1",
+    "mocha": "3.3.0",
+    "webpack-dev-server": "^2.4.5"
+  }
+}

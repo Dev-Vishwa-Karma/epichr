@@ -1,0 +1,507 @@
+import React, { Component } from 'react';
+import { connect } from 'react-redux';
+import { NavLink } from 'react-router-dom';
+
+class Header extends Component {
+
+	constructor(props) {
+		super(props);
+		this.state = {
+			isPunchedIn: false,
+			showModal: false,
+			report: '',
+			error: null
+		};
+	}
+
+	componentDidMount() {
+
+		// Check if user exists in localStorage
+		const user = JSON.parse(localStorage.getItem('user'));
+		if (!user) {
+			// If no user is found, redirect to the login page
+			window.location.href = '/login';
+			return;
+		} else {
+			window.user = user; // Attach user to the global window object
+		}
+
+		/** Get employees list */
+		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=get_punch_status&user_id=${window.user.id}`)
+			.then(response => response.json())
+			.then(data => {
+				if (data.status === 'success') {
+					this.setState({ isPunchedIn: true });
+				} else {
+					this.setState({ isPunchedIn: false });
+				}
+			})
+			.catch(err => {
+				this.setState({ error: 'Failed to fetch data' });
+				console.error(err);
+			});
+	}
+
+	handlePunchIn = () => {
+		
+		const formData = new FormData();
+		formData.append('employee_id', window.user.id);
+		formData.append('punch_status', 'active');
+		formData.append('punch_out_report', null);
+
+		// API call to punch-in
+		// API call to add break
+		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=add`, {
+			method: "POST",
+			body: formData,
+		})
+			.then((response) => response.json())
+			.then((data) => {
+				if (data.status === "success") {
+					this.setState({ isPunchedIn: true });
+				} else {
+					alert(data.message);
+					console.log("Failed to add punch-in data");
+				}
+			})
+			.catch((error) => console.error("Error:", error));
+	};
+
+	handlePunchOut = () => {
+		// Show modal when punching out
+		this.setState({ showModal: true });
+	};
+
+	handleReportChange = (e) => {
+		this.setState({ report: e.target.value });
+	};
+
+	handleSaveReport = () => {
+
+		const formData = new FormData();
+		formData.append('employee_id', window.user.id);
+		formData.append('punch_status', 'completed');
+		formData.append('punch_out_report', this.state.report);
+
+		// API call to save the report and punch-out
+		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=add`, {
+			method: "POST",
+			body: formData,
+		})
+			.then((response) => response.json())
+			.then((data) => {
+				if (data.status === "success") {
+					this.setState({ isPunchedIn: false, showModal: false, report: '' });
+					window.location.href = '/hr-report';
+				} else {
+					alert(data.message);
+					console.log("Failed to add punch-in data");
+				}
+			})
+			.catch((error) => console.error("Error:", error));
+	};
+
+	// Handle logout functionality
+	handleLogout = () => {
+		// Clear the user data from localStorage
+		localStorage.removeItem('user');
+		
+		// Redirect to the login page
+		window.location.href = '/login';
+	};
+
+	render() {
+		const { fixNavbar, darkHeader } = this.props;
+		const { isPunchedIn, showModal, report } = this.state;
+		return (
+			<div>
+				<div
+					id="page_top"
+					// className={isFixNavbar ? "sticky-top" : "" + this.props.dataFromParent === 'dark' ? 'section-body top_dark' : 'section-body'}
+					className={`section-body ${fixNavbar ? "sticky-top" : ""} ${darkHeader ? "top_dark" : ""}`}
+				>
+					<div className="container-fluid">
+						<div className="page-header">
+							<div className="left">
+								<h1 className="page-title">{this.props.dataFromSubParent}</h1>
+								<select className="custom-select">
+									<option>Year</option>
+									<option>Month</option>
+									<option>Week</option>
+								</select>
+								<div className="input-group xs-hide">
+									<input type="text" className="form-control" placeholder="Search..." />
+								</div>
+							</div>
+							<div className="right">
+								<button
+									className="btn btn-primary"
+									onClick={isPunchedIn ? this.handlePunchOut : this.handlePunchIn}
+								>
+									{isPunchedIn ? 'Punch Out' : 'Punch In'}
+								</button>
+								<ul className="nav nav-pills">
+									{/* <li className="nav-item dropdown">
+										<a
+											className="nav-link dropdown-toggle"
+											data-toggle="dropdown"
+
+											role="button"
+											aria-haspopup="true"
+											aria-expanded="false"
+										>
+											Language
+										</a>
+										<div className="dropdown-menu">
+											<a className="dropdown-item" >
+												<img
+													className="w20 mr-2"
+													src="../assets/images/flags/us.svg"
+													alt="fake_url"
+												/>
+												English
+											</a>
+											<div className="dropdown-divider" />
+											<a className="dropdown-item" >
+												<img
+													className="w20 mr-2"
+													src="../assets/images/flags/es.svg"
+													alt="fake_url"
+												/>
+												Spanish
+											</a>
+											<a className="dropdown-item" >
+												<img
+													className="w20 mr-2"
+													src="../assets/images/flags/jp.svg"
+													alt="fake_url"
+												/>
+												japanese
+											</a>
+											<a className="dropdown-item" >
+												<img
+													className="w20 mr-2"
+													src="../assets/images/flags/bl.svg"
+													alt="fake_url"
+												/>
+												France
+											</a>
+										</div>
+									</li> */}
+									<li className="nav-item dropdown">
+										<a
+											className="nav-link dropdown-toggle"
+											data-toggle="dropdown"
+
+											role="button"
+											aria-haspopup="true"
+											aria-expanded="false"
+										>
+											Reports
+										</a>
+										<div className="dropdown-menu">
+											<a className="dropdown-item" >
+												<i className="dropdown-icon fa fa-file-excel-o" /> MS Excel
+											</a>
+											<a className="dropdown-item" >
+												<i className="dropdown-icon fa fa-file-word-o" /> MS Word
+											</a>
+											<a className="dropdown-item" >
+												<i className="dropdown-icon fa fa-file-pdf-o" /> PDF
+											</a>
+										</div>
+									</li>
+									<li className="nav-item dropdown">
+										<a
+											className="nav-link dropdown-toggle"
+											data-toggle="dropdown"
+
+											role="button"
+											aria-haspopup="true"
+											aria-expanded="false"
+										>
+											Project
+										</a>
+										<div className="dropdown-menu">
+											<a className="dropdown-item" >
+												Graphics Design
+											</a>
+											<a className="dropdown-item" >
+												Angular Admin
+											</a>
+											<a className="dropdown-item" >
+												PSD to HTML
+											</a>
+											<a className="dropdown-item" >
+												iOs App Development
+											</a>
+											<div className="dropdown-divider" />
+											<a className="dropdown-item" >
+												Home Development
+											</a>
+											<a className="dropdown-item" >
+												New Blog post
+											</a>
+										</div>
+									</li>
+								</ul>
+								<div className="notification d-flex">
+									<div className="dropdown d-flex">
+										<a
+											href="/#"
+											className="nav-link icon d-none d-md-flex btn btn-default btn-icon ml-1"
+											data-toggle="dropdown"
+										>
+											<i className="fa fa-envelope" />
+											<span className="badge badge-success nav-unread" />
+										</a>
+										<div className="dropdown-menu dropdown-menu-right dropdown-menu-arrow">
+											<ul className="right_chat list-unstyled w250 p-0">
+												<li className="online">
+													<a href="fake_url">
+														<div className="media">
+															<img
+																className="media-object "
+																src="../assets/images/xs/avatar4.jpg"
+																alt="fake_url"
+															/>
+															<div className="media-body">
+																<span className="name">Donald Gardner</span>
+																<span className="message">Designer, Blogger</span>
+																<span className="badge badge-outline status" />
+															</div>
+														</div>
+													</a>
+												</li>
+												<li className="online">
+													<a href="fake_url">
+														<div className="media">
+															<img
+																className="media-object "
+																src="../assets/images/xs/avatar5.jpg"
+																alt="fake_url"
+															/>
+															<div className="media-body">
+																<span className="name">Wendy Keen</span>
+																<span className="message">Java Developer</span>
+																<span className="badge badge-outline status" />
+															</div>
+														</div>
+													</a>
+												</li>
+												<li className="offline">
+													<a href="fake_url">
+														<div className="media">
+															<img
+																className="media-object "
+																src="../assets/images/xs/avatar2.jpg"
+																alt="fake_url"
+															/>
+															<div className="media-body">
+																<span className="name">Matt Rosales</span>
+																<span className="message">CEO, Epic Theme</span>
+																<span className="badge badge-outline status" />
+															</div>
+														</div>
+													</a>
+												</li>
+												<li className="online">
+													<a href="fake_url">
+														<div className="media">
+															<img
+																className="media-object "
+																src="../assets/images/xs/avatar3.jpg"
+																alt="fake_url"
+															/>
+															<div className="media-body">
+																<span className="name">Phillip Smith</span>
+																<span className="message">Writter, Mag Editor</span>
+																<span className="badge badge-outline status" />
+															</div>
+														</div>
+													</a>
+												</li>
+											</ul>
+											<div className="dropdown-divider" />
+											<a
+
+												className="dropdown-item text-center text-muted-dark readall"
+											>
+												Mark all as read
+											</a>
+										</div>
+									</div>
+									<div className="dropdown d-flex">
+										<a
+											href="/#"
+											className="nav-link icon d-none d-md-flex btn btn-default btn-icon ml-1"
+											data-toggle="dropdown"
+										>
+											<i className="fa fa-bell" />
+											<span className="badge badge-primary nav-unread" />
+										</a>
+										<div className="dropdown-menu dropdown-menu-right dropdown-menu-arrow">
+											<ul className="list-unstyled feeds_widget">
+												<li>
+													<div className="feeds-left">
+														<i className="fa fa-check" />
+													</div>
+													<div className="feeds-body">
+														<h4 className="title text-danger">
+															Issue Fixed{' '}
+															<small className="float-right text-muted">11:05</small>
+														</h4>
+														<small>WE have fix all Design bug with Responsive</small>
+													</div>
+												</li>
+												<li>
+													<div className="feeds-left">
+														<i className="fa fa-user" />
+													</div>
+													<div className="feeds-body">
+														<h4 className="title">
+															New User{' '}
+															<small className="float-right text-muted">10:45</small>
+														</h4>
+														<small>I feel great! Thanks team</small>
+													</div>
+												</li>
+												<li>
+													<div className="feeds-left">
+														<i className="fa fa-thumbs-o-up" />
+													</div>
+													<div className="feeds-body">
+														<h4 className="title">
+															7 New Feedback{' '}
+															<small className="float-right text-muted">Today</small>
+														</h4>
+														<small>It will give a smart finishing to your site</small>
+													</div>
+												</li>
+												<li>
+													<div className="feeds-left">
+														<i className="fa fa-question-circle" />
+													</div>
+													<div className="feeds-body">
+														<h4 className="title text-warning">
+															Server Warning{' '}
+															<small className="float-right text-muted">10:50</small>
+														</h4>
+														<small>Your connection is not private</small>
+													</div>
+												</li>
+												<li>
+													<div className="feeds-left">
+														<i className="fa fa-shopping-cart" />
+													</div>
+													<div className="feeds-body">
+														<h4 className="title">
+															7 New Orders{' '}
+															<small className="float-right text-muted">11:35</small>
+														</h4>
+														<small>You received a new oder from Tina.</small>
+													</div>
+												</li>
+											</ul>
+											<div className="dropdown-divider" />
+											<a
+												href="fake_url"
+												className="dropdown-item text-center text-muted-dark readall"
+											>
+												Mark all as read
+											</a>
+										</div>
+									</div>
+									<div className="dropdown d-flex">
+										<a
+											href="/#"
+											className="nav-link icon d-none d-md-flex btn btn-default btn-icon ml-1"
+											data-toggle="dropdown"
+										>
+											<i className="fa fa-user" />
+										</a>
+										<div className="dropdown-menu dropdown-menu-right dropdown-menu-arrow">
+											<NavLink to="/profile" className="dropdown-item">
+												<i className="dropdown-icon fe fe-user" /> Profile
+											</NavLink>
+											<a className="dropdown-item" >
+												<i className="dropdown-icon fe fe-settings" /> Settings
+											</a>
+											<a className="dropdown-item">
+												<span className="float-right">
+													<span className="badge badge-primary">6</span>
+												</span>
+												<i className="dropdown-icon fe fe-mail" /> Inbox
+											</a>
+											<a className="dropdown-item" >
+												<i className="dropdown-icon fe fe-send" /> Message
+											</a>
+											<div className="dropdown-divider" />
+											<a className="dropdown-item" >
+												<i className="dropdown-icon fe fe-help-circle" /> Need help?
+											</a>
+											<NavLink to="/login" className="dropdown-item" onClick={this.handleLogout}>
+												<i className="dropdown-icon fe fe-log-out" /> Sign out
+											</NavLink>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				{/* Modal for Punch Out Report */}
+				{showModal && (
+					<div className="modal show" style={{ display: 'block' }} onClick={() => this.setState({ showModal: false })}>
+						<div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+							<div className="modal-content">
+								<div className="modal-header">
+									<h5 className="modal-title">Punch Out Report</h5>
+									<button
+										type="button"
+										className="close"
+										onClick={() => this.setState({ showModal: false })}
+									>
+										<span>&times;</span>
+									</button>
+								</div>
+								<div className="modal-body">
+									<textarea
+										className="form-control"
+										placeholder="Enter report"
+										value={report}
+										onChange={this.handleReportChange}
+										rows="10"
+                                        cols="50"
+									/>
+								</div>
+								<div className="modal-footer">
+									<button
+										className="btn btn-secondary"
+										onClick={() => this.setState({ showModal: false })}
+									>
+										Close
+									</button>
+									<button
+										className="btn btn-primary"
+										onClick={this.handleSaveReport}
+										disabled={!report}
+									>
+										Save Report
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
+			</div>
+		);
+	}
+}
+const mapStateToProps = state => ({
+	fixNavbar: state.settings.isFixNavbar,
+	darkHeader: state.settings.isDarkHeader
+})
+
+const mapDispatchToProps = dispatch => ({})
+export default connect(mapStateToProps, mapDispatchToProps)(Header);
