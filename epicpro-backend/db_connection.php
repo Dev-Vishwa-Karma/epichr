@@ -2,7 +2,7 @@
 // Database configuration
 $host = "localhost";         // Database host (e.g., localhost)
 $username = "root";          // Database username
-$password = "";          // Database password
+$password = "root";          // Database password
 $database = "epic_hr";       // Name of your database
 
 
