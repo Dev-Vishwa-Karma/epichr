@@ -236,11 +236,6 @@ class Menu extends Component {
 						"to": "/hr-accounts"
 					},
 					{
-						"id": 12,
-						"label": "Reports",
-						"to": "/hr-report"
-					},
-					{
 						"id": 39,
 						"label": "Gallery",
 						"to": "/gallery",
@@ -329,6 +324,30 @@ class Menu extends Component {
 				]
 			},
 		];
+
+		// Only super admin or admin can see report
+		// Check if user exists in localStorage
+		const user = JSON.parse(localStorage.getItem('user'));
+		if (!user) {
+			// If no user is found, redirect to the login page
+			window.location.href = '/login';
+			return;
+		} else {
+			window.user = user; // Attach user to the global window object
+			if (window.user.role === 'super_admin' || window.user.role === 'admin') {
+				// Find the HRMS section
+				const hrmsSection = content.find(item => item.id === 1);
+				if (hrmsSection) {
+					// Add the "Reports" item to the HRMS section
+					hrmsSection.content.push({
+						"id": 12,
+						"label": "Reports",
+						"to": "/hr-report"
+					});
+				}
+			}
+		}
+
 		const { isOpenRightSidebar, isOpenUserMenu } = this.state
 		const { darkMinSidebar, istoggleLeftMenu, friendListOpen, statisticsOpen, statisticsClose, friendListClose } = this.props
 		const pageHeading = Routes.filter((route) => route.path === this.props.location.pathname)

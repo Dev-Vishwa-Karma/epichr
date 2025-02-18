@@ -10,7 +10,10 @@ class Header extends Component {
 			isPunchedIn: false,
 			showModal: false,
 			report: '',
-			error: null
+			error: null,
+			punchError: null,
+			punchSuccess: null,
+			punchErrorModel: null
 		};
 	}
 
@@ -27,7 +30,7 @@ class Header extends Component {
 		}
 
 		/** Get employees list */
-		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=get_punch_status&user_id=${window.user.id}`)
+		fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=get_punch_status&user_id=${window.user.id}`)
 			.then(response => response.json())
 			.then(data => {
 				if (data.status === 'success') {
@@ -36,40 +39,54 @@ class Header extends Component {
 					this.setState({ isPunchedIn: false });
 				}
 			})
-			.catch(err => {
-				this.setState({ error: 'Failed to fetch data' });
-				console.error(err);
+			.catch((error) => {
+				this.setState({ punchError: 'Something went wrong. Please try again.' });
+				setTimeout(() => {
+					this.setState({ punchError: null });
+				}, 5000);
 			});
 	}
 
 	handlePunchIn = () => {
-		
+
 		const formData = new FormData();
 		formData.append('employee_id', window.user.id);
-		formData.append('punch_status', 'active');
-		formData.append('punch_out_report', null);
+		formData.append('activity_type', 'Punch');
+		formData.append('description', null);
+		formData.append('status', 'active');
 
 		// API call to punch-in
 		// API call to add break
-		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=add`, {
+		fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=add-by-user`, {
 			method: "POST",
 			body: formData,
 		})
 			.then((response) => response.json())
 			.then((data) => {
 				if (data.status === "success") {
-					this.setState({ isPunchedIn: true });
+					this.setState({ punchSuccess: data.message, isPunchedIn: true });
+					setTimeout(() => {
+						this.setState({ punchSuccess: null });
+					}, 5000);
 				} else {
-					alert(data.message);
-					console.log("Failed to add punch-in data");
+					this.setState({ punchError: data.message });
+					// Hide the error message after 5 seconds
+					setTimeout(() => {
+						this.setState({ punchError: null });
+					}, 5000);
 				}
 			})
-			.catch((error) => console.error("Error:", error));
+			.catch((error) => {
+				this.setState({ punchError: 'Something went wrong. Please try again.' });
+				setTimeout(() => {
+					this.setState({ punchError: null });
+				}, 5000);
+			});
 	};
 
 	handlePunchOut = () => {
 		// Show modal when punching out
-		this.setState({ showModal: true });
+		//this.setState({ showModal: true });
 	};
 
 	handleReportChange = (e) => {
@@ -80,39 +97,61 @@ class Header extends Component {
 
 		const formData = new FormData();
 		formData.append('employee_id', window.user.id);
-		formData.append('punch_status', 'completed');
-		formData.append('punch_out_report', this.state.report);
+		formData.append('activity_type', 'Punch');
+		formData.append('description', this.state.report);
+		formData.append('status', 'completed');
+
+		if (!this.state.report) {
+			this.setState({ punchErrorModel: 'Please provide the punch-out report.' });
+			// Hide the error message after 5 seconds
+			setTimeout(() => {
+				this.setState({ punchErrorModel: null });
+			}, 5000)
+			return;
+		}
 
 		// API call to save the report and punch-out
-		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=add`, {
+		fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=add-by-user`, {
 			method: "POST",
 			body: formData,
 		})
 			.then((response) => response.json())
 			.then((data) => {
 				if (data.status === "success") {
-					this.setState({ isPunchedIn: false, showModal: false, report: '' });
-					window.location.href = '/hr-report';
+					this.setState({ punchSuccess: data.message, isPunchedIn: false, showModal: false, report: '' });
+					//window.location.href = '/hr-report';
+					document.querySelector("#punchOutReportModal .close").click();
+					setTimeout(() => {
+						this.setState({ punchSuccess: null });
+					}, 5000);
 				} else {
-					alert(data.message);
-					console.log("Failed to add punch-in data");
+					this.setState({ punchError: data.message });
+					//window.location.href = '/hr-report';
+					setTimeout(() => {
+						this.setState({ punchError: null });
+					}, 5000);
 				}
 			})
-			.catch((error) => console.error("Error:", error));
+			.catch((error) => {
+				this.setState({ punchError: 'Something went wrong. Please try again.' });
+				setTimeout(() => {
+					this.setState({ punchError: null });
+				}, 5000);
+			});
 	};
 
 	// Handle logout functionality
 	handleLogout = () => {
 		// Clear the user data from localStorage
 		localStorage.removeItem('user');
-		
+
 		// Redirect to the login page
 		window.location.href = '/login';
 	};
 
 	render() {
 		const { fixNavbar, darkHeader } = this.props;
-		const { isPunchedIn, showModal, report } = this.state;
+		const { isPunchedIn, showModal, report, punchError, punchSuccess, punchErrorModel } = this.state;
 		return (
 			<div>
 				<div
@@ -121,6 +160,12 @@ class Header extends Component {
 					className={`section-body ${fixNavbar ? "sticky-top" : ""} ${darkHeader ? "top_dark" : ""}`}
 				>
 					<div className="container-fluid">
+						{/* Display activity success message */}
+						{punchSuccess && (
+							<div className="alert alert-success mb-0">{punchSuccess}</div>
+						)}
+						{/* Display error message */}
+						{punchError && <div className="alert alert-danger mb-0">{punchError}</div>}
 						<div className="page-header">
 							<div className="left">
 								<h1 className="page-title">{this.props.dataFromSubParent}</h1>
@@ -137,6 +182,8 @@ class Header extends Component {
 								<button
 									className="btn btn-primary"
 									onClick={isPunchedIn ? this.handlePunchOut : this.handlePunchIn}
+									data-toggle={isPunchedIn ? "modal" : ""} 
+									data-target={isPunchedIn ? "#punchOutReportModal" : ""}
 								>
 									{isPunchedIn ? 'Punch Out' : 'Punch In'}
 								</button>
@@ -450,50 +497,41 @@ class Header extends Component {
 						</div>
 					</div>
 				</div>
+
 				{/* Modal for Punch Out Report */}
-				{showModal && (
-					<div className="modal show" style={{ display: 'block' }} onClick={() => this.setState({ showModal: false })}>
-						<div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+					<div className="modal fade" id="punchOutReportModal" tabIndex={-1} role="dialog" aria-labelledby="punchOutReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+						<div className="modal-dialog" role="break">
 							<div className="modal-content">
 								<div className="modal-header">
-									<h5 className="modal-title">Punch Out Report</h5>
-									<button
-										type="button"
-										className="close"
-										onClick={() => this.setState({ showModal: false })}
-									>
-										<span>&times;</span>
-									</button>
+									<h5 className="modal-title" id="punchOutReportModalLabel">Please provide the punch-out report</h5>
+									<button type="button" className="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
 								</div>
-								<div className="modal-body">
-									<textarea
-										className="form-control"
-										placeholder="Enter report"
-										value={report}
-										onChange={this.handleReportChange}
-										rows="10"
-                                        cols="50"
-									/>
-								</div>
-								<div className="modal-footer">
-									<button
-										className="btn btn-secondary"
-										onClick={() => this.setState({ showModal: false })}
-									>
-										Close
-									</button>
-									<button
-										className="btn btn-primary"
-										onClick={this.handleSaveReport}
-										disabled={!report}
-									>
-										Save Report
-									</button>
+								<div className="dimmer-content">
+									<div className="modal-body">
+										{/* Display error message inside the modal */}
+										{punchErrorModel && <div className="alert alert-danger mb-0">{punchErrorModel}</div>}
+										<div className="row clearfix">
+											<div className="col-md-12">
+												<div className="form-group">
+													<textarea
+														className="form-control"
+														placeholder="Please provide the punch-out report."
+														value={report}
+														onChange={this.handleReportChange}
+														rows="30"
+														cols="50"
+													/>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div className="modal-footer">
+										<button type="button" className="btn btn-primary" onClick={this.handleSaveReport}>Save changes</button>
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				)}
 			</div>
 		);
 	}
