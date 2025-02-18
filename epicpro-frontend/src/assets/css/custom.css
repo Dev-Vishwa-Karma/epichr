@@ -34,4 +34,26 @@ div.rtl{
     white-space: pre-line;
     word-wrap: break-word;
     overflow-wrap: break-word;
-  }
+}
+
+/* Holiday Styling */
+.holiday-event {
+    background-color: #fdecea !important; /* Light Red */
+    border-left: 6px solid #d9534f !important; /* Dark Red */
+    color: #d9534f !important;
+}
+
+/* Regular Events (Birthdays, Anniversaries, etc.) */
+.regular-event {
+    background-color: #e9f7df !important; /* Light Green */
+    border-left: 6px solid #28a745 !important; /* Dark Green */
+    color: #28a745 !important;
+}
+
+/* Other Event Styling */
+.other-event {
+    background-color: #e8f4fc !important;
+    border-left: 6px solid #007bff !important;
+    color: #007bff !important;
+}
+

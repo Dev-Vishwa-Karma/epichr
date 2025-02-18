@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux';
-import CountUp from 'react-countup';
 import Modal from 'react-modal';
 
 class Report extends Component {
@@ -23,7 +22,7 @@ class Report extends Component {
 
         let apiUrl = '';
 
-        if (window.user.role == 'super_admin' || window.user.role == 'admin') {
+        if (window.user.role === 'super_admin' || window.user.role === 'admin') {
             apiUrl = `${process.env.REACT_APP_API_URL}/reports.php`;
         } else {
             apiUrl = `${process.env.REACT_APP_API_URL}/reports.php?user_id=${window.user.id}`;

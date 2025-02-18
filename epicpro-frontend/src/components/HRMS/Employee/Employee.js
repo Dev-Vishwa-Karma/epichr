@@ -232,7 +232,7 @@ class Employee extends Component {
     };
 
 	handleLeaveStatus = (event) => {
-		const { name, value } = event.target;
+		const { value } = event.target;
 		this.setState({
             status: value, // Update selectedRole in state
         });
@@ -327,7 +327,7 @@ class Employee extends Component {
 		})
 		.then((response) => response.json())
 		.then((data) => {
-			if (data.status == "success") {
+			if (data.status === "success") {
 				this.setState((prevState) => {
 					// Update the employee leave data with the new data
 					const updatedEmployeeLeavesData = prevState.employeeLeavesData.map((leave) => {

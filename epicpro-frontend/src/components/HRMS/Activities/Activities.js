@@ -1,7 +1,5 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import Ckeditor from '../../common/ckeditor';
-import { useState } from "react";
 class Activities extends Component {
 	constructor(props) {
 		super(props);
@@ -19,7 +17,7 @@ class Activities extends Component {
 
 		let apiUrl = '';
 
-		if (window.user.role == 'super_admin' || window.user.role == 'admin') {
+		if (window.user.role === 'super_admin' || window.user.role === 'admin') {
 			apiUrl = `${process.env.REACT_APP_API_URL}/activities.php`;
 		} else {
 			apiUrl = `${process.env.REACT_APP_API_URL}/activities.php?user_id=${window.user.id}`;
@@ -74,7 +72,7 @@ class Activities extends Component {
 		const { selectedEmployee, selectedStatus, breakReason } = this.state;
 
 		// Validate form inputs
-		if (window.user.role == 'super_admin' || window.user.role == 'admin') {
+		if (window.user.role === 'super_admin' || window.user.role === 'admin') {
 			if (!selectedEmployee || !selectedStatus) {
 				alert("All the fields are required");
 				return;
@@ -88,7 +86,7 @@ class Activities extends Component {
 
 		const formData = new FormData();
 
-		if (window.user.role == 'super_admin' || window.user.role == 'admin') {
+		if (window.user.role === 'super_admin' || window.user.role === 'admin') {
 			formData.append('employee_id', selectedEmployee);
 		} else {
 			formData.append('employee_id', window.user.id);//loggedin user

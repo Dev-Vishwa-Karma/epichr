@@ -145,7 +145,7 @@ class Users extends Component {
         })
         .then((response) => response.json())
         .then((data) => {
-            if (data.status == "success") {
+            if (data.status === "success") {
                 this.setState((prevState) => {
                     // Update the existing department in the array
                     const updatedUserData = prevState.users.map((user) =>

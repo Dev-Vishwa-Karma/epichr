@@ -68,7 +68,7 @@ class EditEmployee extends Component {
         if (employee) {
             if (typeof employee.frontend_skills === 'string') {
                 const frontendSkillsArray = employee.frontend_skills
-                .replace(/["\[\]]/g, '') // Remove quotes and square brackets
+                .replace(/["[\]]/g, '') // Remove quotes and square brackets
                 .split(',') // Split by commas
                 .map(skill => skill.trim()); // Trim each skill
                 this.setState({
@@ -87,7 +87,7 @@ class EditEmployee extends Component {
             // Handle Backend Skills
             if (typeof employee.backend_skills === 'string') {
                 const backendSkillsArray = employee.backend_skills
-                    .replace(/["\[\]]/g, '') // Remove quotes and square brackets
+                    .replace(/["[\]]/g, '') // Remove quotes and square brackets
                     .split(',') // Split by commas
                     .map(skill => skill.trim()); // Trim each skill
                 this.setState({
