@@ -1,9 +1,105 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCamera } from "@fortawesome/free-solid-svg-icons";
 
 class ViewEmployee extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            employee: null,
+            employeeId: null,
+            selectedImage: null,
+            previewImage: null,
+        };
+    }
+
+    componentDidMount() {
+        const { employee, employeeId } = this.props.location.state || {};
+
+        // Set the state with the employee data
+        if (employee) {
+            this.setState({
+                employee,
+                employeeId,
+                previewImage: `${process.env.REACT_APP_API_URL}/${employee.profile}`
+            });
+        }
+
+        if (employeeId) {
+            this.fetchEmployeeDetails(employeeId);
+        }
+    }
+
+    fetchEmployeeDetails = (employeeId) => {
+        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&user_id=${employeeId}`)
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.status === "success") {
+                    this.setState({
+                        employee: data.data,
+                        previewImage: `${process.env.REACT_APP_API_URL}/${data.data.profile}`
+                    });
+                } else {
+                    console.error("Failed to fetch employee details:", data.message);
+                }
+            })
+            .catch((error) => console.error("Error fetching employee details:", error));
+    };
+
+    handleImageChange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            this.setState({
+                selectedImage: file,
+                previewImage: URL.createObjectURL(file),
+            });
+    
+            // Call function to upload image
+            this.uploadImage(file);
+        }
+    };
+
+    uploadImage = (file) => {
+        const {id, role} = window.user;
+        const { employeeId } = this.state;
+        const formData = new FormData();
+        formData.append("employee_id", employeeId);
+        formData.append("logged_in_employee_id", id);
+        formData.append('logged_in_employee_role', role); // Logged-in employee role
+        formData.append("photo", file);
+    
+        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employeeId}`, {
+          method: "POST",
+          body: formData,
+        })
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.status === "success") {
+                // Correct the image path and set the previewImage state
+                const profileImagePath = data.data.profile.replace(/\\/g, '/');
+
+                // Update the previewImage state correctly
+                this.setState((prevState) => ({
+                    previewImage: `${process.env.REACT_APP_API_URL}/${profileImagePath}`,
+                    employee: { 
+                        ...prevState.employee, 
+                        profile: profileImagePath // Update the profile in employee data
+                    },
+                }));
+            } else {
+                console.log("Upload failed:", data.message);
+            }
+        })
+        .catch((error) => console.error("Error uploading image:", error));
+    };
     render() {
-        const { fixNavbar } = this.props;
+        const { fixNavbar} = this.props;
+        const {employee} = this.state;
+        // Handle case where employee data is not available
+        if (!employee) {
+            return <p>Loading employee details...</p>;
+        }
         return (
             <>
                 <div className={`section-body ${fixNavbar ? "marginTop" : ""} `}>
@@ -12,8 +108,47 @@ class ViewEmployee extends Component {
                             <div className="col-md-12">
                                 <div className="card card-profile">
                                     <div className="card-body text-center">
-                                        <img className="card-profile-img" src="../assets/images/sm/avatar1.jpg" alt="fake_url" />
-                                        <h4 className="mb-3">Sara Hopkins</h4>
+                                        {/* <img className="card-profile-img" src={`${process.env.REACT_APP_API_URL}/${employee.profile}`} alt="fake_url" /> */}
+
+                                        <div style={{ position: "relative", display: "inline-block" }}>
+                                            {/* Profile Image */}
+                                            <img
+                                                className="card-profile-img"
+                                                src={this.state.previewImage}
+                                                alt="Profile"
+                                                style={{
+                                                    borderRadius: "50%",
+                                                    objectFit: "cover",
+                                                }}
+                                            />
+
+                                            {/* Camera Icon Overlay */}
+                                            <label
+                                                htmlFor="imageUpload"
+                                                className='card-profile-img'
+                                                style={{
+                                                    position: "absolute",
+                                                    bottom: "0px",
+                                                    right: "0px",
+                                                    background: "#ececec",
+                                                    color: "#000000",
+                                                    borderRadius: "50%",
+                                                    padding: "5px",
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                <FontAwesomeIcon icon={faCamera} />
+                                                <input
+                                                    id="imageUpload"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={this.handleImageChange}
+                                                    style={{ display: "none" }}
+                                                />
+                                            </label>
+                                        </div>
+
+                                        <h4 className="mb-3">{`${employee.first_name} ${employee.last_name || ''}`}</h4>
                                         <ul className="social-links list-inline mb-3 mt-2">
                                             <li className="list-inline-item"><a href="fake_url" title="Facebook" data-toggle="tooltip"><i className="fa fa-facebook" /></a></li>
                                             <li className="list-inline-item"><a href="fake_url" title="Twitter" data-toggle="tooltip"><i className="fa fa-twitter" /></a></li>

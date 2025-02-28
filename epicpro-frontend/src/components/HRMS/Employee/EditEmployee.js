@@ -201,7 +201,7 @@ class EditEmployee extends Component {
                 updatedSkills = updatedSkills.filter((skill) => skill !== value);
             }
     
-            // Return the updated state for the specific field
+            // Return the updatdepartmented state for the specific field
             return {
                 [fieldName === 'frontend' ? 'skillsFrontend' : 'skillsBackend']: updatedSkills,
             };
@@ -215,6 +215,7 @@ class EditEmployee extends Component {
     };
 
     updateEmployee  = () => {
+        const {id, role} = window.user;
         const {salaryDetails } = this.state;
         const { 
             employeeId,
@@ -294,17 +295,23 @@ class EditEmployee extends Component {
         updateEmployeeData.append('instagram_url', instagram);
         updateEmployeeData.append('upwork_profile_url', upworkProfile);
         updateEmployeeData.append('resume', resume);
+        updateEmployeeData.append("logged_in_employee_id", id);
+        updateEmployeeData.append('logged_in_employee_role', role); // Logged-in employee role
 
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employeeId}`, {
             method: "POST",
             body: updateEmployeeData,
         })
-        .then((response) => response.json())
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json(); // Convert response to JSON
+        })
         .then((data) => {
-            if (data.status === "success") {
+            if (data && data.status === "success") {
                 // Update the department list
-                this.setState((prevState) => {
-                    console.log('updatedEmployeeData = ', data.data);
+                // this.setState((prevState) => {
                     // Update the existing department in the array
                     /* const updatedEmployeeData = prevState.users.map((user) =>
                         user.id === selectedUser.id ? { ...user, ...data.updatedSalaryData } : user
@@ -313,9 +320,9 @@ class EditEmployee extends Component {
                     return {
                         users: updatedEmployeeData,
                     }; */
-                });
+                // });
             } else {
-                console.log("Failed to add department");
+                console.error("Failed to update employee. Response : ", data);
             }
         })
         .catch((error) => console.error("Error:", error));

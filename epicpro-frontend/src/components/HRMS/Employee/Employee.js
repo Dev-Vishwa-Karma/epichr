@@ -84,7 +84,6 @@ class Employee extends Component {
 	}
 
 	calculateLeaveCounts = (employeeLeavesData) => {
-		console.log('employeeLeavesData = ', employeeLeavesData);
 		let totalLeaves = 0;
 		let pendingLeaves = 0;
 		let approvedLeaves = 0;
@@ -142,7 +141,6 @@ class Employee extends Component {
 	}
 
 	goToEditEmployee(employee, employeeId) {
-		console.log(employee)
 		// Fetch salary details based on employee_id
 		fetch(`${process.env.REACT_APP_API_URL}/employee_salary_details.php?action=view&employee_id=${employeeId}`)
         .then((res) => res.json())
@@ -165,8 +163,14 @@ class Employee extends Component {
         });
 	}
 
-	viewEmployee() {
-		this.props.history.push("/view-employee");
+	viewEmployee(employee, employeeId) {
+		this.props.history.push({
+			pathname: `/view-employee`,
+			state: { 
+				employee, 
+				employeeId,
+			}
+		});
 	}
 
 	// Function to handle tab change
@@ -198,27 +202,38 @@ class Employee extends Component {
     };
 
 	confirmDelete = () => {
-        const { deleteUser } = this.state;
-      
-        if (!deleteUser) return;
-      
-        // fetch(`http://localhost/react/epicpro-backend/users.php?action=delete&user_id=${deleteUser}`, {
-		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=delete&user_id=${deleteUser}`, {
-          	method: 'DELETE'
-        })
-        .then((response) => response.json())
-        .then((data) => {
+		const { deleteUser } = this.state;
+		const {id, role} = window.user;
+		const loggedInUserId = id; // Get logged-in user ID
+		const loggedInUserRole = role; // Get logged-in user role
+	
+		if (!deleteUser) return;
+	
+		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=delete`, {
+			method: "POST",  // Change method from DELETE to POST
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				user_id: deleteUser,
+				logged_in_employee_id: loggedInUserId,
+				logged_in_employee_role: loggedInUserRole,
+			}),
+		})
+		.then((response) => response.json())
+		.then((data) => {
 			if (data.status === "success") {
 				this.setState((prevState) => ({
 					employeeData: prevState.employeeData.filter((d) => d.id !== deleteUser),
 				}));
 				document.querySelector("#deleteEmployeeModal .close").click();
 			} else {
-				alert('Failed to delete department.');
+				alert("Failed to delete employee.");
 			}
-        })
-        .catch((error) => console.error('Error:', error));
-    };
+		})
+		.catch((error) => console.error("Error:", error));
+	};
+	
 
 	// Function to close the modal
     closeModal = () => {
@@ -624,7 +639,7 @@ class Employee extends Component {
 																				type="button"
 																				className="btn btn-icon btn-sm"
 																				title="View"
-																				onClick={() => this.viewEmployee()}
+																				onClick={() => this.viewEmployee(employee, employee.id)}
 																			>
 																				<i className="fa fa-eye" />
 																			</button>

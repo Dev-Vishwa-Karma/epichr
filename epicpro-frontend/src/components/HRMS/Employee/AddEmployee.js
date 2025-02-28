@@ -100,6 +100,7 @@ class AddEmployee extends Component {
 
     addEmployee = async (e) => {
 		e.preventDefault();
+        const {id, role} = window.user;
 
         const { firstName,
             lastName,
@@ -176,6 +177,8 @@ class AddEmployee extends Component {
         addEmployeeData.append('instagram_url', instagram);
         addEmployeeData.append('upwork_profile_url', upworkProfile);
         addEmployeeData.append('resume', resume);
+        addEmployeeData.append('logged_in_employee_id', id);
+        addEmployeeData.append('logged_in_employee_role', role);
 
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=add`, {
             method: "POST",
@@ -183,7 +186,6 @@ class AddEmployee extends Component {
         })
         .then((response) => response.json())
         .then((data) => {
-            console.log('data = ', data);
             if (data.status === "success") {
                 // Update the department list
                 this.setState((prevState) => ({

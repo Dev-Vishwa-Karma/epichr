@@ -75,7 +75,7 @@ if (isset($action)) {
         case 'view':
             if (isset($_GET['user_id']) && validateId($_GET['user_id'])) {
                 // Prepare SELECT statement with WHERE clause using a placeholder to prevent SQL injection
-                $stmt = $conn->prepare("SELECT * FROM employees WHERE role = 'employee' AND id = ?");
+                $stmt = $conn->prepare("SELECT * FROM employees WHERE role = 'employee' AND id = ? AND deleted_at IS NULL");
                 $stmt->bind_param('i', $_GET['user_id']);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -90,10 +90,10 @@ if (isset($action)) {
                 $roleFilter = isset($_GET['role']) ? $_GET['role'] : 'all';
                 if ($roleFilter == 'employee') {
                     // If 'employee' role filter is passed, show only employees with role 'employee'
-                    $stmt = $conn->prepare("SELECT * FROM employees WHERE role = 'employee'");
+                    $stmt = $conn->prepare("SELECT * FROM employees WHERE role = 'employee' AND deleted_at IS NULL");
                 } else {
                     // If no filter or 'all', show all employees
-                    $stmt = $conn->prepare("SELECT * FROM employees");
+                    $stmt = $conn->prepare("SELECT * FROM employees WHERE deleted_at IS NULL");
                 }
 
                 $stmt->execute();
@@ -109,6 +109,10 @@ if (isset($action)) {
             break;
 
         case 'add':
+            // Capture and sanitize POST data
+            $logged_in_user_id = $_POST['logged_in_employee_id'] ?? null; // Get logged-in user ID
+            $logged_in_user_role = $_POST['logged_in_employee_role'] ?? null; // Get logged-in user role
+
             // Capture and sanitize POST data
             $data = [
                 'code' => $_POST['code'] ?? null,
@@ -153,7 +157,25 @@ if (isset($action)) {
             // Upload profile image
             $profileImage = $_FILES['photo'] ?? null;
             if ($profileImage) {
-                $data['profile'] = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png']);
+                try {
+                    // Upload to profile folder
+                    $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png']);
+                    
+                    if ($profilePath) {
+                        $data['profile'] = $profilePath;
+            
+                        // Generate the same file name for the gallery
+                        $galleryPath = str_replace('profiles', 'gallery', $profilePath);
+            
+                        // Copy the file to the gallery folder
+                        if (!copy($profilePath, $galleryPath)) {
+                            throw new Exception("Failed to copy image to gallery folder.");
+                        }
+                    }
+                } catch (Exception $e) {
+                    sendJsonResponse('error', null, $e->getMessage());
+                    exit;
+                }
             }
 
             // Upload Aadhaar card
@@ -179,7 +201,11 @@ if (isset($action)) {
             if ($resumeFile) {
                 $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
             }
-            // print_r($next_user_code);
+
+            if (in_array(strtolower($logged_in_user_role), ['admin', 'super_admin'])) {
+                $created_by = $logged_in_user_id;
+            }
+
             // Get the previous employee id and generate the new employee id
             if ($data['code'] != null) {
                 $next_user_code = $data['code']; // Use the value from $data['code']
@@ -207,14 +233,14 @@ if (isset($action)) {
                 "INSERT INTO employees 
                 (code, first_name, last_name, username, email, role, profile, dob, gender, password, joining_date, mobile_no1, mobile_no2, address_line1, address_line2, 
                 emergency_contact1, emergency_contact2, emergency_contact3, frontend_skills, backend_skills, account_holder_name, account_number, ifsc_code, bank_name, bank_address,
-                aadhar_card_number, aadhar_card_file, pan_card_number, pan_card_file, driving_license_number, driving_license_file, facebook_url, twitter_url, linkedin_url, instagram_url, upwork_profile_url, resume) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                aadhar_card_number, aadhar_card_file, pan_card_number, pan_card_file, driving_license_number, driving_license_file, facebook_url, twitter_url, linkedin_url, instagram_url, upwork_profile_url, resume, created_by) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
 
             // Bind parameters dynamically (use an array to store the data)
 
             $stmt->bind_param(
-                'sssssssssssssssssssssssssssssssssssss',
+                'ssssssssssssssssssssssssssssssssssssss',
                 $next_user_code,
                 $data['first_name'],
                 $data['last_name'],
@@ -251,7 +277,8 @@ if (isset($action)) {
                 $data['linkedin_url'],
                 $data['instagram_url'],
                 $data['upwork_profile_url'],
-                $data['resume']
+                $data['resume'],
+                $created_by
             );
 
             if ($stmt->execute()) {
@@ -286,12 +313,29 @@ if (isset($action)) {
                 }
 
                 $created_at = date('Y-m-d H:i:s');
+                
+                // Insert profile image into gallery if uploaded
+                if (!empty($data['profile'])) {
+                    $gallery_stmt = $conn->prepare(
+                        "INSERT INTO gallery (employee_id, url, created_at, created_by) VALUES (?, ?, ?, ?)"
+                    );
+
+                    $gallery_stmt->bind_param('issi', $employee_id, $galleryPath, $created_at, $created_by);
+                    
+                    if (!$gallery_stmt->execute()) {
+                        $gallery_error = $gallery_stmt->error;
+                        sendJsonResponse('error', null, "Failed to add profile image to gallery: $gallery_error");
+                        exit;
+                    }
+                }
+
                 sendJsonResponse('success', [
                     'employee_id' => $employee_id,
                     'first_name' => $data['first_name'],
                     'last_name' => $data['last_name'],
                     'email' => $data['email'],
                     'role' => 'employee',
+                    'created_by' => $created_by,
                     'created_at' => $created_at
                 ], 'Employee and salary details added successfully');
             } else {
@@ -304,6 +348,15 @@ if (isset($action)) {
         case 'edit':
             if (isset($_GET['user_id']) && validateId($_GET['user_id'])) {
                 $id = $_GET['user_id'];
+
+                // Ensure logged-in user data is provided in the API request
+                if (empty($_POST['logged_in_employee_id']) || empty($_POST['logged_in_employee_role'])) {
+                    sendJsonResponse('error', null, "Missing logged-in user details");
+                    exit;
+                }
+
+                $logged_in_user_id = $_POST['logged_in_employee_id']; // Logged-in user's ID
+                $logged_in_role = $_POST['logged_in_employee_role']; // Logged-in user's role
 
                 // Initialize data array
                 $data = [];
@@ -411,12 +464,29 @@ if (isset($action)) {
                 if (!empty($_POST['upwork_profile_url'])) {
                     $data['upwork_profile_url'] = $_POST['upwork_profile_url'];
                 }
-
                 // File uploads: handle files only if they are present
                 // Upload profile image
                 $profileImage = $_FILES['photo'];
                 if ($profileImage) {
-                    $data['profile'] = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png']);
+                    try {
+                        // Upload to profile folder
+                        $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png']);
+                        
+                        if ($profilePath) {
+                            $data['profile'] = $profilePath;
+                
+                            // Generate the same file name for the gallery
+                            $galleryPath = str_replace('profiles', 'gallery', $profilePath);
+                
+                            // Copy the file to the gallery folder
+                            if (!copy($profilePath, $galleryPath)) {
+                                throw new Exception("Failed to copy image to gallery folder.");
+                            }
+                        }
+                    } catch (Exception $e) {
+                        sendJsonResponse('error', null, $e->getMessage());
+                        exit;
+                    }
                 }
 
                 // Upload Aadhaar card
@@ -443,6 +513,13 @@ if (isset($action)) {
                     $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
                 }
 
+                // Check if admin or super_admin is updating another user's profile
+                if ($logged_in_user_id != $id && ($logged_in_role === 'admin' || $logged_in_role === 'super_admin')) {
+                    $data['updated_by'] = $logged_in_user_id; // Store admin/super_admin ID
+                }
+
+                $data['updated_at'] = date('Y-m-d H:i:s');
+
                 // Prepare SQL UPDATE statement
                 $updateColumns = [];
                 $updateValues = [];
@@ -464,6 +541,15 @@ if (isset($action)) {
                 $stmt->bind_param($types, ...$updateValues);
 
                 if ($stmt->execute()) {
+                    // Insert new profile image into the gallery
+                    if (!empty($data['profile'])) {
+                        $insert_gallery_sql = "INSERT INTO gallery (employee_id, url, created_at, created_by) VALUES (?, ?, ?, ?)";
+                        $insert_gallery_stmt = $conn->prepare($insert_gallery_sql);
+                        $created_at = date('Y-m-d H:i:s');
+                        $insert_gallery_stmt->bind_param('issi', $id, $galleryPath, $created_at, $data['updated_by']);
+                        $insert_gallery_stmt->execute();
+                    }
+
                     $salaryDetails = $_POST['salaryDetails'] ?? [];
 
                     // Update salary details into the salary_details table
@@ -503,6 +589,7 @@ if (isset($action)) {
                         'user_id' => $id,
                         'first_name' => $data['first_name'],
                         'last_name' => $data['last_name'],
+                        'profile' => $data['profile'],
                         'email' => $data['email'],
                         'role' => $data['role'],
                         'mobile_no' => $data['mobile_no1'],
@@ -518,32 +605,52 @@ if (isset($action)) {
             }
             break;
 
-            // Delete user case
-        case 'delete':
-            if (isset($_GET['user_id']) && validateId($_GET['user_id'])) {
-                $id = $_GET['user_id'];
-
-                // Delete from employees table first
-                $stmt = $conn->prepare("DELETE FROM employees WHERE id = ?");
-                $stmt->bind_param('i', $id);
-
-                if ($stmt->execute()) {
-                    // Now delete from users table
-                    $stmt = $conn->prepare("DELETE FROM salary_details WHERE employee_id = ?");
-                    $stmt->bind_param('i', $id);
-                    if ($stmt->execute()) {
-                        sendJsonResponse('success', null, 'Employee and salary details deleted successfully');
+            case 'delete':
+                // Get request body
+                $json = file_get_contents('php://input');
+                $data = json_decode($json, true);
+            
+                if (isset($data['user_id']) && validateId($data['user_id'])) {
+                    $id = $data['user_id'];
+                    $deleted_by = null;
+            
+                    // Check if logged-in user ID and role are provided
+                    if (isset($data['logged_in_employee_id']) && isset($data['logged_in_employee_role'])) {
+                        $logged_in_user_id = $data['logged_in_employee_id'];
+                        $logged_in_user_role = strtolower($data['logged_in_employee_role']); // Convert to lowercase for consistency
+            
+                        // Allow only admin and super admin to set deleted_by
+                        if ($logged_in_user_role === 'admin' || $logged_in_user_role === 'super_admin') {
+                            $deleted_by = $logged_in_user_id;
+                        }
+                    }
+            
+                    // Prepare the SQL query based on role condition
+                    if ($deleted_by) {
+                        $stmt = $conn->prepare("UPDATE employees SET deleted_at = NOW(), deleted_by = ? WHERE id = ?");
+                        $stmt->bind_param('ii', $deleted_by, $id);
                     } else {
-                        $error = $stmt->error;
-                        sendJsonResponse('error', null, "Failed to delete salary details: $error");
+                        $stmt = $conn->prepare("UPDATE employees SET deleted_at = NOW() WHERE id = ?");
+                        $stmt->bind_param('i', $id);
+                    }
+            
+                    if ($stmt->execute()) {
+                        // Soft delete from salary_details table
+                        $stmt = $conn->prepare("UPDATE salary_details SET deleted_at = NOW() WHERE employee_id = ?");
+                        $stmt->bind_param('i', $id);
+                        if ($stmt->execute()) {
+                            sendJsonResponse('success', null, 'Employee and salary details deleted successfully');
+                        } else {
+                            $error = $stmt->error;
+                            sendJsonResponse('error', null, "Failed to delete salary details: $error");
+                        }
+                    } else {
+                        sendJsonResponse('error', null, 'Failed to delete employee details');
                     }
                 } else {
-                    sendJsonResponse('error', null, 'Failed to delete employee details');
+                    sendJsonResponse('error', null, 'Invalid user ID');
                 }
-            } else {
-                sendJsonResponse('error', null, 'Invalid user ID');
-            }
-            break;
+                break;            
 
         case 'check-login':
             $email = $_POST['email'] ?? null;
@@ -554,14 +661,14 @@ if (isset($action)) {
                 sendJsonResponse('error', null, 'Please provide all required fields');
             }
 
-            $stmt = $conn->prepare("SELECT * FROM employees WHERE email = ? LIMIT 1");
+            $stmt = $conn->prepare("SELECT * FROM employees WHERE email = ? AND deleted_at IS NULL LIMIT 1");
             $stmt->bind_param("s", $email);
             $stmt->execute();
             $result = $stmt->get_result();
 
             /** Validate email */
             if ($result->num_rows == 0) {
-                sendJsonResponse('error', null, 'Invalid Email.');
+                sendJsonResponse('error', null, 'Invalid Email or Account Deleted.');
             } else {
                 $row = $result->fetch_assoc();
                 if ($password != $row['password']) {
