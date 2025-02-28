@@ -36,7 +36,6 @@ class Holidays extends Component {
 
 		// Make the GET API call when the component is mounted
 		fetch(`${process.env.REACT_APP_API_URL}/events.php`)
-		// fetch('http://localhost/react/epicpro-backend/events.php')
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {
