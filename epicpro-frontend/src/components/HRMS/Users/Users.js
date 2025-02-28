@@ -5,6 +5,8 @@ class Users extends Component {
 	constructor(props) {
 		super(props);
 		this.state = {
+			logged_in_employee_id: null,
+			logged_in_employee_role: null,
 			employeeId: "",
 			firstName: "",
 			lastName: "",
@@ -24,8 +26,14 @@ class Users extends Component {
 	}
 
 	componentDidMount() {
+		if (window.user) {
+			this.setState({
+				logged_in_employee_id: window.user.id,
+				logged_in_employee_role: window.user.role,
+			});
+		}
+
 		// Make the GET API call when the component is mounted
-		// fetch('http://localhost/react/epicpro-backend/users.php')
 		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php`)
 		.then(response => response.json())
 		.then(data => {
@@ -63,7 +71,7 @@ class Users extends Component {
 
 	// Add department data API call
     addUser = () => {
-        const { employeeId, firstName, lastName, email, mobileNo, selectedRole, username, confirmPassword} = this.state;
+        const {logged_in_employee_id, logged_in_employee_role, employeeId, firstName, lastName, email, mobileNo, selectedRole, username, confirmPassword} = this.state;
 
         // Validate form inputs
         if (!employeeId || !firstName || !email || !username) {
@@ -80,6 +88,8 @@ class Users extends Component {
         addUserData.append('selected_role', selectedRole);
         addUserData.append('username', username);
         addUserData.append('password', confirmPassword);
+		addUserData.append('logged_in_employee_id', logged_in_employee_id);
+		addUserData.append('logged_in_employee_role', logged_in_employee_role);
 
         // API call to add user
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=add`, {
@@ -127,7 +137,7 @@ class Users extends Component {
 
 	// Update/Edit User profile (API Call)
 	updateProfile = () => {
-        const { selectedUser } = this.state;
+        const {logged_in_employee_id, logged_in_employee_role, selectedUser } = this.state;
         if (!selectedUser) return;
 
 		const updateProfileData = new FormData();
@@ -137,6 +147,8 @@ class Users extends Component {
         updateProfileData.append('email', selectedUser.email);
         updateProfileData.append('selected_role', selectedUser.role);
         updateProfileData.append('job_role', selectedUser.job_role);
+        updateProfileData.append('logged_in_employee_id', logged_in_employee_id);
+        updateProfileData.append('logged_in_employee_role', logged_in_employee_role);
 
         // Example API call
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${selectedUser.id}`, {
@@ -173,13 +185,20 @@ class Users extends Component {
     };
 
 	confirmDelete = () => {
-        const { deleteUser } = this.state;
+        const { deleteUser, logged_in_employee_id, logged_in_employee_role} = this.state;
       
         if (!deleteUser) return;
-      
-        // fetch(`http://localhost/react/epicpro-backend/users.php?action=delete&user_id=${deleteUser}`, {
-		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=delete&user_id=${deleteUser}`, {
-          	method: 'DELETE'
+
+		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=delete`, {
+          	method: 'DELETE',
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				user_id: deleteUser,
+				logged_in_employee_id: logged_in_employee_id,
+				logged_in_employee_role: logged_in_employee_role,
+			}),
         })
         .then((response) => response.json())
         .then((data) => {
