@@ -330,7 +330,7 @@ if (isset($action)) {
                 }
 
                 sendJsonResponse('success', [
-                    'employee_id' => $employee_id,
+                    'id' => $employee_id,
                     'first_name' => $data['first_name'],
                     'last_name' => $data['last_name'],
                     'email' => $data['email'],

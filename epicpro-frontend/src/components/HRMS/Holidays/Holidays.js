@@ -23,6 +23,8 @@ class Holidays extends Component {
       		errorMessage: "",
 			showSuccess: false,
       		showError: false,
+			currentPage: 1,
+			dataPerPage: 10,
 		};
 		// Create a ref to scroll to the message container
 		this.messageRef = React.createRef();
@@ -40,9 +42,10 @@ class Holidays extends Component {
 		.then(data => {
 			if (data.status === 'success') {
 				const holidaysData = data.data;
+				const holidays = holidaysData.filter(event => event.event_type === 'holiday');  
 
 				this.setState(
-					{ holidays: holidaysData}
+					{ holidays: holidays }
 				);
 			} else {
 			  	this.setState({ message: data.message }); // Update messages in state
@@ -320,7 +323,7 @@ class Holidays extends Component {
     };
 
 	confirmDelete = () => {
-        const { deleteHoliday } = this.state;
+        const { deleteHoliday, currentPage, holidays, dataPerPage } = this.state;
       
         if (!deleteHoliday) return;
 
@@ -330,11 +333,28 @@ class Holidays extends Component {
         .then((response) => response.json())
         .then((data) => {
 			if (data.status === "success") {
-				this.setState((prevState) => ({
-					holidays: prevState.holidays.filter((d) => d.id !== deleteHoliday),
+				// Update holidays state after deletion
+				const updatedHolidays = holidays.filter((d) => d.id !== deleteHoliday);
+
+				// Calculate the total pages after deletion
+				const totalPages = Math.ceil(updatedHolidays.length / dataPerPage);
+	
+				// Adjust currentPage if necessary (if we're on a page that no longer has data)
+				let newPage = currentPage;
+				if (updatedHolidays.length === 0) {
+					newPage = 1;
+				} else if (currentPage > totalPages) {
+					newPage = totalPages;
+				}
+
+				this.setState({
+					holidays: updatedHolidays,
 					successMessage: "Holiday deleted successfully",
-					showSuccess: true
-				}));
+					showSuccess: true,
+					currentPage: newPage, // Update currentPage to the new page
+					deleteHoliday: null,  // Clear the deleteHoliday state
+				});
+
 				document.querySelector("#deleteEventModal .close").click();
 
 				// Scroll to the message section
@@ -366,9 +386,24 @@ class Holidays extends Component {
         .catch((error) => console.error('Error:', error));
     };
 
+	// Handle Pagination
+    handlePageChange = (newPage) => {
+        const totalPages = Math.ceil(this.state.holidays.length / this.state.dataPerPage);
+        
+        if (newPage >= 1 && newPage <= totalPages) {
+            this.setState({ currentPage: newPage });
+        }
+    };
+
 	render() {
 		const { fixNavbar } = this.props;
-		const { holidays, message, showAddHolidayModal, selectedEvent } = this.state;
+		const { holidays, message, showAddHolidayModal, selectedEvent, currentPage, dataPerPage } = this.state;
+
+		// Pagination Logic
+        const indexOfLastHoliday = currentPage * dataPerPage;
+        const indexOfFirstHoliday = indexOfLastHoliday - dataPerPage;
+        const currentHolidays = holidays.slice(indexOfFirstHoliday, indexOfLastHoliday);
+		const totalPages = Math.ceil(holidays.length / dataPerPage);
 		return (
 			<>
 				<div>
@@ -429,8 +464,8 @@ class Holidays extends Component {
 														</tr>
 													</thead>
 													<tbody>
-														{holidays.length > 0 ? (
-															holidays
+														{currentHolidays.length > 0 ? (
+															currentHolidays
 																.filter((holiday) => holiday.event_type === 'holiday')
 																.map((holiday, index) => (
 																<tr key={index}>
@@ -484,6 +519,30 @@ class Holidays extends Component {
 											</div>
 										</div>
 									</div>
+									{/* Only show pagination if there are holidays */}
+									{totalPages > 1 && (
+										<nav aria-label="Page navigation">
+											<ul className="pagination mb-0 justify-content-end">
+												<li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+													<button className="page-link" onClick={() => this.handlePageChange(currentPage - 1)}>
+														Previous
+													</button>
+												</li>
+												{[...Array(totalPages)].map((_, i) => (
+													<li key={i} className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(i + 1)}>
+															{i + 1}
+														</button>
+													</li>
+												))}
+												<li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+													<button className="page-link" onClick={() => this.handlePageChange(currentPage + 1)}>
+														Next
+													</button>
+												</li>
+											</ul>
+										</nav>
+									)}
 								</div>
 							</div>
 						</div>

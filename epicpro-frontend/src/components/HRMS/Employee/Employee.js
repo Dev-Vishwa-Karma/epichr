@@ -68,12 +68,18 @@ class Employee extends Component {
 			},
 			// Set state for add employee leave
 			employee_id: '',
+			logged_in_employee_id: '',
+			logged_in_employee_role: '',
 			from_date: '',
 			to_date: '',
 			reason: '',
 			status: '',
 			selectedEmployeeLeave: '',
 			deleteEmployeeLeave: '',
+			searchQuery: "",
+			currentPageEmployees: 1,
+			currentPageLeaves: 1,
+            dataPerPage: 10,
 		};
 	}
 	handleStatistics(e) {
@@ -113,6 +119,16 @@ class Employee extends Component {
 	};	
 
 	componentDidMount() {
+		if (window.user) {
+			const { id, role } = window.user;
+			this.setState({
+				employee_id: id || null,
+				logged_in_employee_role: role || null,
+			});
+		} else {
+			console.warn("window.user is undefined");
+		}
+
 		const apiUrl = process.env.REACT_APP_API_URL;
 
 		// Make the GET API call when the component is mounted
@@ -126,6 +142,7 @@ class Employee extends Component {
 
 			this.setState({
 				employeeData: employeesData.data,
+				filterEmployeesData: employeesData.data,
 				employeeLeavesData: employeeLeavesData.data,
 				totalLeaves: totalLeaves,
 				pendingLeaves: pendingLeaves,
@@ -202,7 +219,7 @@ class Employee extends Component {
     };
 
 	confirmDelete = () => {
-		const { deleteUser } = this.state;
+		const { deleteUser, currentPageEmployees, employeeData, dataPerPage } = this.state;
 		const {id, role} = window.user;
 		const loggedInUserId = id; // Get logged-in user ID
 		const loggedInUserRole = role; // Get logged-in user role
@@ -223,9 +240,27 @@ class Employee extends Component {
 		.then((response) => response.json())
 		.then((data) => {
 			if (data.status === "success") {
-				this.setState((prevState) => ({
-					employeeData: prevState.employeeData.filter((d) => d.id !== deleteUser),
-				}));
+				// Update users state after deletion
+				const updatedEmployees = employeeData.filter((d) => d.id !== deleteUser);
+
+				// Calculate the total pages after deletion
+				const totalPages = Math.ceil(updatedEmployees.length / dataPerPage);
+	
+				// Adjust currentPageEmployees if necessary (if we're on a page that no longer has data)
+				let newPage = currentPageEmployees;
+				if (updatedEmployees.length === 0) {
+					newPage = 1;
+				} else if (currentPageEmployees > totalPages) {
+					newPage = totalPages;
+				}
+
+				this.setState({
+					employeeData: updatedEmployees,
+					successMessage: "Employee deleted successfully",
+					showSuccess: true,
+					currentPageEmployees: newPage, // Update currentPageEmployees to the new page
+					deleteUser: null,  // Clear the deleteUser state
+				});
 				document.querySelector("#deleteEmployeeModal .close").click();
 			} else {
 				alert("Failed to delete employee.");
@@ -264,21 +299,26 @@ class Employee extends Component {
 	}
 
 	// API endpoint to add employee leave data
-    addLeave = () => {
-        const { employee_id, from_date, to_date, reason, status} = this.state;
+    addLeave = (event) => {
+		event.preventDefault();
+
+        const { employee_id, from_date, to_date, reason, status, logged_in_employee_role} = this.state;
 
         // Validate form inputs
         if (!from_date || !to_date || !reason) {
-            alert("Please fill in all fields");
+            console.log("Please fill in all fields");
             return;
         }
+
+		// If role is 'employee', force status to 'pending'
+		const finalStatus = logged_in_employee_role === "employee" ? "pending" : status;
 
         const addEmployeeLeaveData = new FormData();
         addEmployeeLeaveData.append('employee_id', employee_id);
         addEmployeeLeaveData.append('from_date', from_date);
         addEmployeeLeaveData.append('to_date', to_date);
         addEmployeeLeaveData.append('reason', reason);
-        addEmployeeLeaveData.append('status', status);
+        addEmployeeLeaveData.append('status', finalStatus);
 
         // API call to add employee leave
         fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=add`, {
@@ -381,12 +421,14 @@ class Employee extends Component {
     };
 
 	confirmDeleteForEmployeeLeave = () => {
-        const { deleteEmployeeLeave } = this.state;
+        const { deleteEmployeeLeave, currentPageLeaves, dataPerPage } = this.state;
       
-        if (!deleteEmployeeLeave) return;
-      
-        // fetch(`http://localhost/react/epicpro-backend/users.php?action=delete&user_id=${deleteUser}`, {
-		fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=delete&id=${deleteEmployeeLeave}`, {
+        if (!deleteEmployeeLeave) {
+			console.error("No employee leave ID selected for deletion.");
+			return;
+		}
+
+        fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=delete&id=${deleteEmployeeLeave}`, {
           	method: 'DELETE'
         })
         .then((response) => response.json())
@@ -398,6 +440,17 @@ class Employee extends Component {
 			
 					// Calculate the leave counts
 					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
+
+					// Calculate the total pages after deletion
+					const totalPages = Math.ceil(updatedEmployeeLeavesData.length / dataPerPage);
+		
+					// Adjust currentPage if necessary (if we're on a page that no longer has data)
+					let newPage = currentPageLeaves;
+					if (updatedEmployeeLeavesData.length === 0) {
+						newPage = 1;
+					} else if (currentPageLeaves > totalPages) {
+						newPage = totalPages;
+					}
 			
 					// Return the updated state
 					return {
@@ -405,7 +458,8 @@ class Employee extends Component {
 						totalLeaves,
 						pendingLeaves,
 						approvedLeaves,
-						rejectedLeaves
+						rejectedLeaves,
+						currentPageLeaves: newPage
 					};
 				});
 				// Close the modal after deletion
@@ -417,10 +471,57 @@ class Employee extends Component {
         .catch((error) => console.error('Error:', error));
     };
 
+	// Handle Pagination of employee listing and employee leaves listing
+	handlePageChange = (newPage, listType) => {
+		if (listType === 'employees') {
+			const totalPages = Math.ceil(this.state.employeeData.length / this.state.dataPerPage);
+			if (newPage >= 1 && newPage <= totalPages) {
+				this.setState({ currentPageEmployees: newPage });
+			}
+		} else if (listType === 'leaves') {
+			const totalPages = Math.ceil(this.state.employeeLeavesData.length / this.state.dataPerPage);
+			if (newPage >= 1 && newPage <= totalPages) {
+				this.setState({ currentPageLeaves: newPage });
+			}
+		}
+	};	
 
+	// Add searching user by name and email
+	handleSearch = (event) => {
+        const query = event.target.value.toLowerCase(); // Get search input
+        this.setState({ searchQuery: query }, () => {
+			if (query === "") {
+				// If search is empty, reset users to the original list
+				this.setState({ employeeData: this.state.filterEmployeesData, currentPageEmployees: 1 });
+			} else {
+				const filtered = this.state.filterEmployeesData.filter(employee => {
+					return (
+						employee.first_name.toLowerCase().includes(query) ||
+						employee.last_name.toLowerCase().includes(query) ||
+						`${employee.first_name.toLowerCase()} ${employee.last_name.toLowerCase()}`.includes(query) ||  
+						employee.email.toLowerCase().includes(query)
+					);
+				});
+				this.setState({ employeeData: filtered, currentPageEmployees: 1});
+			}
+        });
+    };
 	render() {
 		const { fixNavbar, /* statisticsOpen, statisticsClose */ } = this.props;
-		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave } = this.state;
+		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave, currentPageEmployees,  currentPageLeaves, dataPerPage } = this.state;
+
+		// Pagination Logic for Employees
+		const indexOfLastEmployee = this.state.currentPageEmployees * dataPerPage;
+		const indexOfFirstEmployee = indexOfLastEmployee - dataPerPage;
+		const currentEmployees = employeeData.slice(indexOfFirstEmployee, indexOfLastEmployee);
+		const totalPagesEmployees = Math.ceil(employeeData.length / dataPerPage);
+
+		// Pagination logic for employee leaves
+		const indexOfLastLeave = this.state.currentPageLeaves * dataPerPage;
+		const indexOfFirstLeave = indexOfLastLeave - dataPerPage;
+		const currentEmployeeLeaves = employeeLeavesData.slice(indexOfFirstLeave, indexOfLastLeave);
+		const totalPagesLeaves = Math.ceil(employeeLeavesData.length / dataPerPage);
+
 		return (
 			<>
 				<div>
@@ -555,21 +656,21 @@ class Employee extends Component {
 											<div className="card-header">
 												<h3 className="card-title">Employee List</h3>
 												<div className="card-options">
-													<form>
-														<div className="input-group">
+													<div className="input-group">
+														<div className="input-icon ml-2">
+															<span className="input-icon-addon">
+																<i className="fe fe-search" />
+															</span>
 															<input
 																type="text"
-																className="form-control form-control-sm"
-																placeholder="Search something..."
-																name="s"
+																className="form-control"
+																placeholder="Search employee..."
+																// name="s"
+																value={this.state.searchQuery}
+																onChange={this.handleSearch}
 															/>
-															<span className="input-group-btn ml-2">
-																<button className="btn btn-icon btn-sm" type="submit">
-																	<span className="fe fe-search" />
-																</button>
-															</span>
 														</div>
-													</form>
+													</div>
 												</div>
 											</div>
 											<div className="card-body">
@@ -587,8 +688,8 @@ class Employee extends Component {
 															</tr>
 														</thead>
 														<tbody>
-															{employeeData.length > 0 ? (
-																employeeData.map((employee, index) => (
+															{currentEmployees.length > 0 ? (
+																currentEmployees.map((employee, index) => (
 																	<tr key={index}>
 																		<td className="w40">
 																			<label className="custom-control custom-checkbox">
@@ -673,6 +774,31 @@ class Employee extends Component {
 												</div>
 											</div>
 										</div>
+
+										{/* Only show pagination if there are employees */}
+										{totalPagesEmployees > 1 && (
+											<nav aria-label="Page navigation">
+												<ul className="pagination mb-0 justify-content-end">
+													<li className={`page-item ${currentPageEmployees === 1 ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageEmployees - 1, 'employees')}>
+															Previous
+														</button>
+													</li>
+													{[...Array(totalPagesEmployees)].map((_, i) => (
+														<li key={i} className={`page-item ${currentPageEmployees === i + 1 ? 'active' : ''}`}>
+															<button className="page-link" onClick={() => this.handlePageChange(i + 1, 'employees')}>
+																{i + 1}
+															</button>
+														</li>
+													))}
+													<li className={`page-item ${currentPageEmployees === totalPagesEmployees ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageEmployees + 1, 'employees')}>
+															Next
+														</button>
+													</li>
+												</ul>
+											</nav>
+										)}
 									</div>
 									<div className="tab-pane fade" id="Employee-Request" role="tabpanel">
 										<div className="card">
@@ -690,8 +816,8 @@ class Employee extends Component {
 															</tr>
 														</thead>
 														<tbody>
-															{employeeLeavesData.length > 0 ? (
-																employeeLeavesData.map((leave, index) => (
+															{currentEmployeeLeaves.length > 0 ? (
+																currentEmployeeLeaves.map((leave, index) => (
 																	<tr key={index}>
 																		<td className="width45">
 																			<span
@@ -764,6 +890,31 @@ class Employee extends Component {
 												</div>
 											</div>
 										</div>
+
+										{/* Only show pagination if there are employee leaves */}
+										{totalPagesLeaves > 1 && (
+											<nav aria-label="Page navigation">
+												<ul className="pagination mb-0 justify-content-end">
+													<li className={`page-item ${currentPageLeaves === 1 ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageLeaves - 1, 'leaves')}>
+															Previous
+														</button>
+													</li>
+													{[...Array(totalPagesLeaves)].map((_, i) => (
+														<li key={i} className={`page-item ${currentPageLeaves === i + 1 ? 'active' : ''}`}>
+															<button className="page-link" onClick={() => this.handlePageChange(i + 1, 'leaves')}>
+																{i + 1}
+															</button>
+														</li>
+													))}
+													<li className={`page-item ${currentPageLeaves === totalPagesLeaves ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageLeaves + 1, 'leaves')}>
+															Next
+														</button>
+													</li>
+												</ul>
+											</nav>
+										)}
 									</div>
 								</div>
 							</div>
@@ -789,7 +940,7 @@ class Employee extends Component {
 										className="form-control"
 										placeholder="employeeId"
 										name='employeeId'
-										value={this.state.employee_id || 6}
+										value={this.state.employee_id}
 										onChange={this.handleInputChangeForAddLeaves}
 									/>
 									<div className="col-md-6">
@@ -829,7 +980,7 @@ class Employee extends Component {
 											/>
 										</div>
 									</div>
-									<div className="col-sm-6 col-md-6">
+									{/* <div className="col-sm-6 col-md-6">
 										<div className="form-group">
 											<label className="form-label">Status</label>
 											<select 
@@ -843,6 +994,27 @@ class Employee extends Component {
 												<option value="approved" >Approved</option>
 												<option value="pending" >Pending</option>
 												<option value="rejected" >Rejected</option>
+											</select>
+										</div>
+									</div> */}
+									<div className="col-sm-6 col-md-6">
+										<div className="form-group">
+											<label className="form-label">Status</label>
+											<select 
+												name="status"
+												className="form-control"
+												id="status"
+												onChange={this.handleLeaveStatus}
+												value={this.state.status}
+												disabled={this.state.logged_in_employee_role === "employee"} // Disable selection for employees
+											>
+												<option value="pending">Pending</option> 
+												{(this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin") && (
+													<>
+														<option value="approved">Approved</option>
+														<option value="rejected">Rejected</option>
+													</>
+												)}
 											</select>
 										</div>
 									</div>

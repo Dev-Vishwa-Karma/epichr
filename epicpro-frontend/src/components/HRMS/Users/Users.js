@@ -22,6 +22,9 @@ class Users extends Component {
 			},
 			deleteUser: null,
 			error: null,
+			searchQuery: "",
+			currentPage: 1,
+            dataPerPage: 10,
 		};
 	}
 
@@ -38,7 +41,7 @@ class Users extends Component {
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {
-			  	this.setState({ users: data.data });
+			  	this.setState({ users: data.data, allUsers: data.data });
 			} else {
 			  	this.setState({ error: data.message });
 			}
@@ -185,7 +188,7 @@ class Users extends Component {
     };
 
 	confirmDelete = () => {
-        const { deleteUser, logged_in_employee_id, logged_in_employee_role} = this.state;
+        const { deleteUser, currentPage, users, dataPerPage, logged_in_employee_id, logged_in_employee_role} = this.state;
       
         if (!deleteUser) return;
 
@@ -203,9 +206,27 @@ class Users extends Component {
         .then((response) => response.json())
         .then((data) => {
 			if (data.status === "success") {
-				this.setState((prevState) => ({
-					users: prevState.users.filter((d) => d.id !== deleteUser),
-				}));
+				// Update users state after deletion
+				const updatedUsers = users.filter((d) => d.id !== deleteUser);
+
+				// Calculate the total pages after deletion
+				const totalPages = Math.ceil(updatedUsers.length / dataPerPage);
+	
+				// Adjust currentPage if necessary (if we're on a page that no longer has data)
+				let newPage = currentPage;
+				if (updatedUsers.length === 0) {
+					newPage = 1;
+				} else if (currentPage > totalPages) {
+					newPage = totalPages;
+				}
+
+				this.setState({
+					users: updatedUsers,
+					successMessage: "User deleted successfully",
+					showSuccess: true,
+					currentPage: newPage, // Update currentPage to the new page
+					deleteUser: null,  // Clear the deleteUser state
+				});
 				document.querySelector("#deleteUserModal .close").click();
 			} else {
 				alert('Failed to delete department.');
@@ -214,10 +235,47 @@ class Users extends Component {
         .catch((error) => console.error('Error:', error));
     };
 
+	// Handle Pagination
+    handlePageChange = (newPage) => {
+        const totalPages = Math.ceil(this.state.users.length / this.state.dataPerPage);
+        
+        if (newPage >= 1 && newPage <= totalPages) {
+            this.setState({ currentPage: newPage });
+        }
+    };
+
+	// Add searching user by name and email
+	handleSearch = (event) => {
+        const query = event.target.value.toLowerCase(); // Get search input
+        this.setState({ searchQuery: query }, () => {
+			if (query === "") {
+				// If search is empty, reset users to the original list
+				this.setState({ users: this.state.allUsers, currentPage: 1 });
+			} else {
+				const filtered = this.state.allUsers.filter(user => {
+					return (
+						user.first_name.toLowerCase().includes(query) ||
+						user.last_name.toLowerCase().includes(query) ||
+						`${user.first_name.toLowerCase()} ${user.last_name.toLowerCase()}`.includes(query) ||  
+						user.email.toLowerCase().includes(query)
+					);
+				});
+				this.setState({ users: filtered, currentPage: 1 });
+			}
+        });
+    };
+
 	render() {
 
 		const { fixNavbar } = this.props;
-		const { users, error, selectedUser } = this.state;
+		const { users, error, selectedUser, currentPage, dataPerPage } = this.state;
+
+		// Pagination Logic
+        const indexOfLastImage = currentPage * dataPerPage;
+        const indexOfFirstImage = indexOfLastImage - dataPerPage;
+        const currentUsers = users.slice(indexOfFirstImage, indexOfLastImage);
+
+        const totalPages = Math.ceil(users.length / dataPerPage);
 		return (
 			<>
 				<div>
@@ -252,21 +310,19 @@ class Users extends Component {
 										<div className="card-header">
 											<h3 className="card-title">User List</h3>
 											<div className="card-options">
-												<form>
-													<div className="input-group">
-														<input
-															type="text"
-															className="form-control form-control-sm"
-															placeholder="Search something..."
-															name="s"
-														/>
-														<span className="input-group-btn ml-2">
-															<button className="btn btn-sm btn-default" type="submit">
-																<span className="fe fe-search" />
-															</button>
-														</span>
-													</div>
-												</form>
+												<div className="input-icon ml-2">
+													<span className="input-icon-addon">
+														<i className="fe fe-search" />
+													</span>
+													<input
+														type="text"
+														className="form-control"
+														placeholder="Search user..."
+														name="s"
+														value={this.state.searchQuery}
+														onChange={this.handleSearch}
+													/>
+												</div>
 											</div>
 										</div>
 										<div className="card-body">
@@ -283,8 +339,8 @@ class Users extends Component {
 														</tr>
 													</thead>
 													<tbody>
-														{users.length > 0 ? (
-															users.map((user, index) => (
+														{currentUsers.length > 0 ? (
+															currentUsers.map((user, index) => (
 																<tr key={index}>
 																	<td className="width45">
 																		<span
@@ -359,6 +415,31 @@ class Users extends Component {
 											</div>
 										</div>
 									</div>
+
+									{/* Only show pagination if there are users */}
+									{totalPages > 1 && (
+										<nav aria-label="Page navigation">
+											<ul className="pagination mb-0 justify-content-end">
+												<li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+													<button className="page-link" onClick={() => this.handlePageChange(currentPage - 1)}>
+														Previous
+													</button>
+												</li>
+												{[...Array(totalPages)].map((_, i) => (
+													<li key={i} className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(i + 1)}>
+															{i + 1}
+														</button>
+													</li>
+												))}
+												<li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+													<button className="page-link" onClick={() => this.handlePageChange(currentPage + 1)}>
+														Next
+													</button>
+												</li>
+											</ul>
+										</nav>
+									)}
 								</div>
 								<div className="tab-pane fade" id="user-add" role="tabpanel">
 									<div className="card">
