@@ -15,7 +15,11 @@ class Report extends Component {
             selectedEmployee: "",
             employeeData: [],
             selectedStatus: "",
-            punchOutReport: ""
+            punchOutReport: "",
+            activityId: null,
+            reportError: null,
+            reportSuccess: null,
+            addReportByAdminError: null
         };
     }
 
@@ -23,11 +27,11 @@ class Report extends Component {
 
         let apiUrl = '';
 
-        if (window.user.role == 'super_admin' || window.user.role == 'admin') {
-            apiUrl = `${process.env.REACT_APP_API_URL}/reports.php`;
-        } else {
-            apiUrl = `${process.env.REACT_APP_API_URL}/reports.php?user_id=${window.user.id}`;
-        }
+        //if (window.user.role == 'super_admin' || window.user.role == 'admin') {
+        apiUrl = `${process.env.REACT_APP_API_URL}/activities.php`;
+        // } else {
+        //     apiUrl = `${process.env.REACT_APP_API_URL}/reports.php?user_id=${window.user.id}`;
+        // }
 
         // Make the GET API call when the component is mounted
         fetch(apiUrl)
@@ -36,7 +40,7 @@ class Report extends Component {
                 if (data.status === 'success') {
                     this.setState({ reports: data.data });
                 } else {
-                    this.setState({ error: data.message });
+                    this.setState({ reports: [], error: data.message });
                 }
             })
             .catch(err => {
@@ -61,12 +65,54 @@ class Report extends Component {
     }
 
     openModal = (report) => {
-        this.setState({ selectedReport: report, isModalOpen: true });
+        this.setState({ viewPunchOutReportDescription: report.description });
     };
 
-    closeModal = () => {
-        this.setState({ selectedReport: null, isModalOpen: false });
+    setActivityIdState = (report) => {
+        this.setState({ activityId: report.activity_id });
     };
+
+    deleteReport = () => {
+        const { activityId } = this.state;
+
+        // Validate form inputs
+        if (!activityId) {
+            this.setState({ reportError: 'Invalid Request' });
+            setTimeout(() => {
+                this.setState({ reportError: null });
+            }, 5000)
+            return;
+        }
+
+        // API call to add break
+        fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=delete&id=${activityId}&user_id=${window.user.id}`, {
+            method: 'DELETE'
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.status === "success") {
+                    this.setState({ reportSuccess: data.message });
+                    setTimeout(() => {
+                        this.setState({ reportSuccess: null });
+                    }, 5000)
+                    // Close the modal
+                    document.querySelector("#deleteReportModal .close").click();
+                    this.componentDidMount();
+                } else {
+                    this.setState({ reportError: data.message });
+                    setTimeout(() => {
+                        this.setState({ reportError: null });
+                    }, 5000)
+                }
+            })
+            .catch((error) => {
+				this.setState({ reportError: 'Something went wrong. Please try again.' });
+				setTimeout(() => {
+					this.setState({ reportError: null });
+				}, 5000);
+			});
+    };
+
 
     // Handle dropdown change for employee
     handleEmployeeChange = (event) => {
@@ -83,70 +129,82 @@ class Report extends Component {
         this.setState({ punchOutReport: event.target.value });
     };
 
-    addReport = () => {
+    addReportByAdmin = () => {
         const { selectedEmployee, selectedStatus, punchOutReport } = this.state;
 
         // Validate form inputs
-        if (!selectedEmployee || !selectedStatus) {
-            alert("All the fields are required");
+        if (!selectedEmployee && !selectedStatus) {
+            this.setState({ addReportByAdminError: 'Please select an Employee and Status' });
+            setTimeout(() => {
+                this.setState({ addReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+
+        if (!selectedEmployee) {
+            this.setState({ addReportByAdminError: 'Please select an Employee' });
+            setTimeout(() => {
+                this.setState({ addReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+
+        if (!selectedStatus) {
+            this.setState({ addReportByAdminError: 'Please select a Status' });
+            setTimeout(() => {
+                this.setState({ addReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+
+        if (selectedStatus == 'completed' && !punchOutReport) {
+            this.setState({ addReportByAdminError: 'Please provide the punch-out report' });
+            setTimeout(() => {
+                this.setState({ addReportByAdminError: null });
+            }, 5000)
             return;
         }
 
         const formData = new FormData();
         formData.append('employee_id', selectedEmployee);
-        formData.append('punch_status', selectedStatus);
-        formData.append('punch_out_report', punchOutReport);
+		formData.append('activity_type', 'Punch');
+		formData.append('description', punchOutReport);
+		formData.append('status', selectedStatus);
+        formData.append('created_by', window.user.id); //created by admin
+		formData.append('updated_by', window.user.id); //updated by admin
 
         // API call to add break
-        fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=add`, {
+        fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=add-by-admin`, {
             method: "POST",
             body: formData,
         })
             .then((response) => response.json())
             .then((data) => {
                 if (data.status === "success") {
-                    alert(data.message);
-                    // Close the modal
+                    this.setState({ reportSuccess: data.message });
+                    setTimeout(() => {
+                        this.setState({ reportSuccess: null });
+                    }, 5000)
                     document.querySelector("#addReportModal .close").click();
                     this.componentDidMount();
                 } else {
-                    alert(data.message);
-                    console.log("Failed to add break data");
+                    this.setState({ addReportByAdminError: data.message });
+                    setTimeout(() => {
+                        this.setState({ addReportByAdminError: null });
+                    }, 5000)
                 }
             })
-            .catch((error) => console.error("Error:", error));
+            .catch((error) => {
+				this.setState({ addReportByAdminError: 'Something went wrong. Please try again.' });
+				setTimeout(() => {
+					this.setState({ addReportByAdminError: null });
+				}, 5000);
+			});
     };
 
     render() {
         const { fixNavbar } = this.props;
-        const { reports, selectedReport, isModalOpen, error, employeeData, selectedStatus, selectedEmployee, punchOutReport } = this.state;
-        // Define custom styles for the modal
-        const customStyles = {
-            overlay: {
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent black background
-            },
-            content: {
-                position: 'absolute',
-                top: '20%',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '80%', // Adjust width as needed
-                maxWidth: '600px', // Maximum width
-                height: 'auto',
-                maxHeight: '80%', // Maximum height
-                overflow: 'auto',
-                border: '1px solid #ccc',
-                background: '#fff',
-                borderRadius: '4px',
-                outline: 'none',
-                padding: '20px',
-            },
-        };
+        const { reports, selectedReport, isModalOpen, error, employeeData, selectedStatus, selectedEmployee, punchOutReport, activityId, reportError, reportSuccess, addReportByAdminError } = this.state;
         return (
             <>
                 <div>
@@ -168,18 +226,25 @@ class Report extends Component {
                             <div className="tab-content mt-3">
                                 <div className="tab-pane fade show active" id="Report-Invoices" role="tabpanel">
                                     <div className="card">
+                                        {/* Display activity success message outside the modal */}
+                                        {reportSuccess && (
+                                            <div className="alert alert-success mb-0">{reportSuccess}</div>
+                                        )}
+                                        {/* Display activity error message outside the modal */}
+                                        {reportError && (
+                                            <div className="alert alert-danger mb-0">{reportError}</div>
+                                        )}
                                         <div className="card-body">
                                             <div className="table-responsive">
                                                 <table className="table table-hover table-striped table-vcenter mb-0">
                                                     <thead>
                                                         <tr>
                                                             <th>Employee Name</th>
-                                                            <th>Employee Code</th>
-                                                            <th>Attendance Date</th>
-                                                            <th>Punch In</th>
-                                                            <th>Punch Out</th>
-                                                            <th>Total Hours Worked</th>
-                                                            <th>Attendance Status</th>
+                                                            <th>Activity Type</th>
+                                                            <th>In Time</th>
+                                                            <th>Out Time</th>
+                                                            <th>Duration</th>
+                                                            <th>Status</th>
                                                             <th>Action</th>
                                                         </tr>
                                                     </thead>
@@ -187,20 +252,28 @@ class Report extends Component {
                                                         {reports.length > 0 ? (
                                                             reports.map((report, index) => (
                                                                 <tr>
-                                                                    <td>{report.employee_name}</td>
-                                                                    <td>{report.code}</td>
-                                                                    <td>{report.attendance_date}</td>
-                                                                    <td>{report.punch_in_time}</td>
-                                                                    <td>{report.punch_out_time}</td>
-                                                                    <td>{report.total_hours_worked}</td>
-                                                                    <td>{report.attendance_status}</td>
+                                                                    <td>{report.full_name}</td>
+                                                                    <td>{report.activity_type}</td>
+                                                                    <td>{report.complete_in_time}</td>
+                                                                    <td>{report.complete_out_time}</td>
+                                                                    <td>{report.duration}</td>
                                                                     <td>
-                                                                        <button
-                                                                            className="btn btn-primary"
-                                                                            onClick={() => this.openModal(report)}
-                                                                        >
-                                                                            View Report
-                                                                        </button>
+                                                                        {report.status === 'active' && (
+                                                                            <label className="badge badge-primary">Active</label>
+                                                                        )}
+                                                                        {report.status === 'completed' && (
+                                                                            <label className="badge badge-success">Completed</label>
+                                                                        )}
+                                                                        {report.status === 'auto closed' && (
+                                                                            <label className="badge badge-warning">Auto Closed</label>
+                                                                        )}
+                                                                    </td>
+                                                                    <td>
+                                                                        {report.activity_type === 'Punch' && (
+                                                                            <button type="button" class="btn btn-icon btn-sm" title="View" data-toggle="modal" data-target="#viewpunchOutReportModal" onClick={() => this.openModal(report)}><i class="icon-eye text-danger"></i></button>
+                                                                        )}
+                                                                        <button type="button" class="btn btn-icon btn-sm" title="Edit"><i class="icon-pencil text-danger"></i></button>
+                                                                        <button type="button" class="btn btn-icon btn-sm" title="Delete" data-toggle="modal" data-target="#deleteReportModal" onClick={() => this.setActivityIdState(report)}><i class="icon-trash text-danger"></i></button>
                                                                     </td>
                                                                 </tr>
                                                             ))
@@ -221,35 +294,54 @@ class Report extends Component {
                         </div>
                     </div>
                     {/* Modal for viewing report details */}
-                    {selectedReport && (
-                        <Modal
-                            isOpen={isModalOpen}
-                            onRequestClose={this.closeModal}
-                            contentLabel="Report Details"
-                            ariaHideApp={false}
-                            style={customStyles}
-                        >
-                            <h2>Report Details</h2>
-                            {this.state.selectedReport && (
-                                <div className="multiline-text">
-                                    <p>{this.state.selectedReport.report}</p>
-                                    {/* Display other details as needed */}
-                                </div>
-                            )}
-                            <button className="btn btn-secondary" onClick={this.closeModal}>
-                                Close
-                            </button>
-                        </Modal>
-                    )}
-                    {/* Add Break Modal */}
-                    <div className="modal fade" id="addReportModal" tabIndex={-1} role="dialog" aria-labelledby="addReportModalLabel" /* aria-hidden="true" */>
-                        <div className="modal-dialog" role="report">
+                    <div className="modal fade" id="viewpunchOutReportModal" tabIndex={-1} role="dialog" aria-labelledby="viewpunchOutReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                        <div className="modal-dialog" role="break">
                             <div className="modal-content">
                                 <div className="modal-header">
-                                    <h5 className="modal-title" id="addReportModalLabel">Add Report</h5>
+                                    <h5 className="modal-title" id="viewpunchOutReportModal">Punch Out Report</h5>
                                     <button type="button" className="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
                                 </div>
                                 <div className="modal-body">
+                                    <div className="row clearfix multiline-text">
+                                        {this.state.viewPunchOutReportDescription}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Modal for deleting report details */}
+                    <div className="modal fade" id="deleteReportModal" tabIndex={-1} role="dialog" aria-labelledby="deleteReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                        <div className="modal-dialog" role="break">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h5 className="modal-title" id="deleteReportModal">Delete</h5>
+                                    <button type="button" className="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                </div>
+                                <div className="modal-body">
+                                    <div className="row clearfix">
+                                        Are you sure you want to delete this Record?
+                                    </div>
+                                </div>
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                    <button type="button" className="btn btn-primary" onClick={this.deleteReport}>Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Add Break Modal */}
+                    <div className="modal fade" id="addReportModal" tabIndex={-1} role="dialog" aria-labelledby="addReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                        <div className="modal-dialog" role="report">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h5 className="modal-title" id="addReportModalLabel">Register Employee Punch-In/Out</h5>
+                                    <button type="button" className="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                </div>
+                                <div className="modal-body">
+                                    {/* Display activity error message outside the modal */}
+                                    {addReportByAdminError && (
+                                            <div className="alert alert-danger mb-0">{addReportByAdminError}</div>
+                                        )}
                                     <div className="row clearfix">
                                         <div className="col-md-12">
                                             <div className="form-group">
@@ -284,7 +376,7 @@ class Report extends Component {
                                                         placeholder="Report"
                                                         value={punchOutReport}
                                                         onChange={this.handleReportChange}
-                                                        rows="10"
+                                                        rows="30"
                                                         cols="50"
                                                     />
                                                 </div>
@@ -293,8 +385,7 @@ class Report extends Component {
                                     </div>
                                 </div>
                                 <div className="modal-footer">
-                                    <button type="button" className="btn btn-secondary" data-dismiss="modal">Close</button>
-                                    <button type="button" className="btn btn-primary" onClick={this.addReport}>Save changes</button>
+                                    <button type="button" className="btn btn-primary" onClick={this.addReportByAdmin}>Save changes</button>
                                 </div>
                             </div>
                         </div>
