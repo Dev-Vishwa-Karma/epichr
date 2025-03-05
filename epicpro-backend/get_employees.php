@@ -75,7 +75,7 @@ if (isset($action)) {
         case 'view':
             if (isset($_GET['user_id']) && validateId($_GET['user_id'])) {
                 // Prepare SELECT statement with WHERE clause using a placeholder to prevent SQL injection
-                $stmt = $conn->prepare("SELECT * FROM employees WHERE role = 'employee' AND id = ? AND deleted_at IS NULL");
+                $stmt = $conn->prepare("SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL");
                 $stmt->bind_param('i', $_GET['user_id']);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -368,11 +368,17 @@ if (isset($action)) {
                 if (!empty($_POST['last_name'])) {
                     $data['last_name'] = $_POST['last_name'];
                 }
+                if (!empty($_POST['username'])) {
+                    $data['username'] = $_POST['username'];
+                }
                 if (!empty($_POST['email'])) {
                     $data['email'] = $_POST['email'];
                 }
                 if (!empty($_POST['selected_role'])) {
                     $data['role'] = $_POST['selected_role'];
+                }
+                if (!empty($_POST['about_me'])) {
+                    $data['about_me'] = $_POST['about_me'];
                 }
                 if (!empty($_POST['gender'])) {
                     $data['gender'] = $_POST['gender'];
@@ -585,17 +591,25 @@ if (isset($action)) {
                         }
                     }
 
-                    sendJsonResponse('success', [
-                        'user_id' => $id,
+                    $updatedData = [
+                        'id' => $id,
                         'first_name' => $data['first_name'],
                         'last_name' => $data['last_name'],
+                        'username' => $data['username'],
                         'profile' => $data['profile'],
                         'email' => $data['email'],
+                        'dob' => $data['dob'],
+                        'address_line1' => $data['address_line1'],
                         'role' => $data['role'],
-                        'mobile_no' => $data['mobile_no1'],
+                        'mobile_no1' => $data['mobile_no1'],
+                        'about_me' => $data['about_me'],
                         'joining_date' => $data['joining_date'],
-                        'job_role' => $data['job_role']
-                    ], 'Employee and salary details updated successfully');
+                        'job_role' => $data['job_role'],
+                        'facebook_url' => $data['facebook_url'],
+                        'twitter_url' => $data['twitter_url']
+                    ];
+
+                    sendJsonResponse('success', $updatedData, "Employee and salary details updated successfully");
                 } else {
                     $error = $stmt->error;
                     sendJsonResponse('error', null, "Failed to update employee details: $error");
