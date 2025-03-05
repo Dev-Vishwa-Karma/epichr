@@ -871,7 +871,7 @@ class ViewEmployee extends Component {
                                                                         <strong>Wayne Holland: </strong>
                                                                         Donec id elit non mi porta gravida at eget metus. Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor. Donec ullamcorper nulla non metus
                                                                         auctor fringilla. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Sed posuere consectetur est at lobortis.
-                            </div>
+                                                                    </div>
                                                                 </li>
                                                             </ul>
                                                         </div>
@@ -1024,7 +1024,6 @@ class ViewEmployee extends Component {
                         </div>
                     </div>
                 </div>
-
             </>
         )
     }
