@@ -55,6 +55,7 @@ if (isset($action)) {
         case 'add':
             // Get form data
             $employee_id = isset($_POST['employee_id']) ? $_POST['employee_id'] : null;
+            $created_by = isset($_POST['created_by']) ? $_POST['created_by'] : null;
             $images = $_FILES['images']['name'];
 
             // Check if files are upload
@@ -79,14 +80,15 @@ if (isset($action)) {
                 // Move file to uploads directory
                 if (move_uploaded_file($tmpName, $imagePath)) {
                     $stmt = $conn->prepare("INSERT INTO gallery (employee_id, url, created_by) VALUES (?, ?, ?)");
-                    $stmt->bind_param("isi", $employee_id, $imagePath, $employee_id);
+                    $stmt->bind_param("isi", $employee_id, $imagePath, $created_by);
                     
                     if ($stmt->execute()) {
                         $uploadedImages[] = [
                             'id' => $conn->insert_id,
                             'employee_id' => $employee_id,
                             'url' => $imagePath,
-                            'created_at' => $created_at
+                            'created_at' => $created_at,
+                            'created_by' => $created_by
                         ];
                     } else {
                         sendJsonResponse('error', null, "Failed to add image: " . $stmt->error);

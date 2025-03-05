@@ -25,6 +25,7 @@ class Users extends Component {
 			searchQuery: "",
 			currentPage: 1,
             dataPerPage: 10,
+			loading: true
 		};
 	}
 
@@ -41,13 +42,17 @@ class Users extends Component {
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {
-			  	this.setState({ users: data.data, allUsers: data.data });
+			  	this.setState({
+					users: data.data,
+					allUsers: data.data,
+					loading: false
+				});
 			} else {
-			  	this.setState({ error: data.message });
+			  	this.setState({ error: data.message, loading: false });
 			}
 		})
 		.catch(err => {
-			this.setState({ error: 'Failed to fetch data' });
+			this.setState({ error: 'Failed to fetch data', loading: false });
 			console.error(err);
 		});
 	}
@@ -78,7 +83,7 @@ class Users extends Component {
 
         // Validate form inputs
         if (!employeeId || !firstName || !email || !username) {
-            alert("Please fill in all fields");
+            console.log("Please fill in all fields");
             return;
         }
 
@@ -268,7 +273,7 @@ class Users extends Component {
 	render() {
 
 		const { fixNavbar } = this.props;
-		const { users, error, selectedUser, currentPage, dataPerPage } = this.state;
+		const { users, error, selectedUser, currentPage, dataPerPage, loading } = this.state;
 
 		// Pagination Logic
         const indexOfLastImage = currentPage * dataPerPage;
@@ -327,6 +332,13 @@ class Users extends Component {
 										</div>
 										<div className="card-body">
 											<div className="table-responsive">
+											{loading ? (
+												<div className="card-body">
+													<div className="dimmer active">
+														<div className="loader" />
+													</div>
+												</div>
+											) : ( // Show Table after loading is false
 												<table className="table table-striped table-hover table-vcenter text-nowrap mb-0">
 													<thead>
 														<tr>
@@ -412,6 +424,7 @@ class Users extends Component {
 														)}
 													</tbody>
 												</table>
+												)}
 											</div>
 										</div>
 									</div>
@@ -751,7 +764,7 @@ class Users extends Component {
 													</div>
 													<button
 														type="button"
-														className="btn btn-primary"
+														className="btn btn-primary mr-2"
 														onClick={this.addUser}
 													>
 														Add

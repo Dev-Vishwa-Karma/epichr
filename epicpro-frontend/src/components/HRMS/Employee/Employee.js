@@ -80,6 +80,7 @@ class Employee extends Component {
 			currentPageEmployees: 1,
 			currentPageLeaves: 1,
             dataPerPage: 10,
+			loading: true
 		};
 	}
 	handleStatistics(e) {
@@ -147,12 +148,12 @@ class Employee extends Component {
 				totalLeaves: totalLeaves,
 				pendingLeaves: pendingLeaves,
 				approvedLeaves: approvedLeaves,
-				rejectedLeaves: rejectedLeaves
+				rejectedLeaves: rejectedLeaves,
+				loading: false
 			});
-
 		})
 		.catch(err => {
-			this.setState({ message: 'Failed to fetch data' });
+			this.setState({ message: 'Failed to fetch data', loading: false });
 			console.error(err);
 		});
 	}
@@ -508,7 +509,7 @@ class Employee extends Component {
     };
 	render() {
 		const { fixNavbar, /* statisticsOpen, statisticsClose */ } = this.props;
-		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave, currentPageEmployees,  currentPageLeaves, dataPerPage } = this.state;
+		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave, currentPageEmployees,  currentPageLeaves, dataPerPage, loading } = this.state;
 
 		// Pagination Logic for Employees
 		const indexOfLastEmployee = this.state.currentPageEmployees * dataPerPage;
@@ -674,104 +675,112 @@ class Employee extends Component {
 												</div>
 											</div>
 											<div className="card-body">
-												<div className="table-responsive">
-													<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
-														<thead>
-															<tr>
-																<th>#</th>
-																<th>Name</th>
-																<th>Employee ID</th>
-																<th>Phone</th>
-																<th>Join Date</th>
-																<th>Role</th>
-																<th>Action</th>
-															</tr>
-														</thead>
-														<tbody>
-															{currentEmployees.length > 0 ? (
-																currentEmployees.map((employee, index) => (
-																	<tr key={index}>
-																		<td className="w40">
-																			<label className="custom-control custom-checkbox">
-																				<input
-																					type="checkbox"
-																					className="custom-control-input"
-																					name="example-checkbox1"
-																					defaultValue="option1"
-																				/>
-																				<span className="custom-control-label">
-																					&nbsp;
+												{loading ? (
+													<div className="card-body">
+														<div className="dimmer active">
+															<div className="loader" />
+														</div>
+													</div>
+                                                ) : ( // Show Table after loading is false
+													<div className="table-responsive">
+														<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
+															<thead>
+																<tr>
+																	<th>#</th>
+																	<th>Name</th>
+																	<th>Employee ID</th>
+																	<th>Phone</th>
+																	<th>Join Date</th>
+																	<th>Role</th>
+																	<th>Action</th>
+																</tr>
+															</thead>
+															<tbody>
+																{currentEmployees.length > 0 ? (
+																	currentEmployees.map((employee, index) => (
+																		<tr key={index}>
+																			<td className="w40">
+																				<label className="custom-control custom-checkbox">
+																					<input
+																						type="checkbox"
+																						className="custom-control-input"
+																						name="example-checkbox1"
+																						defaultValue="option1"
+																					/>
+																					<span className="custom-control-label">
+																						&nbsp;
+																					</span>
+																				</label>
+																			</td>
+																			<td className="d-flex">
+																				<span
+																					className="avatar avatar-blue"
+																					data-toggle="tooltip"
+																					data-original-title="Avatar Name"
+																				>
+																					{employee.first_name.charAt(0).toUpperCase()}{employee.last_name.charAt(0).toUpperCase()}
 																				</span>
-																			</label>
-																		</td>
-																		<td className="d-flex">
-																			<span
-																				className="avatar avatar-blue"
-																				data-toggle="tooltip"
-																				data-original-title="Avatar Name"
-																			>
-																				{employee.first_name.charAt(0).toUpperCase()}{employee.last_name.charAt(0).toUpperCase()}
-																			</span>
-																			<div className="ml-3">
-																				<h6 className="mb-0">
-																					{`${employee.first_name} ${employee.last_name}`}
-																				</h6>
-																				<span className="text-muted">
-																					{employee.email}
-																				</span>
-																			</div>
-																		</td>
-																		<td>
-																			<span>{employee.code}</span>
-																		</td>
-																		<td>
-																			<span>{employee.mobile_no1}</span>
-																		</td>
-																		<td>
-																			{new Intl.DateTimeFormat('en-US', {
-																				day: '2-digit',
-																				month: 'short',
-																				year: 'numeric',
-																			}).format(new Date(employee.joining_date))}
-																		</td>
-																		<td>{employee.job_role}</td>
-																		<td>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="View"
-																				onClick={() => this.viewEmployee(employee, employee.id)}
-																			>
-																				<i className="fa fa-eye" />
-																			</button>
-																			<button
-																				onClick={() => this.goToEditEmployee(employee, employee.id)}
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="Edit"
-																			>
-																				<i className="fa fa-edit" />
-																			</button>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm js-sweetalert"
-																				title="Delete"
-																				data-type="confirm"
-																				data-toggle="modal"
-																				data-target="#deleteEmployeeModal"
-																				onClick={() => this.openDeleteModal(employee.id)}
-																			>
-																				<i className="fa fa-trash-o text-danger" />
-																			</button>
-																		</td>
-																	</tr>
-																))
-															): (
-																!message && <tr><td>No employees found</td></tr>
-															)}
-														</tbody>
-													</table>
-												</div>
+																				<div className="ml-3">
+																					<h6 className="mb-0">
+																						{`${employee.first_name} ${employee.last_name}`}
+																					</h6>
+																					<span className="text-muted">
+																						{employee.email}
+																					</span>
+																				</div>
+																			</td>
+																			<td>
+																				<span>{employee.code}</span>
+																			</td>
+																			<td>
+																				<span>{employee.mobile_no1}</span>
+																			</td>
+																			<td>
+																				{new Intl.DateTimeFormat('en-US', {
+																					day: '2-digit',
+																					month: 'short',
+																					year: 'numeric',
+																				}).format(new Date(employee.joining_date))}
+																			</td>
+																			<td>{employee.job_role}</td>
+																			<td>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="View"
+																					onClick={() => this.viewEmployee(employee, employee.id)}
+																				>
+																					<i className="fa fa-eye" />
+																				</button>
+																				<button
+																					onClick={() => this.goToEditEmployee(employee, employee.id)}
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="Edit"
+																				>
+																					<i className="fa fa-edit" />
+																				</button>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm js-sweetalert"
+																					title="Delete"
+																					data-type="confirm"
+																					data-toggle="modal"
+																					data-target="#deleteEmployeeModal"
+																					onClick={() => this.openDeleteModal(employee.id)}
+																				>
+																					<i className="fa fa-trash-o text-danger" />
+																				</button>
+																			</td>
+																		</tr>
+																	))
+																): (
+																	!message && <tr><td>No employees found</td></tr>
+																)}
+															</tbody>
+														</table>
+													</div>
+												)}
 											</div>
 										</div>
 
@@ -802,92 +811,103 @@ class Employee extends Component {
 									</div>
 									<div className="tab-pane fade" id="Employee-Request" role="tabpanel">
 										<div className="card">
+											<div className="card-header">
+												<h3 className="card-title">Leave List</h3>
+											</div>
 											<div className="card-body">
-												<div className="table-responsive">
-													<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
-														<thead>
-															<tr>
-																<th>#</th>
-																<th>Name</th>
-																<th>Date</th>
-																<th>Reason</th>
-																<th>Status</th>
-																<th>Action</th>
-															</tr>
-														</thead>
-														<tbody>
-															{currentEmployeeLeaves.length > 0 ? (
-																currentEmployeeLeaves.map((leave, index) => (
-																	<tr key={index}>
-																		<td className="width45">
-																			<span
-																				className="avatar avatar-orange"
-																				data-toggle="tooltip"
-																				title="Avatar Name"
-																			>
-																				{leave.first_name.charAt(0).toUpperCase()}{leave.last_name.charAt(0).toUpperCase()}
-																			</span>
-																		</td>
-																		<td>
-																			<div className="font-15">
-																				{`${leave.first_name} ${leave.last_name}`}
-																			</div>
-																		</td>
-																		<td>
-																		{`${new Intl.DateTimeFormat('en-US', {
-																			day: '2-digit',
-																			month: 'short',
-																			year: 'numeric',
-																			}).format(new Date(leave.from_date))} to ${new Intl.DateTimeFormat('en-US', {
-																			day: '2-digit',
-																			month: 'short',
-																			year: 'numeric',
-																			}).format(new Date(leave.to_date))}`}
-																		</td>
-																		<td>{leave.reason}</td>
-																		<td>
-																			<span className={
-																				`tag ${
-																				leave.status === 'approved'
-																				  ? 'tag-success'
-																				  : leave.status === 'pending'
-																				  ? 'tag-warning'
-																				  : 'tag-danger'
-																			  	}`}>
-																					{leave.status}
-																			</span>
-																		</td>
-																		<td>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="Edit"
-																				data-toggle="modal"
-																				data-target="#editLeaveRequestModal"
-																				onClick={() => this.handleEditClickForEmployeeLeave(leave)}
-																			>
-																				<i className="fa fa-edit" />
-																			</button>
-																			<button
-																				type="button"
-																				className="btn btn-icon btn-sm js-sweetalert"
-																				title="Delete"
-																				data-type="confirm"
-																				data-toggle="modal"
-																				data-target="#deleteLeaveRequestModal"
-																				onClick={() => this.openDeleteLeaveModal(leave.id)}
-																			>
-																				<i className="fa fa-trash-o text-danger" />
-																			</button>
-																		</td>
-																	</tr>
-																))
-															): (
-																!message && <tr><td>No leaves found</td></tr>
-															)}
-														</tbody>
-													</table>
-												</div>
+												{loading ? (
+													<div className="card-body">
+														<div className="dimmer active">
+															<div className="loader" />
+														</div>
+													</div>
+                                                ) : ( // Show Table after loading is false
+													<div className="table-responsive">
+														<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
+															<thead>
+																<tr>
+																	<th>#</th>
+																	<th>Name</th>
+																	<th>Date</th>
+																	<th>Reason</th>
+																	<th>Status</th>
+																	<th>Action</th>
+																</tr>
+															</thead>
+															<tbody>
+																{currentEmployeeLeaves.length > 0 ? (
+																	currentEmployeeLeaves.map((leave, index) => (
+																		<tr key={index}>
+																			<td className="width45">
+																				<span
+																					className="avatar avatar-orange"
+																					data-toggle="tooltip"
+																					title="Avatar Name"
+																				>
+																					{leave.first_name.charAt(0).toUpperCase()}{leave.last_name.charAt(0).toUpperCase()}
+																				</span>
+																			</td>
+																			<td>
+																				<div className="font-15">
+																					{`${leave.first_name} ${leave.last_name}`}
+																				</div>
+																			</td>
+																			<td>
+																			{`${new Intl.DateTimeFormat('en-US', {
+																				day: '2-digit',
+																				month: 'short',
+																				year: 'numeric',
+																				}).format(new Date(leave.from_date))} to ${new Intl.DateTimeFormat('en-US', {
+																				day: '2-digit',
+																				month: 'short',
+																				year: 'numeric',
+																				}).format(new Date(leave.to_date))}`}
+																			</td>
+																			<td>{leave.reason}</td>
+																			<td>
+																				<span className={
+																					`tag ${
+																					leave.status === 'approved'
+																					? 'tag-success'
+																					: leave.status === 'pending'
+																					? 'tag-warning'
+																					: 'tag-danger'
+																					}`}>
+																						{leave.status}
+																				</span>
+																			</td>
+																			<td>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="Edit"
+																					data-toggle="modal"
+																					data-target="#editLeaveRequestModal"
+																					onClick={() => this.handleEditClickForEmployeeLeave(leave)}
+																				>
+																					<i className="fa fa-edit" />
+																				</button>
+																				<button
+																					type="button"
+																					className="btn btn-icon btn-sm js-sweetalert"
+																					title="Delete"
+																					data-type="confirm"
+																					data-toggle="modal"
+																					data-target="#deleteLeaveRequestModal"
+																					onClick={() => this.openDeleteLeaveModal(leave.id)}
+																				>
+																					<i className="fa fa-trash-o text-danger" />
+																				</button>
+																			</td>
+																		</tr>
+																	))
+																): (
+																	!message && <tr><td>No leaves found</td></tr>
+																)}
+															</tbody>
+														</table>
+													</div>
+												)}
 											</div>
 										</div>
 

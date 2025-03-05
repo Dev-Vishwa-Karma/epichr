@@ -10,7 +10,9 @@ class Header extends Component {
 			isPunchedIn: false,
 			showModal: false,
 			report: '',
-			error: null
+			error: null,
+			user: null,
+			userId: null
 		};
 	}
 
@@ -24,6 +26,11 @@ class Header extends Component {
 			return;
 		} else {
 			window.user = user; // Attach user to the global window object
+			const {id} = window.user;
+			this.setState({
+				user: user,
+				userId: id,
+			})
 		}
 
 		/** Get employees list */
@@ -112,7 +119,7 @@ class Header extends Component {
 
 	render() {
 		const { fixNavbar, darkHeader } = this.props;
-		const { isPunchedIn, showModal, report } = this.state;
+		const { isPunchedIn, showModal, report, userId, user } = this.state;
 		return (
 			<div>
 				<div
@@ -421,7 +428,7 @@ class Header extends Component {
 											<i className="fa fa-user" />
 										</a>
 										<div className="dropdown-menu dropdown-menu-right dropdown-menu-arrow">
-											<NavLink to="/profile" className="dropdown-item">
+											<NavLink to={{ pathname: "/view-employee", state: { employee: user, employeeId: userId } }} className="dropdown-item">
 												<i className="dropdown-icon fe fe-user" /> Profile
 											</NavLink>
 											<a className="dropdown-item" >

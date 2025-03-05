@@ -15,7 +15,8 @@ class departments extends Component {
             errorMessage: "",
             showSuccess: false,
             showError: false,
-            errors: {}
+            errors: {},
+            loading: true
 		};
 
         // Create a ref to scroll to the message container
@@ -23,18 +24,17 @@ class departments extends Component {
 	}
 
     componentDidMount() {
-        // fetch('http://localhost/react/epicpro-backend/departments.php?action=view')
         fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=view`)
 		.then(response => response.json())
 		.then(data => {
-			if (data.status === 'success') {
-			    this.setState({ departmentData: data.data }); // Update users in state
-			} else {
-			    this.setState({ message: data.message }); // Update error in state
-			}
+            if (data.status === 'success') {
+                this.setState({ departmentData: data.data, loading: false }); // Update users in state
+            } else {
+                this.setState({ message: data.message, loading: false }); // Update error in state
+            }
 		})
 		.catch(err => {
-			this.setState({ message: 'Failed to fetch data' });
+			this.setState({ message: 'Failed to fetch data', loading: false });
 			console.error(err);
 		});
     }
@@ -355,7 +355,7 @@ class departments extends Component {
 
     render() {
         const { fixNavbar } = this.props;
-        const { departmentName, departmentHead, departmentData, selectedDepartment, message } = this.state;
+        const { departmentName, departmentHead, departmentData, selectedDepartment, message, loading } = this.state;
         return (
             <>
                 <div>
@@ -417,56 +417,64 @@ class departments extends Component {
                                                     )}
                                                 </div>
                                                 <div className="table-responsive">
-                                                    <table className="table table-striped table-vcenter table-hover mb-0">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>#</th>
-                                                                <th>Department Name</th>
-                                                                <th>Department Head</th>
-                                                                <th>Total Employee</th>
-                                                                <th>Action</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {departmentData.length > 0 ? (
-                                                                departmentData.map((department, index) => (
-                                                                    <tr key={index}>
-                                                                        <td>{index + 1}</td>
-                                                                        <td>
-                                                                            <div className="font-15">{department.department_name}</div>
-                                                                        </td>
-                                                                        <td>{department.department_head}</td>
-                                                                        <td>{department.total_employee}</td>
-                                                                        <td>
-                                                                            <button 
-                                                                                type="button"
-                                                                                className="btn btn-icon"
-                                                                                title="Edit"
-                                                                                data-toggle="modal"
-                                                                                data-target="#editDepartmentModal"
-                                                                                onClick={() => this.handleEditClick(department)}
-                                                                            >
-                                                                                <i className="fa fa-edit" />
-                                                                            </button>
-                                                                            <button 
-                                                                                type="button"
-                                                                                className="btn btn-icon btn-sm js-sweetalert"
-                                                                                title="Delete"
-                                                                                data-type="confirm"
-                                                                                onClick={() => this.openModal(department.id)}
-                                                                                data-toggle="modal"
-                                                                                data-target="#deleteDepartmentModal"
-                                                                            >
-                                                                                <i className="fa fa-trash-o text-danger" />
-                                                                            </button>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))
-                                                            ): (
-                                                                !message && <tr><td>Department not found</td></tr>
-                                                            )}
-                                                        </tbody>
-                                                    </table>
+                                                    {loading ? (
+                                                        <div className="card-body">
+                                                            <div className="dimmer active">
+                                                                <div className="loader" />
+                                                            </div>
+                                                        </div>
+                                                    ) : ( // Show Table after loading is false
+                                                        <table className="table table-striped table-vcenter table-hover mb-0">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>#</th>
+                                                                    <th>Department Name</th>
+                                                                    <th>Department Head</th>
+                                                                    <th>Total Employee</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {departmentData.length > 0 ? (
+                                                                    departmentData.map((department, index) => (
+                                                                        <tr key={index}>
+                                                                            <td>{index + 1}</td>
+                                                                            <td>
+                                                                                <div className="font-15">{department.department_name}</div>
+                                                                            </td>
+                                                                            <td>{department.department_head}</td>
+                                                                            <td>{department.total_employee}</td>
+                                                                            <td>
+                                                                                <button 
+                                                                                    type="button"
+                                                                                    className="btn btn-icon"
+                                                                                    title="Edit"
+                                                                                    data-toggle="modal"
+                                                                                    data-target="#editDepartmentModal"
+                                                                                    onClick={() => this.handleEditClick(department)}
+                                                                                >
+                                                                                    <i className="fa fa-edit" />
+                                                                                </button>
+                                                                                <button 
+                                                                                    type="button"
+                                                                                    className="btn btn-icon btn-sm js-sweetalert"
+                                                                                    title="Delete"
+                                                                                    data-type="confirm"
+                                                                                    onClick={() => this.openModal(department.id)}
+                                                                                    data-toggle="modal"
+                                                                                    data-target="#deleteDepartmentModal"
+                                                                                >
+                                                                                    <i className="fa fa-trash-o text-danger" />
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))
+                                                                ): (
+                                                                    !message && <tr><td>Department not found</td></tr>
+                                                                )}
+                                                            </tbody>
+                                                        </table>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

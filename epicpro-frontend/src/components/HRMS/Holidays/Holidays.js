@@ -25,6 +25,7 @@ class Holidays extends Component {
       		showError: false,
 			currentPage: 1,
 			dataPerPage: 10,
+			loading: true
 		};
 		// Create a ref to scroll to the message container
 		this.messageRef = React.createRef();
@@ -45,15 +46,15 @@ class Holidays extends Component {
 				const holidays = holidaysData.filter(event => event.event_type === 'holiday');  
 
 				this.setState(
-					{ holidays: holidays }
+					{ holidays: holidays, loading: false}
 				);
 			} else {
-			  	this.setState({ message: data.message }); // Update messages in state
+				this.setState({ message: data.message, loading: false }); // Update messages in state
 			}
 		})
 		.catch(err => {
-			this.setState({ message: 'Failed to fetch data' });
-			console.error(err);
+			this.setState({ message: 'Failed to fetch data', loading: false });
+			// console.error(err);
 		});
 
 		if (this.state.successMessage && this.state.successMessage !== prevState.successMessage) {
@@ -397,7 +398,7 @@ class Holidays extends Component {
 
 	render() {
 		const { fixNavbar } = this.props;
-		const { holidays, message, showAddHolidayModal, selectedEvent, currentPage, dataPerPage } = this.state;
+		const { holidays, message, showAddHolidayModal, selectedEvent, currentPage, dataPerPage, loading } = this.state;
 
 		// Pagination Logic
         const indexOfLastHoliday = currentPage * dataPerPage;
@@ -452,72 +453,83 @@ class Holidays extends Component {
 							<div className="row">
 								<div className="col-12">
 									<div className="card">
-										<div className="card-body">
-											<div className="table-responsive">
-												<table className="table table_custom spacing5 border-style mb-0">
-													<thead>
-														<tr>
-															<th>DAY</th>
-															<th>DATE</th>
-															<th>HOLIDAY</th>
-															<th>Action</th>
-														</tr>
-													</thead>
-													<tbody>
-														{currentHolidays.length > 0 ? (
-															currentHolidays
-																.filter((holiday) => holiday.event_type === 'holiday')
-																.map((holiday, index) => (
-																<tr key={index}>
-																	<td>
-																		<span>
-																			{new Date(holiday.event_date).toLocaleDateString('en-US', { weekday: 'long' })}
-																		</span>
-																	</td>
-																	<td>
-																		<span>
-																			{new Intl.DateTimeFormat('en-US', {
-																				day: '2-digit',
-																				month: 'short',
-																				year: 'numeric',
-																			}).format(new Date(holiday.event_date))}
-																		</span>
-																	</td>
-																	<td>
-																		<span>{holiday.event_name}</span>
-																	</td>
-																	<td>
-																		<button 
-																			type="button"
-																			className="btn btn-icon btn-sm"
-																			title="Edit"
-																			data-toggle="modal"
-																			data-target="#editEventModal"
-																			onClick={() => this.handleEditClickForEvent(holiday)}
-																		>
-																			<i className="fa fa-edit" />
-																		</button>
-																		<button
-																			type="button"
-																			className="btn btn-icon btn-sm js-sweetalert"
-																			title="Delete"
-																			data-type="confirm"
-																			data-toggle="modal"
-																			data-target="#deleteEventModal"
-																			onClick={() => this.openDeleteEventModal(holiday.id)}
-																		>
-																			<i className="fa fa-trash-o text-danger" />
-																		</button>
-																	</td>
-																</tr>
-															))
-														): (
-															!message && <tr><td>Holidays data not found</td></tr>
-														)}
-													</tbody>
-												</table>
-											</div>
+										<div className='card-header'>
+											<h3 className='card-title'>Holiday List</h3>	
 										</div>
+										{loading ? (
+											<div className="card-body">
+												<div className="dimmer active mb-4">
+													<div className="loader" />
+												</div>
+											</div>
+										) : ( // Show Table after loading is false
+											<div className="card-body">
+												<div className="table-responsive">
+													<table className="table table_custom spacing5 border-style mb-0">
+														<thead>
+															<tr>
+																<th>DAY</th>
+																<th>DATE</th>
+																<th>HOLIDAY</th>
+																<th>Action</th>
+															</tr>
+														</thead>
+														<tbody>
+															{currentHolidays.length > 0 ? (
+																currentHolidays
+																	.filter((holiday) => holiday.event_type === 'holiday')
+																	.map((holiday, index) => (
+																	<tr key={index}>
+																		<td>
+																			<span>
+																				{new Date(holiday.event_date).toLocaleDateString('en-US', { weekday: 'long' })}
+																			</span>
+																		</td>
+																		<td>
+																			<span>
+																				{new Intl.DateTimeFormat('en-US', {
+																					day: '2-digit',
+																					month: 'short',
+																					year: 'numeric',
+																				}).format(new Date(holiday.event_date))}
+																			</span>
+																		</td>
+																		<td>
+																			<span>{holiday.event_name}</span>
+																		</td>
+																		<td>
+																			<button 
+																				type="button"
+																				className="btn btn-icon btn-sm"
+																				title="Edit"
+																				data-toggle="modal"
+																				data-target="#editEventModal"
+																				onClick={() => this.handleEditClickForEvent(holiday)}
+																			>
+																				<i className="fa fa-edit" />
+																			</button>
+																			<button
+																				type="button"
+																				className="btn btn-icon btn-sm js-sweetalert"
+																				title="Delete"
+																				data-type="confirm"
+																				data-toggle="modal"
+																				data-target="#deleteEventModal"
+																				onClick={() => this.openDeleteEventModal(holiday.id)}
+																			>
+																				<i className="fa fa-trash-o text-danger" />
+																			</button>
+																		</td>
+																	</tr>
+																))
+															): (
+																!message && <tr><td>Holidays data not found</td></tr>
+															)}
+														</tbody>
+													</table>
+												</div>
+											</div>
+										)}
 									</div>
 									{/* Only show pagination if there are holidays */}
 									{totalPages > 1 && (

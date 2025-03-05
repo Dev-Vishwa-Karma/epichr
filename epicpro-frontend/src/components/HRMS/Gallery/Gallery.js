@@ -8,16 +8,20 @@ class Gallery extends Component {
             selectedImages: [],
             images: [],
             filteredImages: [], // Store filtered images
-            employee_id: null,
+            employees: [],
+            logged_in_employee_id: null,
+            selectedEmployeeId: '',
             isModalOpen: false,
             successMessage: '',
             showSuccess: false,
             errorMessage: '',
             showError: false,
+            errors: {},
             searchQuery: "",
             currentPage: 1,
             imagesPerPage: 8,
             sortOrder: "asc", // Default to newest first
+            loading: true
         };
         this.fileInputRef = React.createRef();
     }
@@ -26,12 +30,31 @@ class Gallery extends Component {
         const {role} = window.user;
         if (window.user?.id) {
             this.setState({
-                employee_id: window.user.id,
+                logged_in_employee_id: window.user.id,
                 sortOrder: "asc",
             });
         }
         // Check if user is admin or superadmin
         if (role === 'admin' || role === 'super_admin') {
+            // Fetch employees data if user is admin or super_admin
+            fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=employee`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    this.setState({
+                        employees: data.status === 'success' ? data.data : [],
+                        loading: false
+                    });
+                } else {
+                    this.setState({ error: data.message, loading: false });
+                }
+            })
+            .catch(err => {
+                this.setState({ error: 'Failed to fetch employees data' });
+                console.error(err);
+            });
+
+            // Fetch gallery data (as in the previous code)
             fetch(`${process.env.REACT_APP_API_URL}/gallery.php?action=view`)
                 .then(response => response.json())
                 .then(data => {
@@ -40,18 +63,19 @@ class Gallery extends Component {
                         this.setState({
                             images: sortedImages,
                             filteredImages: sortedImages,
+                            loading: false
                         });
                     } else {
-                        this.setState({ message: data.message });
+                        this.setState({ message: data.message, loading: false });
                     }
                 })
                 .catch(err => {
-                    this.setState({ message: 'Failed to fetch data' });
+                    this.setState({ message: 'Failed to fetch data', loading: false });
                     console.error(err);
                 });
         } else {
             // Employees should not see the gallery
-            this.setState({ images: [], filteredImages: [], message: 'Access denied' });
+            this.setState({ images: [], filteredImages: [], message: 'Access denied', loading: false });
         }
     }
 
@@ -67,6 +91,7 @@ class Gallery extends Component {
             selectedImages: [],
             errorMessage: '',
             showError: false,
+            errors: {}
         });
 
         // Reset file input field
@@ -97,34 +122,61 @@ class Gallery extends Component {
         const files = Array.from(event.target.files);
 
         this.setState({
-          selectedImages: files,
+            selectedImages: files,
+            errors: { ...this.state.errors, selectedImages: '' }
+        });
+    };
+
+    handleEmployeeSelection = (e) => {
+        const selectedEmployeeId = e.target.value;
+
+        // Clear errors related to employee selection
+        this.setState({
+            selectedEmployeeId,
+            errors: { ...this.state.errors, selectedEmployeeId: '' },
         });
     };
 
     submitImages = () => {
-        const { selectedImages, employee_id} = this.state;
+        const { selectedImages, logged_in_employee_id, selectedEmployeeId } = this.state;
+
+        let errors = {};
+        let isValid = true;
+
+         // Validate if employee is selected
+        if (!selectedEmployeeId) {
+            errors.selectedEmployeeId = "Please select an employee.";
+            isValid = false;
+        }
 
         if (selectedImages.length === 0) {
-            this.setState({ showError: true, errorMessage: "Please select at least one image before submitting." });
-            return;
+            errors.selectedImages = "Please select at least one image.";
+            isValid = false;
         }
 
         const validImageTypes = ["image/jpeg", "image/png", "image/webp"];
         const invalidFiles = selectedImages.filter(file => !validImageTypes.includes(file.type));
 
         if (invalidFiles.length > 0) {
-            this.setState({ showError: true, errorMessage: "Only image files (JPG, PNG, WEBP) are allowed." });
-            return;
+            errors.selectedImages = "Only image files (JPG, PNG, WEBP) are allowed.";
+            isValid = false;
         }
 
         if (window.user.role === 'employee') {
-            this.setState({ showError: true, errorMessage: "You do not have permission to upload images. Please contact an administrator." });
-            return;
+            errors.selectedImages = "You do not have permission to upload images. Please contact an administrator.";
+            isValid = false;
+        }
+
+        // If validation fails, set error messages and return
+        if (!isValid) {
+            this.setState({ errors });
+            return isValid;
         }
 
         // Prepare FormData to send images via AJAX
         const uploadImageData = new FormData();
-        uploadImageData.append('employee_id', employee_id);
+        uploadImageData.append('employee_id', selectedEmployeeId);
+        uploadImageData.append('created_by', logged_in_employee_id);
 
         // Ensure only image files are processed
         selectedImages.forEach((image) => {
@@ -155,6 +207,7 @@ class Gallery extends Component {
                         successMessage: data.message,
                         showSuccess: true,
                         selectedImages: [],
+                        selectedEmployeeId: '',
                         images: sortedImages,
                         filteredImages: sortedImages // Apply sorting dynamically
                     };
@@ -240,7 +293,7 @@ class Gallery extends Component {
     
     render() {
         const { fixNavbar } = this.props;
-        const { sortOrder, filteredImages, currentPage, imagesPerPage } = this.state;
+        const { sortOrder, filteredImages, currentPage, imagesPerPage, employees, loading } = this.state;
 
         // Pagination Logic
         const indexOfLastImage = currentPage * imagesPerPage;
@@ -283,7 +336,7 @@ class Gallery extends Component {
                                                 aria-hidden={!this.state.isModalOpen}
                                                 style={{ display: this.state.isModalOpen ? 'block' : 'none', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
                                             >
-                                                <div className="modal-dialog" role="document">
+                                                <div className="modal-dialog" role="document" aria-hidden="true">
                                                     <div className="modal-content">
                                                         <div className="modal-header">
                                                             <h5 className="modal-title" id="uploadImageModalLabel">
@@ -298,18 +351,42 @@ class Gallery extends Component {
                                                             {this.state.showSuccess && (
                                                                 <div className="alert alert-success">{this.state.successMessage}</div>
                                                             )}
+                                                            
+                                                            {/* Employee Selection Section */}
+                                                            <div className="mt-3">
+                                                                <label htmlFor="employeeSelect" className="form-label">Select Employee</label>
+                                                                <select
+                                                                    id="employeeSelect"
+                                                                    className="form-control"
+                                                                    value={this.state.selectedEmployeeId}
+                                                                    onChange={this.handleEmployeeSelection}
+                                                                >
+                                                                    <option value="">Select an Employee</option>
+                                                                    {employees.map((employee) => (
+                                                                        <option key={employee.id} value={employee.id}>
+                                                                            {employee.first_name} {employee.last_name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                {this.state.errors.selectedEmployeeId && (
+                                                                    <small className={`invalid-feedback ${this.state.errors.selectedEmployeeId ? 'd-block' : ''}`}>{this.state.errors.selectedEmployeeId}</small>
+                                                                )}
+                                                            </div>
 
                                                             {/* File Input */}
-                                                            <input
-                                                                type="file"
-                                                                onChange={this.handleImageSelection}
-                                                                className="form-control"
-                                                                multiple
-                                                                ref={this.fileInputRef}
-                                                            />
+                                                            <div className="mt-3">
+                                                                <label htmlFor="image" className="form-label">Select Image</label>
+                                                                <input
+                                                                    type="file"
+                                                                    onChange={this.handleImageSelection}
+                                                                    className="form-control"
+                                                                    multiple
+                                                                    ref={this.fileInputRef}
+                                                                />
+                                                            </div>
                                                             {/* Show error message if an invalid file is selected */}
-                                                            {this.state.showError && (
-                                                                <div className="invalid-feedback" style={{ display: 'block' }}>{this.state.errorMessage}</div>
+                                                            {this.state.errors.selectedImages && (
+                                                                <small className={`invalid-feedback ${this.state.errors.selectedImages ? 'd-block' : ''}`}>{this.state.errors.selectedImages}</small>
                                                             )}
 
                                                             {/* Preview Section */}
@@ -343,7 +420,7 @@ class Gallery extends Component {
                                                                 Cancel
                                                             </button>
                                                             <button type="button" className="btn btn-primary" onClick={this.submitImages}>
-                                                                Submit
+                                                                Upload Images
                                                             </button>
                                                         </div>
                                                     </div>
@@ -356,13 +433,25 @@ class Gallery extends Component {
                         </div>
                         {/* Images listing */}
                         <div className="row row-cards">
-                            {window.user?.role === "employee" ? ( // Check if logged-in user is an employee
+                            {loading && ( // ✅ Show Loader while fetching images
+                                <div className="col-12">
+                                    <div className="card p-3 d-flex align-items-center justify-content-center" style={{ height: '300px' }}>
+                                        <div className="dimmer active">
+                                            <div className="loader" />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+            
+                            {!loading && window.user?.role === "employee" && ( // Check if logged-in user is an employee
                                 <div className="col-12">
                                     <div className="card p-3 d-flex align-items-center justify-content-center" style={{ height: '300px' }}>
                                         <span className="text-danger fw-bold">Access Denied</span>
                                     </div>
                                 </div>
-                            ) : filteredImages.length > 0 ? ( // If not employee, show images if available
+                            )}
+                            
+                            {!loading && filteredImages.length > 0 && ( // If not employee, show images if available
                                 currentImages.map((image, index) => (
                                     <div className="col-sm-6 col-lg-3" key={index + 1}>
                                         <div className="card p-3">
@@ -370,7 +459,9 @@ class Gallery extends Component {
                                         </div>
                                     </div>
                                 ))
-                            ) : (
+                            )}
+                            
+                            {!loading && filteredImages.length === 0 && (
                                 <div className="col-12">
                                     <div className="card p-3 d-flex align-items-center justify-content-center" style={{ height: '300px' }}>
                                         <span>Image not available</span>
