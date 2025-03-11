@@ -40,28 +40,42 @@ class Events extends Component {
 		const {events, selectedYear } = this.state;
 
 		// Dynamic generation of years (last 50 years to next 10 years)
+		const currentDate = new Date();
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth() + 1;
         const defaultDate = `${selectedYear}-${String(currentMonth).padStart(2, '0')}-01`;
         const startYear = currentYear - 50;
         const endYear = currentYear + 10;
-        const years = [];
 
-        for (let year = startYear; year <= endYear; year++) {
-            years.push(year);
-        }
+        // Generate an array of years
+    	const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
 
-		const filteredEvents = events.filter((event) => {
-			const eventYear = new Date(event.event_date).getFullYear();
-			if (event.event_type === 'event') {
-				return true;
+		const filteredEvents = events
+		.map((event) => {
+			let eventDate = new Date(event.event_date);
+			let eventYear = eventDate.getFullYear();
+
+			// Only update the year if event_type is "event" and the event is from a previous year
+			if (event.event_type === "event" && eventYear < selectedYear) {
+				eventDate.setFullYear(selectedYear);
 			}
-			return selectedYear === new Date().getFullYear() || eventYear === selectedYear;
-		});
+
+			return {
+				...event,
+				event_date: eventDate.toISOString().split("T")[0], // Convert back to YYYY-MM-DD format
+			};
+		})
+		.filter((event) => {
+			const eventDate = new Date(event.event_date);
+    		const eventYear = eventDate.getFullYear();
+
+    		// Show only events from the selected year AND from today onwards
+    		return eventYear === selectedYear && eventDate >= currentDate;
+		})
+		.sort((a, b) => new Date(a.event_date) - new Date(b.event_date)); // Sort events by date
 
 		// Format filtered events, ensuring 'event' type events show up for all years
         const formattedEvents = filteredEvents.map(event => {
-            // If event type is 'event', ensure it shows for all years, set the event date accordingly
             if (event.event_type === 'event') {
 				// For event type (like birthdays), we need to create an event for each year
 				const eventDate = new Date(event.event_date);

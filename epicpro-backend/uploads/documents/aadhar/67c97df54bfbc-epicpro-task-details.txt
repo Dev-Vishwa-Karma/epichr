@@ -1,0 +1,69 @@
+Need following thing on Employee Add/Edit Screen
+
+Department dropdown 
+
+Photo
+Address 1
+Address 2
+Mobile No (2)  (3)
+Emergency Contact 1,2,3
+Gender
+DOB
+Joining Date
+
+Skills (Add this section using the project list color boxes like web design, angular, android with colored checkboxes and colored checkboxes added in the forms section)
+Frontend - Angular, react etc. 
+Backend - php, laravel, python etc.
+
+Bank Account Detail (A/c Name, account no, bank name, IFCI code, Bank Address)
+
+Govt Issue ID:
+Aadhar-Card (input box) Browse Button
+Driving License (input box) Browse Button
+Pan-Card (input box) Browse Button
+
+Facebook, Twitter, Linkedin, Instagram
+
+upWork Profile:
+
+Resume (Browse Button)
+
+
+
+10/1/2025 Task Details
+
+1)Remove Activities from left menu(Done)
+
+Employee
+2)Leave request
+
+- Top (Total Leaves, Approved, Rejected, Pending) (Done)
+- Listing Screen
+#, Name, Date, Reason, Status (Approved, Pending, Rejected) edit / delete icons (Done)
+
+Add/Edit screens (Done)
+
+
+3)Payroll
+- Remove salary & status from columns from listing screen(Done)
+- Remove mail, print and delete icon and all view icon there(Done)
+
+4) Add Payroll on left menu (Done)
+
+5) Change the left menu Events page content to app-calendar(Done)
+
+
+18/1/2025
+Employee Add/Edit
+- Salary Souce "Need new dropdown" (IDBI Bank, HDFC Bank, Cash Payout, NEFT)
+- Salary  - Amount , From (Date picker) , To (Date picker)  with ("Add More Option")
+
+Employee
+- create view employee component and Added the profile section data.(Done)
+
+21/1/2025
+1. Remove the Add user popup code.(Done)
+2. Remove the ui elements section and its code on the project.(Done)
+3. Remove Languages section from the header.(Done)
+4. Changed the frontend and backend skills checkboxes on add and edit employee. 
+

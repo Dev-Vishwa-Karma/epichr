@@ -27,7 +27,7 @@
                     // $stmt = $conn->prepare("SELECT * FROM departments WHERE id = ?");
                     $stmt = $conn->prepare("
                         SELECT d.*, 
-                            (SELECT COUNT(*) FROM employees e WHERE e.job_role = d.department_name) AS total_employee
+                            (SELECT COUNT(*) FROM employees e WHERE e.department_id = d.department_id AND e.deleted_at IS NULL) AS total_employee
                         FROM departments d
                         WHERE d.id = ?
                     ");
@@ -50,7 +50,7 @@
                     // $result = $conn->query("SELECT * FROM departments");
                     $result = $conn->query("
                         SELECT d.*, 
-                            (SELECT COUNT(*) FROM employees e WHERE e.job_role = d.department_name) AS total_employee
+                            (SELECT COUNT(*) FROM employees e WHERE e.department_id = d.id AND e.deleted_at IS NULL) AS total_employee
                         FROM departments d
                     ");
                     if ($result) {

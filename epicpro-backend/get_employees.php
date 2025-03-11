@@ -35,16 +35,24 @@ function uploadFile($file, $targetDir, $allowedTypes = [], $maxSize = 2 * 1024 *
 {
     if ($file['error'] === UPLOAD_ERR_OK) {
         $fileType = mime_content_type($file['tmp_name']);
+        error_log("Detected MIME Type: " . $fileType);
         $fileSize = $file['size'];
 
         // Validate file type
         if (!empty($allowedTypes) && !in_array($fileType, $allowedTypes)) {
-            throw new Exception("Invalid file type: $fileType");
+            sendJsonResponse('error', null, "Invalid file type: $fileType");
         }
 
         // Validate file size
         if ($fileSize > $maxSize) {
             throw new Exception("File size exceeds the maximum allowed size of $maxSize bytes");
+        }
+
+        $originalFileName = $file['name'];
+        $extension = pathinfo($originalFileName, PATHINFO_EXTENSION);
+        
+        if (!$extension) {
+            $extension = 'pdf'; // Set default extension if missing
         }
 
         // Generate a unique file name
@@ -75,7 +83,16 @@ if (isset($action)) {
         case 'view':
             if (isset($_GET['user_id']) && validateId($_GET['user_id'])) {
                 // Prepare SELECT statement with WHERE clause using a placeholder to prevent SQL injection
-                $stmt = $conn->prepare("SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL");
+                // $stmt = $conn->prepare("SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL");
+                // Get specific employee with department info
+                $stmt = $conn->prepare("
+                    SELECT e.*, 
+                        d.department_name, 
+                        d.department_head 
+                    FROM employees e
+                    LEFT JOIN departments d ON e.department_id = d.id
+                    WHERE e.id = ? AND e.deleted_at IS NULL
+                ");
                 $stmt->bind_param('i', $_GET['user_id']);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -90,10 +107,38 @@ if (isset($action)) {
                 $roleFilter = isset($_GET['role']) ? $_GET['role'] : 'all';
                 if ($roleFilter == 'employee') {
                     // If 'employee' role filter is passed, show only employees with role 'employee'
-                    $stmt = $conn->prepare("SELECT * FROM employees WHERE role = 'employee' AND deleted_at IS NULL");
+                    // $stmt = $conn->prepare("SELECT * FROM employees WHERE role = 'employee' AND deleted_at IS NULL");
+                    $stmt = $conn->prepare("
+                        SELECT e.*, 
+                            d.department_name, 
+                            d.department_head 
+                        FROM employees e
+                        LEFT JOIN departments d ON e.department_id = d.id
+                        WHERE e.role = 'employee' AND e.deleted_at IS NULL
+                        ORDER BY e.id DESC
+                    ");
+                } else if ($roleFilter == 'admin') {
+                    $stmt = $conn->prepare("
+                        SELECT e.*, 
+                            d.department_name, 
+                            d.department_head 
+                        FROM employees e
+                        LEFT JOIN departments d ON e.department_id = d.id
+                        WHERE (e.role = 'admin' OR e.role = 'super_admin') 
+                        AND e.deleted_at IS NULL
+                        ORDER BY e.id DESC
+                    ");
                 } else {
                     // If no filter or 'all', show all employees
-                    $stmt = $conn->prepare("SELECT * FROM employees WHERE deleted_at IS NULL");
+                    $stmt = $conn->prepare("
+                        SELECT e.*, 
+                            d.department_name, 
+                            d.department_head 
+                        FROM employees e
+                        LEFT JOIN departments d ON e.department_id = d.id
+                        WHERE e.deleted_at IS NULL
+                        ORDER BY e.id DESC
+                    ");
                 }
 
                 $stmt->execute();
@@ -116,6 +161,7 @@ if (isset($action)) {
             // Capture and sanitize POST data
             $data = [
                 'code' => $_POST['code'] ?? null,
+                'department_id' => $_POST['department_id'] ?? null,
                 'first_name' => $_POST['first_name'] ?? null,
                 'last_name' => $_POST['last_name'] ?? null,
                 'username' => $_POST['username'] ?? null,
@@ -231,16 +277,16 @@ if (isset($action)) {
             // Insert into employees table
             $stmt = $conn->prepare(
                 "INSERT INTO employees 
-                (code, first_name, last_name, username, email, role, profile, dob, gender, password, joining_date, mobile_no1, mobile_no2, address_line1, address_line2, 
+                (department_id, code, first_name, last_name, username, email, role, profile, dob, gender, password, joining_date, mobile_no1, mobile_no2, address_line1, address_line2, 
                 emergency_contact1, emergency_contact2, emergency_contact3, frontend_skills, backend_skills, account_holder_name, account_number, ifsc_code, bank_name, bank_address,
                 aadhar_card_number, aadhar_card_file, pan_card_number, pan_card_file, driving_license_number, driving_license_file, facebook_url, twitter_url, linkedin_url, instagram_url, upwork_profile_url, resume, created_by) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
 
             // Bind parameters dynamically (use an array to store the data)
-
             $stmt->bind_param(
-                'ssssssssssssssssssssssssssssssssssssss',
+                'issssssssssssssssssssssssssssssssssssss',
+                $data['department_id'],
                 $next_user_code,
                 $data['first_name'],
                 $data['last_name'],
@@ -287,30 +333,55 @@ if (isset($action)) {
 
                 $salaryDetails = $_POST['salaryDetails'] ?? [];
 
-                // Insert salary details into the salary_details table
-                $salary_stmt = $conn->prepare(
-                    "INSERT INTO salary_details (employee_id, source, amount, from_date, to_date) 
-                    VALUES (?, ?, ?, ?, ?)"
-                );
-
-                foreach ($salaryDetails as $detail) {
-                    // Bind the parameters for each salary entry
-                    $salary_stmt->bind_param(
-                        'issss',
-                        $employee_id,
-                        $detail['source'],
-                        $detail['amount'],
-                        $detail['from_date'],
-                        $detail['to_date']
+                // Check if salary details are not empty.
+                if (!empty($salaryDetails)) {
+                    // Insert salary details into the salary_details table
+                    $salary_stmt = $conn->prepare(
+                        "INSERT INTO salary_details (employee_id, source, amount, from_date, to_date) 
+                        VALUES (?, ?, ?, ?, ?)"
                     );
 
-                    // Execute the insert for each salary detail
-                    if (!$salary_stmt->execute()) {
-                        $salary_error = $salary_stmt->error;
-                        sendJsonResponse('error', null, "Failed to add salary detail: $salary_error");
-                        exit; // Exit if any insert fails
+                    foreach ($salaryDetails as $detail) {
+                        // Trim and validate fields to ensure there is no empty data
+                        $source = isset($detail['source']) ? trim($detail['source']) : '';
+                        $amount = isset($detail['amount']) && is_numeric($detail['amount']) && $detail['amount'] !== '' ? (int)$detail['amount'] : null;
+                        $from_date = isset($detail['from_date']) && !empty($detail['from_date']) ? $detail['from_date'] : null;
+                        $to_date = isset($detail['to_date']) && !empty($detail['to_date']) ? $detail['to_date'] : null;
+
+                        // Skip the insertion if any of the required fields are empty or invalid
+                        if (empty($source) || $amount === null || $from_date === null || $to_date === null) {
+                            continue; // Skip this salary detail if data is invalid
+                        }
+
+                        // Bind the parameters for each salary entry
+                        $salary_stmt->bind_param(
+                            'issss',
+                            $employee_id,
+                            $detail['source'],
+                            $amount,
+                            $from_date,
+                            $to_date
+                        );
+
+                        // Execute the insert for each salary detail
+                        if (!$salary_stmt->execute()) {
+                            $salary_error = $salary_stmt->error;
+                            sendJsonResponse('error', null, "Failed to add salary detail: $salary_error");
+                            exit; // Exit if any insert fails
+                        }
                     }
                 }
+
+                // Fetch department details based on department_id
+                $dept_stmt = $conn->prepare("SELECT department_name, department_head FROM departments WHERE id = ?");
+                $dept_stmt->bind_param("i", $data['department_id']);
+                $dept_stmt->execute();
+                $dept_result = $dept_stmt->get_result();
+                $department = $dept_result->fetch_assoc();
+
+                // If department exists, get its details
+                $department_name = $department['department_name'] ?? null;
+                $department_head = $department['department_head'] ?? null;
 
                 $created_at = date('Y-m-d H:i:s');
                 
@@ -331,10 +402,14 @@ if (isset($action)) {
 
                 sendJsonResponse('success', [
                     'id' => $employee_id,
+                    'department_id' => $data['department_id'],
+                    'department_name' => $department_name,
+                    'department_head' => $department_head,
+                    'code' => $data['code'],
                     'first_name' => $data['first_name'],
                     'last_name' => $data['last_name'],
                     'email' => $data['email'],
-                    'role' => 'employee',
+                    'role' => $role,
                     'created_by' => $created_by,
                     'created_at' => $created_at
                 ], 'Employee and salary details added successfully');
@@ -362,6 +437,9 @@ if (isset($action)) {
                 $data = [];
 
                 // Capture and sanitize POST data for each field conditionally
+                if (!empty($_POST['department_id'])) {
+                    $data['department_id'] = $_POST['department_id'];
+                }
                 if (!empty($_POST['first_name'])) {
                     $data['first_name'] = $_POST['first_name'];
                 }
@@ -498,7 +576,7 @@ if (isset($action)) {
                 // Upload Aadhaar card
                 $aadharCardFile = $_FILES['aadhar_card_file'];
                 if ($aadharCardFile) {
-                    $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                    $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/octet-stream']);
                 }
 
                 // Upload PAN card
@@ -516,7 +594,7 @@ if (isset($action)) {
                 // Upload resume
                 $resumeFile = $_FILES['resume'];
                 if ($resumeFile) {
-                    $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
+                    $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/octet-stream']);
                 }
 
                 // Check if admin or super_admin is updating another user's profile
@@ -591,6 +669,19 @@ if (isset($action)) {
                         }
                     }
 
+                    // Fetch department details based on department_id
+                    if (!empty($data['department_id'])) {
+                        $dept_stmt = $conn->prepare("SELECT department_name, department_head FROM departments WHERE id = ?");
+                        $dept_stmt->bind_param("i", $data['department_id']);
+                        $dept_stmt->execute();
+                        $dept_result = $dept_stmt->get_result();
+                        $department = $dept_result->fetch_assoc();
+
+                        // If department exists, get its details
+                        $department_name = $department['department_name'] ?? null;
+                        $department_head = $department['department_head'] ?? null;
+                    }
+
                     $updatedData = [
                         'id' => $id,
                         'first_name' => $data['first_name'],
@@ -606,7 +697,9 @@ if (isset($action)) {
                         'joining_date' => $data['joining_date'],
                         'job_role' => $data['job_role'],
                         'facebook_url' => $data['facebook_url'],
-                        'twitter_url' => $data['twitter_url']
+                        'twitter_url' => $data['twitter_url'],
+                        'department_name' => $department_name,
+                        'department_head' => $department_head,
                     ];
 
                     sendJsonResponse('success', $updatedData, "Employee and salary details updated successfully");

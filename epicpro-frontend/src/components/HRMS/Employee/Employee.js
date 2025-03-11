@@ -511,17 +511,22 @@ class Employee extends Component {
 		const { fixNavbar, /* statisticsOpen, statisticsClose */ } = this.props;
 		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave, currentPageEmployees,  currentPageLeaves, dataPerPage, loading } = this.state;
 
+		// Handle empty employee data safely
+		console.log('employeeData === ', employeeData);
+		const employeeList = (employeeData || []).length > 0 ? employeeData : [];
+		const leaveList = (employeeLeavesData || []).length > 0 ? employeeLeavesData : [];
+
 		// Pagination Logic for Employees
 		const indexOfLastEmployee = this.state.currentPageEmployees * dataPerPage;
 		const indexOfFirstEmployee = indexOfLastEmployee - dataPerPage;
-		const currentEmployees = employeeData.slice(indexOfFirstEmployee, indexOfLastEmployee);
-		const totalPagesEmployees = Math.ceil(employeeData.length / dataPerPage);
+		const currentEmployees = employeeList.slice(indexOfFirstEmployee, indexOfLastEmployee);
+		const totalPagesEmployees = Math.ceil(employeeList.length / dataPerPage);
 
 		// Pagination logic for employee leaves
 		const indexOfLastLeave = this.state.currentPageLeaves * dataPerPage;
 		const indexOfFirstLeave = indexOfLastLeave - dataPerPage;
-		const currentEmployeeLeaves = employeeLeavesData.slice(indexOfFirstLeave, indexOfLastLeave);
-		const totalPagesLeaves = Math.ceil(employeeLeavesData.length / dataPerPage);
+		const currentEmployeeLeaves = leaveList.slice(indexOfFirstLeave, indexOfLastLeave);
+		const totalPagesLeaves = Math.ceil(leaveList.length / dataPerPage);
 
 		return (
 			<>
@@ -742,7 +747,7 @@ class Employee extends Component {
 																					year: 'numeric',
 																				}).format(new Date(employee.joining_date))}
 																			</td>
-																			<td>{employee.job_role}</td>
+																			<td>{employee.department_name}</td>
 																			<td>
 																				<button 
 																					type="button"

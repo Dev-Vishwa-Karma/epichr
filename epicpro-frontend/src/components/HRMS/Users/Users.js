@@ -7,13 +7,17 @@ class Users extends Component {
 		this.state = {
 			logged_in_employee_id: null,
 			logged_in_employee_role: null,
-			employeeId: "",
+			employeeCode: "",
 			firstName: "",
 			lastName: "",
-			email: "",
-			mobileNo: "",
-			selectedRole: "",
 			username: "",
+			email: "",
+			selectedRole: "",
+			dob: "",
+			gender: "",
+			mobileNo: "",
+			departments: [],  // Stores all departments
+        	selectedDepartment: "",
 			password: "",
 			confirmPassword: "",
 			users: [],
@@ -38,12 +42,12 @@ class Users extends Component {
 		}
 
 		// Make the GET API call when the component is mounted
-		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php`)
+		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=admin`)
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {
 			  	this.setState({
-					users: data.data,
+					users: data.data, // only admin and super_admin users
 					allUsers: data.data,
 					loading: false
 				});
@@ -55,7 +59,48 @@ class Users extends Component {
 			this.setState({ error: 'Failed to fetch data', loading: false });
 			console.error(err);
 		});
+
+		// Fetch all users to generate the correct employee code
+		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view`)
+		.then(response => response.json())
+		.then(data => {
+			if (data.status === 'success') {
+				// Generate next employee Code from all users
+				const nextEmployeeCode = this.generateNewUserCode(data.data);
+				this.setState({ employeeCode: nextEmployeeCode });
+			} else {
+				this.setState({ error: data.message });
+			}
+		})
+		.catch(err => {
+			this.setState({ error: 'Failed to fetch all users' });
+			console.error(err);
+		});
+
+		// Get department data from departments table
+		fetch(`${process.env.REACT_APP_API_URL}/departments.php`)
+        .then(response => response.json())
+        .then(data => {
+			this.setState({ departments: data.data });
+        })
+        .catch(error => console.error("Error fetching departments:", error));
 	}
+
+	generateNewUserCode = (users) => {
+		if (!users || users.length === 0) {
+			return "EMP001"; // Default if no users exist
+		}
+	
+		// Extract numeric part from employee IDs
+		const userCodes = users
+			.map(user => user.code) // Assuming 'code' holds the employee ID (e.g., "User005")
+			.filter(code => code.match(/^EMP\d+$/)) // Ensure it matches "EMPXXX" format
+			.map(code => parseInt(code.replace(/\D/g, ""), 10)); // Extract numbers
+	
+		const maxCode = Math.max(...userCodes); // Find the highest number
+		const nextCode = (maxCode + 1).toString().padStart(3, "0"); // Increment and format
+		return `EMP${nextCode}`;
+	};
 
 	// Handle input changes
     handleInputChangeForAddUser = (event) => {
@@ -71,30 +116,31 @@ class Users extends Component {
                 ...prevState.selectedUser,
                 [name]: value,
             },
+			[name]: value,
         }));
-		this.setState({
-            selectedRole: value, // Update selectedRole in state
-        });
     };
 
-	// Add department data API call
+	// Add user data API call
     addUser = () => {
-        const {logged_in_employee_id, logged_in_employee_role, employeeId, firstName, lastName, email, mobileNo, selectedRole, username, confirmPassword} = this.state;
+        const {logged_in_employee_id, logged_in_employee_role, employeeCode, firstName, lastName, username, email, selectedRole, dob, gender, mobileNo, selectedDepartment, confirmPassword} = this.state;
 
         // Validate form inputs
-        if (!employeeId || !firstName || !email || !username) {
+        if (!employeeCode || !firstName || !email || !username) {
             console.log("Please fill in all fields");
             return;
         }
 
         const addUserData = new FormData();
-        addUserData.append('code', employeeId);
+        addUserData.append('department_id', selectedDepartment);
+        addUserData.append('code', employeeCode);
         addUserData.append('first_name', firstName);
         addUserData.append('last_name', lastName);
-        addUserData.append('email', email);
-        addUserData.append('mobile_no1', mobileNo);
-        addUserData.append('selected_role', selectedRole);
         addUserData.append('username', username);
+        addUserData.append('email', email);
+        addUserData.append('selected_role', selectedRole);
+        addUserData.append('dob', dob);
+        addUserData.append('gender', gender);
+        addUserData.append('mobile_no1', mobileNo);
         addUserData.append('password', confirmPassword);
 		addUserData.append('logged_in_employee_id', logged_in_employee_id);
 		addUserData.append('logged_in_employee_role', logged_in_employee_role);
@@ -107,24 +153,47 @@ class Users extends Component {
         .then((response) => response.json())
         .then((data) => {
             if (data.status === "success") {
-                // Update the department list
+				// Ensure 'users' is an array before updating it
+				const updatedUsers = [data.data, ...this.state.users];
+
+				// Generate next employee code based on the updated list
+				const nextEmployeeCode = this.generateNewUserCode(updatedUsers);
+
                 this.setState((prevState) => ({
-                    users: [...(prevState.users || []), data.data], // Assuming the backend returns the new department
-                    employeeId: "",
+                    users: updatedUsers, // Assuming the backend returns the new department
+                    employeeCode: nextEmployeeCode,
                     firstName: "",
                     lastName: "",
+					username: "",
 					email: "",
 					mobileNo: "",
 					selectedRole:"",
-					username: "",
+					gender: "",
+					selectedDepartment: "",
+					dob: "",
 					password: "",
-					confirmPassword: ""
+					confirmPassword: "",
+					showSuccess: true,
+                	successMessage: "User added successfully!"
                 }));
+
+				setTimeout(() => this.setState({ showSuccess: false }), 3000);
             } else {
-                console.log("Failed to add user");
+				this.setState({
+					showError: true,
+					errorMessage: "Failed to add user. Please try again.",
+				});
+				setTimeout(() => this.setState({ showError: false }), 3000);
             }
         })
-        .catch((error) => console.error("Error:", error));
+        .catch((error) => {
+			console.error("Error:", error);
+			this.setState({
+				showError: true,
+				errorMessage: "An error occurred. Please try again later.",
+			});
+			setTimeout(() => this.setState({ showError: false }), 3000);
+		});
     };
 
 	// Handle edit button click
@@ -154,7 +223,7 @@ class Users extends Component {
         updateProfileData.append('last_name', selectedUser.last_name);
         updateProfileData.append('email', selectedUser.email);
         updateProfileData.append('selected_role', selectedUser.role);
-        updateProfileData.append('job_role', selectedUser.job_role);
+        updateProfileData.append('department_id', selectedUser.department_id);
         updateProfileData.append('logged_in_employee_id', logged_in_employee_id);
         updateProfileData.append('logged_in_employee_role', logged_in_employee_role);
 
@@ -174,16 +243,29 @@ class Users extends Component {
                 
                     return {
                         users: updatedUserData,
+						successMessage: "User updated successfully!",
+						showSuccess: true,
                     };
                 });
 
                 document.querySelector("#editUserModal .close").click();
-                // Optionally reload the department data here
+
+				setTimeout(() => this.setState({ showSuccess: false }), 3000);
             } else {
-                console.log('Failed to update user!');
+				this.setState({
+					showError: true,
+					errorMessage: "Failed to update user. Please try again.",
+				});
+				setTimeout(() => this.setState({ showError: false }), 3000);
             }
         })
-        .catch((error) => console.error('Error updating user:', error));
+		.catch((error) => {
+			console.error("Error:", error);
+			this.setState({
+				showError: true,
+				errorMessage: "An error occurred. Please try again later.",
+			});
+		});
     };
 
 	openDeleteModal = (userId) => {
@@ -233,11 +315,23 @@ class Users extends Component {
 					deleteUser: null,  // Clear the deleteUser state
 				});
 				document.querySelector("#deleteUserModal .close").click();
+
+				setTimeout(() => this.setState({ showSuccess: false }), 3000);
 			} else {
-				alert('Failed to delete department.');
+				this.setState({
+					showError: true,
+					errorMessage: "Failed to delete user. Please try again.",
+				});
+				// setTimeout(() => this.setState({ showError: false }), 3000);
 			}
         })
-        .catch((error) => console.error('Error:', error));
+		.catch((error) => {
+			console.error("Error:", error);
+			this.setState({
+				showError: true,
+				errorMessage: `An error occurred: ${error.message || error}`,
+			});
+		});
     };
 
 	// Handle Pagination
@@ -270,19 +364,75 @@ class Users extends Component {
         });
     };
 
+	// Render function for success and error messages
+    renderAlertMessages = () => {
+        return (
+            
+            <>
+                {/* Add the alert for success messages */}
+                <div 
+                    className={`alert alert-success alert-dismissible fade show ${this.state.showSuccess ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-circle-check me-2"></i>
+                    {this.state.successMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showSuccess: false })}
+                    >
+                    </button>
+                </div>
+
+                {/* Add the alert for error messages */}
+                <div 
+                    className={`alert alert-danger alert-dismissible fade show ${this.state.showError ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                    {this.state.errorMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showError: false })}
+                    >
+                    </button>
+                </div>
+            </>
+        );
+    };
+
 	render() {
 
 		const { fixNavbar } = this.props;
 		const { users, error, selectedUser, currentPage, dataPerPage, loading } = this.state;
 
 		// Pagination Logic
-        const indexOfLastImage = currentPage * dataPerPage;
-        const indexOfFirstImage = indexOfLastImage - dataPerPage;
-        const currentUsers = users.slice(indexOfFirstImage, indexOfLastImage);
-
+        const indexOfLastUser = currentPage * dataPerPage;
+        const indexOfFirstUser = indexOfLastUser - dataPerPage;
+        const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
         const totalPages = Math.ceil(users.length / dataPerPage);
 		return (
 			<>
+				{this.renderAlertMessages()} {/* Show Messages */}
 				<div>
 					<div className={`section-body ${fixNavbar ? "marginTop" : ""} `}>
 						<div className="container-fluid">
@@ -393,7 +543,7 @@ class Users extends Component {
 																			year: 'numeric',
 																		}).format(new Date(user.created_at))}
 																	</td>
-																	<td>{user.job_role}</td>
+																	<td>{user.department_name}</td>
 																	<td>
 																		<button 
 																			type="button"
@@ -463,9 +613,9 @@ class Users extends Component {
 														<input
 															type="text"
 															className="form-control"
-															placeholder="Employee ID *"
-															name="employeeId"
-                                                    		value={this.state.employeeId}
+															placeholder="Employee Code *"
+															name="employeeCode"
+                                                    		value={this.state.employeeCode}
                                                     		onChange={this.handleInputChangeForAddUser}
 														/>
 													</div>
@@ -490,6 +640,18 @@ class Users extends Component {
 															placeholder="Last Name"
 															name='lastName'
 															value={this.state.lastName}
+															onChange={this.handleInputChangeForAddUser}
+														/>
+													</div>
+												</div>
+												<div className="col-md-4 col-sm-12">
+													<div className="form-group">
+														<input
+															type="text"
+															className="form-control"
+															placeholder="Username *"
+															name='username'
+															value={this.state.username}
 															onChange={this.handleInputChangeForAddUser}
 														/>
 													</div>
@@ -529,22 +691,58 @@ class Users extends Component {
 															<option>Select Role Type</option>
 															<option value="super_admin">Super Admin</option>
 															<option value="admin">Admin</option>
-															<option value="employee">Employee</option>
 														</select>
 													</div>
 												</div>
+												<div className="col-sm-6 col-md-4">
+                                                    <div className="form-group">
+                                                        <select 
+                                                            name="gender"
+                                                            className="form-control"
+                                                            id='gender'
+                                                            value={this.state.gender}
+                                                            onChange={this.handleSelectChange}
+                                                            required
+                                                        >
+                                                            <option value="">Select Gender</option>
+                                                            <option value="male" >Male</option>
+                                                            <option value="female" >Female</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+												
+												
+												{/* Department Dropdown */}
 												<div className="col-md-4 col-sm-12">
 													<div className="form-group">
-														<input
-															type="text"
-															className="form-control"
-															placeholder="Username *"
-															name='username'
-															value={this.state.username}
-															onChange={this.handleInputChangeForAddUser}
-														/>
+														<select
+															className="form-control show-tick"
+															value={this.state.selectedDepartment}
+															onChange={this.handleSelectChange}
+															name="selectedDepartment"
+														>
+															<option value="">Select Department</option>
+															{this.state.departments.map((dept) => (
+																<option key={dept.id} value={dept.id}>
+																	{dept.department_name}
+																</option>
+															))}
+														</select>
 													</div>
 												</div>
+												<div className="col-sm-6 col-md-4">
+                                                    <div className="form-group">
+                                                        <input
+                                                            type="date"
+                                                            id="dob"
+                                                            name="dob"
+															title='dob'
+                                                            className="form-control"
+                                                            value={this.state.dob}
+                                                            onChange={this.handleInputChangeForAddUser}
+                                                        />
+                                                    </div>
+                                                </div>
 												<div className="col-md-4 col-sm-12">
 													<div className="form-group">
 														<input
@@ -671,7 +869,7 @@ class Users extends Component {
 																		</label>
 																	</td>
 																</tr>
-																<tr>
+																{/* <tr>
 																	<td>Employee</td>
 																	<td>
 																		<label className="custom-control custom-checkbox">
@@ -713,8 +911,8 @@ class Users extends Component {
 																			</span>
 																		</label>
 																	</td>
-																</tr>
-																<tr>
+																</tr> */}
+																{/* <tr>
 																	<td>HR Admin</td>
 																	<td>
 																		<label className="custom-control custom-checkbox">
@@ -758,7 +956,7 @@ class Users extends Component {
 																			</span>
 																		</label>
 																	</td>
-																</tr>
+																</tr> */}
 															</tbody>
 														</table>
 													</div>
@@ -845,20 +1043,25 @@ class Users extends Component {
 															<option value="">Select Role Type</option>
 															<option value="super_admin">Super Admin</option>
 															<option value="admin">Admin</option>
-															<option value="employee">Employee</option>
 														</select>
 													</div>
 												</div>
 												<div className="col-md-6">
 													<div className="form-group">
 														<label className="form-label">Position</label>
-														<input
-															type="text"
-															className="form-control"
-															value={selectedUser?.job_role || ""} 
-															onChange={this.handleInputChangeForEditUser}
-                                                            name="job_role"
-														/>
+														<select
+															className="form-control show-tick"
+															value={selectedUser?.department_id || ""}  // Bind value to state
+															onChange={this.handleSelectChange}  // Update state on 
+															name="department_id"
+														>
+															<option value="">Select Position</option>
+															{this.state.departments.map((dept) => (
+																<option key={dept.id} value={dept.id}>
+																	{dept.department_name}
+																</option>
+															))}
+														</select>
 													</div>
 												</div>
 											</div>
