@@ -19,7 +19,15 @@ class Report extends Component {
             activityId: null,
             reportError: null,
             reportSuccess: null,
-            addReportByAdminError: null
+            addReportByAdminError: null,
+            existingFullName: "",
+            existingActivityType: "",
+            existingActivityDescription: "",
+            existingActivityInTime: "",
+            existingActivityOutTime: null,
+            existingActivitySatus: "",
+            existingActivityId: null,
+            editReportByAdminError: null
         };
     }
 
@@ -72,6 +80,140 @@ class Report extends Component {
         this.setState({ activityId: report.activity_id });
     };
 
+    setStateForEditReportModel = (report) => {
+        this.setState({ existingFullName: report.full_name, existingActivityType: report.activity_type, existingActivityDescription: report.description, existingActivityInTime: report.complete_in_time, existingActivityOutTime: report.complete_out_time, existingActivitySatus: report.status, existingActivityId: report.activity_id });
+    };
+
+    // Handle textarea input change admin
+    handleEditActivityDescriptionChange = (event) => {
+        this.setState({ existingActivityDescription: event.target.value });
+    };
+
+    // Handle in time input change admin
+    handleEditActivityInTimeChange = (event) => {
+        this.setState({ existingActivityInTime: event.target.value });
+    };
+
+    // Handle in out input change admin
+    handleEditActivityOutTimeChange = (event) => {
+        this.setState({ existingActivityOutTime: event.target.value });
+    };
+
+    // Handle status input change admin
+    handleEditActivityStatusChange = (event) => {
+        this.setState({ existingActivitySatus: event.target.value });
+    };
+
+    editReportByAdmin = () => {
+        const { existingActivityDescription, existingActivityInTime, existingActivityOutTime, existingActivitySatus, existingActivityId, existingActivityType } = this.state;
+
+        // Validate form inputs
+        if (!existingActivityInTime) {
+            this.setState({ editReportByAdminError: 'In-Time is required!' });
+            setTimeout(() => {
+                this.setState({ editReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+        if (!existingActivitySatus) {
+            this.setState({ editReportByAdminError: 'Status is required!' });
+            setTimeout(() => {
+                this.setState({ editReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+        if (existingActivitySatus == 'active' && existingActivityOutTime) {
+            this.setState({ editReportByAdminError: 'Please leave the Out-Time field empty when the status is set to Active!' });
+            setTimeout(() => {
+                this.setState({ editReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+        if (existingActivitySatus == 'completed' && !existingActivityOutTime) {
+            this.setState({ editReportByAdminError: 'Please enter the Out-Time when the status is set to Completed' });
+            setTimeout(() => {
+                this.setState({ editReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+        if (existingActivitySatus == 'auto closed' && !existingActivityOutTime) {
+            this.setState({ editReportByAdminError: 'Please enter the Out-Time when the status is set to Auto Closed' });
+            setTimeout(() => {
+                this.setState({ editReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+        if (existingActivityInTime && existingActivityOutTime) {
+            const inTimeDate = new Date(existingActivityInTime);
+            const outTimeDate = new Date(existingActivityOutTime);
+            if (outTimeDate <= inTimeDate) {
+                this.setState({ editReportByAdminError: 'Out-Time must be later than In-Time.' });
+                setTimeout(() => {
+                    this.setState({ editReportByAdminError: null });
+                }, 5000)
+                return;
+            }
+        }
+        if (existingActivityType == 'Punch' && existingActivityInTime && existingActivityOutTime && !existingActivityDescription) {
+            this.setState({ editReportByAdminError: 'Punch-out Report/Description is required!' });
+            setTimeout(() => {
+                this.setState({ editReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+        if (existingActivityType == 'Break' && existingActivityInTime && !existingActivityOutTime && !existingActivityDescription) {
+            this.setState({ editReportByAdminError: 'Break Reason/Description is required!' });
+            setTimeout(() => {
+                this.setState({ editReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+        if (existingActivityType == 'Break' && existingActivityInTime && existingActivityOutTime && !existingActivityDescription) {
+            this.setState({ editReportByAdminError: 'Break Reason/Description is required!' });
+            setTimeout(() => {
+                this.setState({ editReportByAdminError: null });
+            }, 5000)
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('activity_id', existingActivityId);
+        formData.append('description', existingActivityDescription);
+        formData.append('in_time', existingActivityInTime);
+        formData.append('out_time', existingActivityOutTime);
+        formData.append('status', existingActivitySatus);
+        formData.append('updated_by', window.user.id); //updated by admin
+
+        // API call to add break
+        fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=edit-report-by-admin`, {
+            method: "POST",
+            body: formData,
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.status === "success") {
+                    this.setState({ reportSuccess: data.message });
+                    setTimeout(() => {
+                        this.setState({ reportSuccess: null });
+                    }, 5000)
+                    document.querySelector("#addReportModal .close").click();
+                    this.componentDidMount();
+                } else {
+                    this.setState({ editReportByAdminError: data.message });
+                    setTimeout(() => {
+                        this.setState({ editReportByAdminError: null });
+                    }, 5000)
+                }
+            })
+            .catch((error) => {
+                this.setState({ editReportByAdminError: 'Something went wrong. Please try again.' });
+                setTimeout(() => {
+                    this.setState({ editReportByAdminError: null });
+                }, 5000);
+            });
+
+    };
+
     deleteReport = () => {
         const { activityId } = this.state;
 
@@ -106,11 +248,11 @@ class Report extends Component {
                 }
             })
             .catch((error) => {
-				this.setState({ reportError: 'Something went wrong. Please try again.' });
-				setTimeout(() => {
-					this.setState({ reportError: null });
-				}, 5000);
-			});
+                this.setState({ reportError: 'Something went wrong. Please try again.' });
+                setTimeout(() => {
+                    this.setState({ reportError: null });
+                }, 5000);
+            });
     };
 
 
@@ -167,11 +309,11 @@ class Report extends Component {
 
         const formData = new FormData();
         formData.append('employee_id', selectedEmployee);
-		formData.append('activity_type', 'Punch');
-		formData.append('description', punchOutReport);
-		formData.append('status', selectedStatus);
+        formData.append('activity_type', 'Punch');
+        formData.append('description', punchOutReport);
+        formData.append('status', selectedStatus);
         formData.append('created_by', window.user.id); //created by admin
-		formData.append('updated_by', window.user.id); //updated by admin
+        formData.append('updated_by', window.user.id); //updated by admin
 
         // API call to add break
         fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=add-by-admin`, {
@@ -195,16 +337,16 @@ class Report extends Component {
                 }
             })
             .catch((error) => {
-				this.setState({ addReportByAdminError: 'Something went wrong. Please try again.' });
-				setTimeout(() => {
-					this.setState({ addReportByAdminError: null });
-				}, 5000);
-			});
+                this.setState({ addReportByAdminError: 'Something went wrong. Please try again.' });
+                setTimeout(() => {
+                    this.setState({ addReportByAdminError: null });
+                }, 5000);
+            });
     };
 
     render() {
         const { fixNavbar } = this.props;
-        const { reports, selectedReport, isModalOpen, error, employeeData, selectedStatus, selectedEmployee, punchOutReport, activityId, reportError, reportSuccess, addReportByAdminError } = this.state;
+        const { reports, selectedReport, isModalOpen, error, employeeData, selectedStatus, selectedEmployee, punchOutReport, activityId, reportError, reportSuccess, addReportByAdminError, existingFullName, existingActivityType, existingActivityDescription, existingActivityInTime, existingActivityOutTime, existingActivitySatus, existingActivityId, editReportByAdminError } = this.state;
         return (
             <>
                 <div>
@@ -269,10 +411,21 @@ class Report extends Component {
                                                                         )}
                                                                     </td>
                                                                     <td>
-                                                                        {report.activity_type === 'Punch' && (
-                                                                            <button type="button" class="btn btn-icon btn-sm" title="View" data-toggle="modal" data-target="#viewpunchOutReportModal" onClick={() => this.openModal(report)}><i class="icon-eye text-danger"></i></button>
-                                                                        )}
-                                                                        <button type="button" class="btn btn-icon btn-sm" title="Edit"><i class="icon-pencil text-danger"></i></button>
+                                                                    {
+                                                                        !(report.activity_type === 'Punch' && !report.complete_out_time) && (
+                                                                            <button 
+                                                                                type="button" 
+                                                                                className="btn btn-icon btn-sm" 
+                                                                                title="View" 
+                                                                                data-toggle="modal" 
+                                                                                data-target="#viewpunchOutReportModal" 
+                                                                                onClick={() => this.openModal(report)}
+                                                                            >
+                                                                                <i className="icon-eye text-danger"></i>
+                                                                            </button>
+                                                                        )
+                                                                    }
+                                                                        <button type="button" class="btn btn-icon btn-sm" title="Edit" data-toggle="modal" data-target="#editReportModal" onClick={() => this.setStateForEditReportModel(report)}><i class="icon-pencil text-danger"></i></button>
                                                                         <button type="button" class="btn btn-icon btn-sm" title="Delete" data-toggle="modal" data-target="#deleteReportModal" onClick={() => this.setActivityIdState(report)}><i class="icon-trash text-danger"></i></button>
                                                                     </td>
                                                                 </tr>
@@ -298,7 +451,7 @@ class Report extends Component {
                         <div className="modal-dialog" role="break">
                             <div className="modal-content">
                                 <div className="modal-header">
-                                    <h5 className="modal-title" id="viewpunchOutReportModal">Punch Out Report</h5>
+                                    <h5 className="modal-title" id="viewpunchOutReportModal">Description</h5>
                                     <button type="button" className="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
                                 </div>
                                 <div className="modal-body">
@@ -340,8 +493,8 @@ class Report extends Component {
                                 <div className="modal-body">
                                     {/* Display activity error message outside the modal */}
                                     {addReportByAdminError && (
-                                            <div className="alert alert-danger mb-0">{addReportByAdminError}</div>
-                                        )}
+                                        <div className="alert alert-danger mb-0">{addReportByAdminError}</div>
+                                    )}
                                     <div className="row clearfix">
                                         <div className="col-md-12">
                                             <div className="form-group">
@@ -386,6 +539,77 @@ class Report extends Component {
                                 </div>
                                 <div className="modal-footer">
                                     <button type="button" className="btn btn-primary" onClick={this.addReportByAdmin}>Save changes</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Modal for edit report details */}
+                    <div className="modal fade" id="editReportModal" tabIndex={-1} role="dialog" aria-labelledby="editReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                        <div className="modal-dialog" role="break">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h5 className="modal-title" id="editReportModal">Edit Report</h5>
+                                    <button type="button" className="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                </div>
+                                {/* Display activity error message outside the modal */}
+                                {editReportByAdminError && (
+                                    <div className="alert alert-danger mb-0">{editReportByAdminError}</div>
+                                )}
+                                <div className="modal-body">
+                                    <div className="row clearfix">
+                                        <div className="col-md-12">
+                                            <div className="form-group">
+                                                <label class="form-label">Employee</label>
+                                                <input type="text" class="form-control" name="example-disabled-input" placeholder="Disabled.." readonly="" value={existingFullName} />
+                                            </div>
+                                        </div>
+                                        <div className="col-md-12">
+                                            <div className="form-group">
+                                                <label class="form-label">Activity Type</label>
+                                                <input type="text" class="form-control" name="example-disabled-input" placeholder="Disabled.." readonly="" value={existingActivityType} />
+                                            </div>
+                                        </div>
+                                        <div className="col-md-12">
+                                            <div className="form-group">
+                                                <label class="form-label">Description</label>
+                                                <textarea
+                                                    className="form-control"
+                                                    placeholder="Description"
+                                                    value={existingActivityDescription}
+                                                    rows="10"
+                                                    cols="50"
+                                                    onChange={this.handleEditActivityDescriptionChange}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="col-md-12">
+                                            <div className="form-group">
+                                                <label class="form-label">In Time</label>
+                                                <input type="text" class="form-control" value={existingActivityInTime} onChange={this.handleEditActivityInTimeChange} />
+                                            </div>
+                                        </div>
+                                        <div className="col-md-12">
+                                            <div className="form-group">
+                                                <label class="form-label">Out Time</label>
+                                                <input type="text" class="form-control" value={existingActivityOutTime} onChange={this.handleEditActivityOutTimeChange} />
+                                            </div>
+                                        </div>
+                                        <div className="col-md-12">
+                                            <div className="form-group">
+                                                <label class="form-label">Status</label>
+                                                <select className="form-control" value={existingActivitySatus} onChange={this.handleEditActivityStatusChange}>
+                                                    <option value="">Select Status</option>
+                                                    <option value="active">Active</option>
+                                                    <option value="completed">Completed</option>
+                                                    <option value="auto closed">Auto Closed</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-primary" onClick={this.editReportByAdmin}>Save Changes</button>
                                 </div>
                             </div>
                         </div>

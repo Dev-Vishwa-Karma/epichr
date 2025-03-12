@@ -517,6 +517,30 @@ if (isset($action)) {
             }
             break;
 
+        case 'edit-report-by-admin':
+            // Capture POST data
+            $activity_id = $_POST['activity_id']; //required
+            $description = $_POST['description'] ?? '';
+            $in_time = $_POST['in_time']; //required
+            $out_time = $_POST['out_time'] ?? null;
+            $status = $_POST['status']; //required
+            $updated_by = $_POST['updated_by']; //required
+            date_default_timezone_set('Asia/Kolkata');
+
+            //Validate
+            if (!$activity_id) {
+                sendJsonResponse('error', null, 'Invalid Request!');
+            }
+            if (!$in_time) {
+                sendJsonResponse('error', null, 'In-Time is required!');
+            }
+            if (!$status) {
+                sendJsonResponse('error', null, 'Status is required!');
+            }
+
+            $stmt = $conn->prepare("UPDATE activities SET description = ?, in_time = ?, out_time = ?,  WHERE id = ?");
+            
+
         default:
             sendJsonResponse('error', null, 'Invalid action');
             break;
