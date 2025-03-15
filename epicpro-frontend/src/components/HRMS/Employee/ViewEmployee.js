@@ -185,24 +185,29 @@ class ViewEmployee extends Component {
         }
 
         const { id, role } = storedUser;
-
         // Create a new FormData object
         const updatedProfileData = new FormData();
-        updatedProfileData.append("id", employee.id);
-        updatedProfileData.append("logged_in_employee_id", id);
-        updatedProfileData.append("logged_in_employee_role", role);
-        updatedProfileData.append("first_name", employee.first_name);
-        updatedProfileData.append("last_name", employee.last_name);
-        updatedProfileData.append("username", employee.username);
-        updatedProfileData.append("email", employee.email);
-        updatedProfileData.append("mobile_no1", employee.mobile_no1);
-        updatedProfileData.append("dob", employee.dob);
-        updatedProfileData.append("address_line1", employee.address_line1);
-        updatedProfileData.append("about_me", employee.about_me);
+
+        // Helper function to ensure blank values are stored as empty strings
+        const appendField = (key, value) => {
+            updatedProfileData.append(key, value !== undefined && value !== null ? value : "");
+        };
+
+        appendField("id", employee.id);
+        appendField("logged_in_employee_id", id);
+        appendField("logged_in_employee_role", role);
+        appendField("first_name", employee.first_name);
+        appendField("last_name", employee.last_name);
+        appendField("username", employee.username);
+        appendField("email", employee.email);
+        appendField("mobile_no1", employee.mobile_no1);
+        appendField("dob", employee.dob);
+        appendField("address_line1", employee.address_line1);
+        appendField("about_me", employee.about_me);
 
         // Preserve social media URLs even if not updated
-        updatedProfileData.append("facebook_url", employee.facebook_url || "");
-        updatedProfileData.append("twitter_url", employee.twitter_url || "");
+        appendField("facebook_url", employee.facebook_url);
+        appendField("twitter_url", employee.twitter_url);
     
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employee.id}`, {
             method: "POST",

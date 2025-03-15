@@ -155,53 +155,53 @@ if (isset($action)) {
 
         case 'add':
             // Capture and sanitize POST data
-            $logged_in_user_id = $_POST['logged_in_employee_id'] ?? null; // Get logged-in user ID
-            $logged_in_user_role = $_POST['logged_in_employee_role'] ?? null; // Get logged-in user role
+            $logged_in_user_id = $_POST['logged_in_employee_id'] ?? ""; // Get logged-in user ID
+            $logged_in_user_role = $_POST['logged_in_employee_role'] ?? ""; // Get logged-in user role
 
             // Capture and sanitize POST data
             $data = [
-                'code' => $_POST['code'] ?? null,
-                'department_id' => $_POST['department_id'] ?? null,
-                'first_name' => $_POST['first_name'] ?? null,
-                'last_name' => $_POST['last_name'] ?? null,
-                'username' => $_POST['username'] ?? null,
-                'email' => $_POST['email'] ?? null,
-                'role' => $_POST['selected_role'] ?? null,
-                'profile' => $_FILES['photo']['name'] ?? null,
-                'dob' => $_POST['dob'] ?? null,
-                'gender' => $_POST['gender'] ?? null,
-                'password' => $_POST['password'] ?? null,
-                'joining_date' => $_POST['joining_date'] ?? null,
-                'mobile_no1' => $_POST['mobile_no1'] ?? null,
-                'mobile_no2' => $_POST['mobile_no2'] ?? null,
-                'address_line1' => $_POST['address_line1'] ?? null,
-                'address_line2' => $_POST['address_line2'] ?? null,
-                'emergency_contact1' => $_POST['emergency_contact1'] ?? null,
-                'emergency_contact2' => $_POST['emergency_contact2'] ?? null,
-                'emergency_contact3' => $_POST['emergency_contact3'] ?? null,
-                'frontend_skills' => $_POST['frontend_skills'] ?? null,
-                'backend_skills' => $_POST['backend_skills'] ?? null,
-                'account_holder_name' => $_POST['account_holder_name'] ?? null,
-                'account_number' => $_POST['account_number'] ?? null,
-                'ifsc_code' => $_POST['ifsc_code'] ?? null,
-                'bank_name' => $_POST['bank_name'] ?? null,
-                'bank_address' => $_POST['bank_address'] ?? null,
-                'aadhar_card_number' => $_POST['aadhar_card_number'] ?? null,
-                'aadhar_card_file' => $_FILES['aadhar_card_file']['name'] ?? null,
-                'pan_card_number' => $_POST['pan_card_number'] ?? null,
-                'pan_card_file' => $_FILES['pan_card_file']['name'] ?? null,
-                'driving_license_number' => $_POST['driving_license_number'] ?? null,
-                'driving_license_file' => $_FILES['driving_license_file']['name'] ?? null,
-                'facebook_url' => $_POST['facebook_url'] ?? null,
-                'twitter_url' => $_POST['twitter_url'] ?? null,
-                'linkedin_url' => $_POST['linkedin_url'] ?? null,
-                'instagram_url' => $_POST['instagram_url'] ?? null,
-                'upwork_profile_url' => $_POST['upwork_profile_url'] ?? null,
-                'resume' => $_FILES['resume']['name'] ?? null,
+                'code' => $_POST['code'] ?? "",
+                'department_id' => $_POST['department_id'] ?? "",
+                'first_name' => $_POST['first_name'] ?? "",
+                'last_name' => $_POST['last_name'] ?? "",
+                'username' => $_POST['username'] ?? "",
+                'email' => $_POST['email'] ?? "",
+                'role' => $_POST['selected_role'] ?? "",
+                'profile' => $_FILES['photo']['name'] ?? "",
+                'dob' => $_POST['dob'] ?? "",
+                'gender' => $_POST['gender'] ?? "",
+                'password' => $_POST['password'] ?? "",
+                'joining_date' => $_POST['joining_date'] ?? "",
+                'mobile_no1' => $_POST['mobile_no1'] ?? "",
+                'mobile_no2' => $_POST['mobile_no2'] ?? "",
+                'address_line1' => $_POST['address_line1'] ?? "",
+                'address_line2' => $_POST['address_line2'] ?? "",
+                'emergency_contact1' => $_POST['emergency_contact1'] ?? "",
+                'emergency_contact2' => $_POST['emergency_contact2'] ?? "",
+                'emergency_contact3' => $_POST['emergency_contact3'] ?? "",
+                'frontend_skills' => $_POST['frontend_skills'] ?? "",
+                'backend_skills' => $_POST['backend_skills'] ?? "",
+                'account_holder_name' => $_POST['account_holder_name'] ?? "",
+                'account_number' => $_POST['account_number'] ?? "",
+                'ifsc_code' => $_POST['ifsc_code'] ?? "",
+                'bank_name' => $_POST['bank_name'] ?? "",
+                'bank_address' => $_POST['bank_address'] ?? "",
+                'aadhar_card_number' => $_POST['aadhar_card_number'] ?? "",
+                'aadhar_card_file' => $_FILES['aadhar_card_file']['name'] ?? "",
+                'pan_card_number' => $_POST['pan_card_number'] ?? "",
+                'pan_card_file' => $_FILES['pan_card_file']['name'] ?? "",
+                'driving_license_number' => $_POST['driving_license_number'] ?? "",
+                'driving_license_file' => $_FILES['driving_license_file']['name'] ?? "",
+                'facebook_url' => $_POST['facebook_url'] ?? "",
+                'twitter_url' => $_POST['twitter_url'] ?? "",
+                'linkedin_url' => $_POST['linkedin_url'] ?? "",
+                'instagram_url' => $_POST['instagram_url'] ?? "",
+                'upwork_profile_url' => $_POST['upwork_profile_url'] ?? "",
+                'resume' => $_FILES['resume']['name'] ?? "",
             ];
 
             // Upload profile image
-            $profileImage = $_FILES['photo'] ?? null;
+            $profileImage = $_FILES['photo'] ?? "";
             if ($profileImage) {
                 try {
                     // Upload to profile folder
@@ -225,25 +225,25 @@ if (isset($action)) {
             }
 
             // Upload Aadhaar card
-            $aadharCardFile = $_FILES['aadhar_card_file'] ?? null;
+            $aadharCardFile = $_FILES['aadhar_card_file'] ?? "";
             if ($aadharCardFile) {
                 $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
             }
 
             // Upload PAN card
-            $panCardFile = $_FILES['pan_card_file'] ?? null;
+            $panCardFile = $_FILES['pan_card_file'] ?? "";
             if ($panCardFile) {
                 $data['pan_card_file'] = uploadFile($panCardFile, 'uploads/documents/pan', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
             }
 
             // Upload driving license
-            $drivingLicenseFile = $_FILES['driving_license_file'] ?? null;
+            $drivingLicenseFile = $_FILES['driving_license_file'] ?? "";
             if ($drivingLicenseFile) {
                 $data['driving_license_file'] = uploadFile($drivingLicenseFile, 'uploads/documents/driving_license', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
             }
 
             // Upload resume
-            $resumeFile = $_FILES['resume'] ?? null;
+            $resumeFile = $_FILES['resume'] ?? "";
             if ($resumeFile) {
                 $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
             }
@@ -344,12 +344,12 @@ if (isset($action)) {
                     foreach ($salaryDetails as $detail) {
                         // Trim and validate fields to ensure there is no empty data
                         $source = isset($detail['source']) ? trim($detail['source']) : '';
-                        $amount = isset($detail['amount']) && is_numeric($detail['amount']) && $detail['amount'] !== '' ? (int)$detail['amount'] : null;
-                        $from_date = isset($detail['from_date']) && !empty($detail['from_date']) ? $detail['from_date'] : null;
-                        $to_date = isset($detail['to_date']) && !empty($detail['to_date']) ? $detail['to_date'] : null;
+                        $amount = isset($detail['amount']) && is_numeric($detail['amount']) && $detail['amount'] !== '' ? (int)$detail['amount'] : '';
+                        $from_date = isset($detail['from_date']) && !empty($detail['from_date']) ? $detail['from_date'] : '';
+                        $to_date = isset($detail['to_date']) && !empty($detail['to_date']) ? $detail['to_date'] : '';
 
                         // Skip the insertion if any of the required fields are empty or invalid
-                        if (empty($source) || $amount === null || $from_date === null || $to_date === null) {
+                        if (empty($source) || $amount === '' || $from_date === '' || $to_date === '') {
                             continue; // Skip this salary detail if data is invalid
                         }
 
@@ -380,8 +380,8 @@ if (isset($action)) {
                 $department = $dept_result->fetch_assoc();
 
                 // If department exists, get its details
-                $department_name = $department['department_name'] ?? null;
-                $department_head = $department['department_head'] ?? null;
+                $department_name = $department['department_name'] ?? '';
+                $department_head = $department['department_head'] ?? '';
 
                 $created_at = date('Y-m-d H:i:s');
                 
@@ -437,117 +437,106 @@ if (isset($action)) {
                 $data = [];
 
                 // Capture and sanitize POST data for each field conditionally
-                if (!empty($_POST['department_id'])) {
+                if (isset($_POST['department_id'])) {
                     $data['department_id'] = $_POST['department_id'];
                 }
-                if (!empty($_POST['first_name'])) {
+                if (isset($_POST['first_name'])) {
                     $data['first_name'] = $_POST['first_name'];
                 }
-                if (!empty($_POST['last_name'])) {
+                if (isset($_POST['last_name'])) {
                     $data['last_name'] = $_POST['last_name'];
                 }
-                if (!empty($_POST['username'])) {
+                if (isset($_POST['username'])) {
                     $data['username'] = $_POST['username'];
                 }
-                if (!empty($_POST['email'])) {
+                if (isset($_POST['email'])) {
                     $data['email'] = $_POST['email'];
                 }
-                if (!empty($_POST['selected_role'])) {
+                if (isset($_POST['selected_role'])) {
                     $data['role'] = $_POST['selected_role'];
                 }
-                if (!empty($_POST['about_me'])) {
+                if (isset($_POST['about_me'])) {
                     $data['about_me'] = $_POST['about_me'];
                 }
-                if (!empty($_POST['gender'])) {
+                if (isset($_POST['gender'])) {
                     $data['gender'] = $_POST['gender'];
                 }
-                if (!empty($_POST['dob'])) {
+                if (isset($_POST['dob'])) {
                     $data['dob'] = $_POST['dob'];
                 }
-                if (!empty($_POST['joining_date'])) {
+                if (isset($_POST['joining_date'])) {
                     $data['joining_date'] = $_POST['joining_date'];
                 }
-                if (!empty($_POST['job_role'])) {
+                if (isset($_POST['job_role'])) {
                     $data['job_role'] = $_POST['job_role'];
                 }
-                if (!empty($_POST['mobile_no1'])) {
+                if (isset($_POST['mobile_no1'])) {
                     $data['mobile_no1'] = $_POST['mobile_no1'];
                 }
-                if (!empty($_POST['mobile_no2'])) {
+                if (isset($_POST['mobile_no2'])) {
                     $data['mobile_no2'] = $_POST['mobile_no2'];
                 }
-                if (!empty($_POST['address_line1'])) {
+                if (isset($_POST['address_line1'])) {
                     $data['address_line1'] = $_POST['address_line1'];
                 }
-                if (!empty($_POST['address_line2'])) {
+                if (isset($_POST['address_line2'])) {
                     $data['address_line2'] = $_POST['address_line2'];
                 }
-                if (!empty($_POST['emergency_contact1'])) {
+                if (isset($_POST['emergency_contact1'])) {
                     $data['emergency_contact1'] = $_POST['emergency_contact1'];
                 }
-                if (!empty($_POST['emergency_contact2'])) {
+                if (isset($_POST['emergency_contact2'])) {
                     $data['emergency_contact2'] = $_POST['emergency_contact2'];
                 }
-                if (!empty($_POST['emergency_contact3'])) {
+                if (isset($_POST['emergency_contact3'])) {
                     $data['emergency_contact3'] = $_POST['emergency_contact3'];
                 }
-                if (!empty($_POST['frontend_skills'])) {
+                if (isset($_POST['frontend_skills'])) {
                     $data['frontend_skills'] = $_POST['frontend_skills'];
                 }
-                if (!empty($_POST['backend_skills'])) {
+                if (isset($_POST['backend_skills'])) {
                     $data['backend_skills'] = $_POST['backend_skills'];
                 }
-                if (!empty($_POST['account_holder_name'])) {
+                if (isset($_POST['account_holder_name'])) {
                     $data['account_holder_name'] = $_POST['account_holder_name'];
                 }
-                if (!empty($_POST['account_number'])) {
+                if (isset($_POST['account_number'])) {
                     $data['account_number'] = $_POST['account_number'];
                 }
-                if (!empty($_POST['ifsc_code'])) {
+                if (isset($_POST['ifsc_code'])) {
                     $data['ifsc_code'] = $_POST['ifsc_code'];
                 }
-                if (!empty($_POST['bank_name'])) {
+                if (isset($_POST['bank_name'])) {
                     $data['bank_name'] = $_POST['bank_name'];
                 }
-                if (!empty($_POST['bank_address'])) {
+                if (isset($_POST['bank_address'])) {
                     $data['bank_address'] = $_POST['bank_address'];
                 }
-                if (!empty($_POST['source'])) {
-                    $data['source'] = $_POST['source'];
-                }
-                if (!empty($_POST['amount'])) {
-                    $data['amount'] = $_POST['amount'];
-                }
-                if (!empty($_POST['from_date'])) {
-                    $data['from_date'] = $_POST['from_date'];
-                }
-                if (!empty($_POST['to_date'])) {
-                    $data['to_date'] = $_POST['to_date'];
-                }
-                if (!empty($_POST['aadhar_card_number'])) {
+                if (isset($_POST['aadhar_card_number'])) {
                     $data['aadhar_card_number'] = $_POST['aadhar_card_number'];
                 }
-                if (!empty($_POST['driving_license_number'])) {
+                if (isset($_POST['driving_license_number'])) {
                     $data['driving_license_number'] = $_POST['driving_license_number'];
                 }
-                if (!empty($_POST['pan_card_number'])) {
+                if (isset($_POST['pan_card_number'])) {
                     $data['pan_card_number'] = $_POST['pan_card_number'];
                 }
-                if (!empty($_POST['facebook_url'])) {
+                if (isset($_POST['facebook_url'])) {
                     $data['facebook_url'] = $_POST['facebook_url'];
                 }
-                if (!empty($_POST['twitter_url'])) {
+                if (isset($_POST['twitter_url'])) {
                     $data['twitter_url'] = $_POST['twitter_url'];
                 }
-                if (!empty($_POST['linkedin_url'])) {
+                if (isset($_POST['linkedin_url'])) {
                     $data['linkedin_url'] = $_POST['linkedin_url'];
                 }
-                if (!empty($_POST['instagram_url'])) {
+                if (isset($_POST['instagram_url'])) {
                     $data['instagram_url'] = $_POST['instagram_url'];
                 }
-                if (!empty($_POST['upwork_profile_url'])) {
+                if (isset($_POST['upwork_profile_url'])) {
                     $data['upwork_profile_url'] = $_POST['upwork_profile_url'];
                 }
+
                 // File uploads: handle files only if they are present
                 // Upload profile image
                 $profileImage = $_FILES['photo'];
@@ -612,10 +601,15 @@ if (isset($action)) {
                 // Dynamically create column assignments and bind parameters
                 foreach ($data as $column => $value) {
                     $updateColumns[] = "$column = ?";
-                    $updateValues[] = $value;
-                    $types .= 's'; // Assuming all fields are strings, adjust if necessary
+                    // $updateValues[] = $value;
+                    $updateValues[] = ($value === null || $value === '') ? '' : $value;
+                    // Determine the data type
+                    if (in_array($column, ['department_id'])) {
+                        $types .= 'i'; // Integers
+                    } else {
+                        $types .= 's'; // Strings
+                    }
                 }
-
                 // SQL query
                 $sql = "UPDATE employees SET " . implode(', ', $updateColumns) . " WHERE id = ?";
                 $updateValues[] = $id;
@@ -636,36 +630,49 @@ if (isset($action)) {
 
                     $salaryDetails = $_POST['salaryDetails'] ?? [];
 
-                    // Update salary details into the salary_details table
-                    $salary_stmt = $conn->prepare(
-                        "UPDATE salary_details SET source = ?, amount = ?, from_date = ?, to_date = ?, updated_at = ? WHERE employee_id = ? AND id = ?"
-                    );
-                    $updated_at = date('Y-m-d H:i:s');
-
-                    foreach ($salaryDetails as $detail) {
-                        // Ensure that the `id` field is present in the incoming data
-                        if (!isset($detail['id'])) {
-                            sendJsonResponse('error', null, "Salary detail ID is missing.");
-                            exit;
-                        }
-
-                        // Bind the parameters for each salary entry
-                        $salary_stmt->bind_param(
-                            'sssssii',
-                            $detail['source'],
-                            $detail['amount'],
-                            $detail['from_date'],
-                            $detail['to_date'],
-                            $updated_at,
-                            $id,
-                            $detail['id'] // Auto-increment ID
+                    if (!empty($salaryDetails)) {
+                        // Update salary details into the salary_details table
+                        $salary_stmt = $conn->prepare(
+                            "UPDATE salary_details SET source = ?, amount = ?, from_date = ?, to_date = ?, updated_at = ? WHERE employee_id = ? AND id = ?"
                         );
+                        $updated_at = date('Y-m-d H:i:s');
 
-                        // Execute the insert for each salary detail
-                        if (!$salary_stmt->execute()) {
-                            $salary_error = $salary_stmt->error;
-                            sendJsonResponse('error', null, "Failed to add salary detail: $salary_error");
-                            exit; // Exit if any insert fails
+                        
+                        foreach ($salaryDetails as $detail) {
+                            if (!isset($detail['id'])) {
+                                sendJsonResponse('error', null, "Salary detail ID is missing.");
+                                exit;
+                            }
+
+                            // Trim and validate fields to ensure there is no empty data
+                            $source = isset($detail['source']) ? trim($detail['source']) : '';
+                            $amount = isset($detail['amount']) && is_numeric($detail['amount']) && $detail['amount'] !== '' ? (int)$detail['amount'] : null;
+                            $from_date = isset($detail['from_date']) && !empty($detail['from_date']) ? $detail['from_date'] : null;
+                            $to_date = isset($detail['to_date']) && !empty($detail['to_date']) ? $detail['to_date'] : null;
+    
+                            // Skip the update if any of the required fields are empty or invalid
+                            if (empty($source) || $amount === null || $from_date === null || $to_date === null) {
+                                continue; // Skip this salary detail if data is invalid
+                            }
+    
+                            // Bind the parameters for each salary entry
+                            $salary_stmt->bind_param(
+                                'sssssii',
+                                $detail['source'],
+                                $detail['amount'],
+                                $detail['from_date'],
+                                $detail['to_date'],
+                                $updated_at,
+                                $id,
+                                $detail['id'] // Auto-increment ID
+                            );
+
+                            // Execute the insert for each salary detail
+                            if (!$salary_stmt->execute()) {
+                                $salary_error = $salary_stmt->error;
+                                sendJsonResponse('error', null, "Failed to add salary detail: $salary_error");
+                                exit; // Exit if any insert fails
+                            }
                         }
                     }
 

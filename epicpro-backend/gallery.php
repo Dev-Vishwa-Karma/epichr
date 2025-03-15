@@ -83,8 +83,16 @@ if (isset($action)) {
                     $stmt->bind_param("isi", $employee_id, $imagePath, $created_by);
                     
                     if ($stmt->execute()) {
+                        $uploadedImageId = $conn->insert_id;
+
+                        // Update the employee's profile field with the latest uploaded image
+                        $updateStmt = $conn->prepare("UPDATE employees SET profile = ? WHERE id = ?");
+                        $updateStmt->bind_param("si", $imagePath, $employee_id);
+                        $updateStmt->execute();
+                        $updateStmt->close();
+
                         $uploadedImages[] = [
-                            'id' => $conn->insert_id,
+                            'id' => $uploadedImageId,
                             'employee_id' => $employee_id,
                             'url' => $imagePath,
                             'created_at' => $created_at,

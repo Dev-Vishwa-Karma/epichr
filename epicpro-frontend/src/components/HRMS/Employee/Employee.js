@@ -119,7 +119,7 @@ class Employee extends Component {
 		return { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves };
 	};	
 
-	componentDidMount() {
+	/* componentDidMount() {
 		if (window.user) {
 			const { id, role } = window.user;
 			this.setState({
@@ -156,7 +156,67 @@ class Employee extends Component {
 			this.setState({ message: 'Failed to fetch data', loading: false });
 			console.error(err);
 		});
+	} */
+
+	componentDidMount() {
+		if (window.user) {
+			const { id, role } = window.user;
+			this.setState({
+				employee_id: id || null,
+				logged_in_employee_role: role || null,
+			});
+	
+			const apiUrl = process.env.REACT_APP_API_URL;
+			let employeesUrl = "";
+			let leavesUrl = "";
+	
+			// Role-based API selection
+			if (role === "admin" || role === "super_admin") {
+				employeesUrl = `${apiUrl}/get_employees.php?action=view&role=employee`; // Fetch all employees
+				leavesUrl = `${apiUrl}/employee_leaves.php`; // Fetch all leaves
+			} else if (role === "employee") {
+				employeesUrl = `${apiUrl}/get_employees.php?action=view&user_id=${id}`; // Fetch only logged-in employee
+				leavesUrl = `${apiUrl}/employee_leaves.php?employee_id=${id}`; // Fetch only logged-in employee's leaves
+			} else {
+				console.warn("Invalid role or role not found.");
+				return;
+			}
+	
+			// Fetch employees & leaves based on role
+			Promise.all([
+				fetch(employeesUrl).then(res => res.json()),
+				fetch(leavesUrl).then(res => res.json()),
+			])
+			.then(([employeesData, employeeLeavesData]) => {
+				// If only a single employee is returned, convert it to an array
+				let employeesArray = Array.isArray(employeesData.data) ? employeesData.data : [employeesData.data];
+
+				let employeesLeaveArray = Array.isArray(employeeLeavesData.data) ? employeeLeavesData.data : [employeeLeavesData.data];
+
+				// Calculate leaves
+				const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = 
+					this.calculateLeaveCounts(employeeLeavesData.data);
+	
+				this.setState({
+					employeeData: employeesArray,
+					filterEmployeesData: employeesArray,
+					employeeLeavesData: employeesLeaveArray,
+					totalLeaves,
+					pendingLeaves,
+					approvedLeaves,
+					rejectedLeaves,
+					loading: false
+				});
+			})
+			.catch(err => {
+				this.setState({ message: "Failed to fetch data", loading: false });
+				console.error(err);
+			});
+		} else {
+			console.warn("window.user is undefined");
+		}
 	}
+		
 
 	goToEditEmployee(employee, employeeId) {
 		// Fetch salary details based on employee_id
@@ -312,10 +372,14 @@ class Employee extends Component {
         }
 
 		// If role is 'employee', force status to 'pending'
-		const finalStatus = logged_in_employee_role === "employee" ? "pending" : status;
+		// const finalStatus = logged_in_employee_role === "employee" ? "pending" : status;
+		const finalStatus = status || "pending"; 
+
+		// Ensure correct employee_id is sent
+		const selectedEmployeeId = logged_in_employee_role === "employee" ? window.user.id : employee_id;
 
         const addEmployeeLeaveData = new FormData();
-        addEmployeeLeaveData.append('employee_id', employee_id);
+        addEmployeeLeaveData.append('employee_id', selectedEmployeeId);
         addEmployeeLeaveData.append('from_date', from_date);
         addEmployeeLeaveData.append('to_date', to_date);
         addEmployeeLeaveData.append('reason', reason);
@@ -512,7 +576,6 @@ class Employee extends Component {
 		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave, currentPageEmployees,  currentPageLeaves, dataPerPage, loading } = this.state;
 
 		// Handle empty employee data safely
-		console.log('employeeData === ', employeeData);
 		const employeeList = (employeeData || []).length > 0 ? employeeData : [];
 		const leaveList = (employeeLeavesData || []).length > 0 ? employeeLeavesData : [];
 
@@ -968,6 +1031,27 @@ class Employee extends Component {
 										value={this.state.employee_id}
 										onChange={this.handleInputChangeForAddLeaves}
 									/>
+									{(this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin") && (
+										<div className="col-md-12">
+											<div className="form-group">
+												<label className="form-label">Select Employee</label>
+												<select 
+													name="employee_id"
+													className="form-control"
+													onChange={this.handleInputChangeForAddLeaves}
+													value={this.state.employee_id}
+												>
+													<option value="">Select Employee</option>
+													{this.state.employeeData.map((emp) => (
+														<option key={emp.id} value={emp.id}>
+															{emp.first_name} {emp.last_name}
+														</option>
+													))}
+												</select>
+											</div>
+										</div>
+									)}
+
 									<div className="col-md-6">
 										<div className="form-group">
 											<label className="form-label">From Date</label>
@@ -1005,44 +1089,24 @@ class Employee extends Component {
 											/>
 										</div>
 									</div>
-									{/* <div className="col-sm-6 col-md-6">
-										<div className="form-group">
-											<label className="form-label">Status</label>
-											<select 
-												name="status"
-												className="form-control"
-												id='status'
-												onChange={this.handleLeaveStatus}
-												value={this.state.status}
-											>
-												<option value="">Select Status</option>
-												<option value="approved" >Approved</option>
-												<option value="pending" >Pending</option>
-												<option value="rejected" >Rejected</option>
-											</select>
+									{(this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin") && (
+										<div className="col-sm-6 col-md-6">
+											<div className="form-group">
+												<label className="form-label">Status</label>
+												<select 
+													name="status"
+													className="form-control"
+													id="status"
+													onChange={this.handleLeaveStatus}
+													value={this.state.status}
+												>
+													<option value="pending">Pending</option> 
+													<option value="approved">Approved</option>
+													<option value="rejected">Rejected</option>
+												</select>
+											</div>
 										</div>
-									</div> */}
-									<div className="col-sm-6 col-md-6">
-										<div className="form-group">
-											<label className="form-label">Status</label>
-											<select 
-												name="status"
-												className="form-control"
-												id="status"
-												onChange={this.handleLeaveStatus}
-												value={this.state.status}
-												disabled={this.state.logged_in_employee_role === "employee"} // Disable selection for employees
-											>
-												<option value="pending">Pending</option> 
-												{(this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin") && (
-													<>
-														<option value="approved">Approved</option>
-														<option value="rejected">Rejected</option>
-													</>
-												)}
-											</select>
-										</div>
-									</div>
+									)}
 								</div>
 							</div>
 							<div className="modal-footer">
@@ -1128,9 +1192,18 @@ class Employee extends Component {
 														onChange={this.handleInputChangeForEditEmployeeLeave}
 													>
 														<option value="">Select Status</option>
-														<option value="approved" >Approved</option>
-														<option value="pending" >Pending</option>
-														<option value="rejected" >Rejected</option>
+														{this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin" ? (
+															<>
+																<option value="approved">Approved</option>
+																<option value="pending">Pending</option>
+																<option value="rejected">Rejected</option>
+															</>
+														) : (
+															<>
+																<option value="pending">Pending</option>
+																<option value="rejected">Rejected</option>
+															</>
+														)}
 													</select>
 												</div>
 											</div>

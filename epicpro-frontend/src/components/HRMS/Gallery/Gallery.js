@@ -325,7 +325,12 @@ class Gallery extends Component {
                                                 </span>
                                                 <input type="text" className="form-control" placeholder="Search photo" value={this.state.searchQuery} onChange={this.handleSearch}/>
                                             </div>
-                                            <button type="button" className="btn btn-primary ml-2" onClick={this.openModal}>Upload New</button>
+                                            {(window.user?.role === "admin" || window.user?.role === "super_admin") && (
+                                                <button type="button" className="btn btn-primary ml-2" onClick={this.openModal}>
+                                                    Upload New
+                                                </button>
+                                            )}
+                                            {/* <button type="button" className="btn btn-primary ml-2" onClick={this.openModal}>Upload New</button> */}
                                             {/* Modal For Uploading Images */}
                                             <div
                                                 className={`modal fade ${this.state.isModalOpen ? 'show' : ''}`}
@@ -461,7 +466,7 @@ class Gallery extends Component {
                                 ))
                             )}
                             
-                            {!loading && filteredImages.length === 0 && (
+                            {!loading && (window.user?.role === "admin" || window.user?.role === "super_admin") && filteredImages.length === 0 && (
                                 <div className="col-12">
                                     <div className="card p-3 d-flex align-items-center justify-content-center" style={{ height: '300px' }}>
                                         <span>Image not available</span>
