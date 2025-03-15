@@ -131,14 +131,14 @@ class Header extends Component {
 						<div className="page-header">
 							<div className="left">
 								<h1 className="page-title">{this.props.dataFromSubParent}</h1>
-								<select className="custom-select">
+								{/* <select className="custom-select">
 									<option>Year</option>
 									<option>Month</option>
 									<option>Week</option>
 								</select>
 								<div className="input-group xs-hide">
 									<input type="text" className="form-control" placeholder="Search..." />
-								</div>
+								</div> */}
 							</div>
 							<div className="right">
 								<button
