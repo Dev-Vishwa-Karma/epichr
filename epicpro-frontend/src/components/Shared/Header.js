@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { NavLink } from 'react-router-dom';
+import authService from '../Authentication/authService';
 
 class Header extends Component {
 
@@ -20,11 +21,7 @@ class Header extends Component {
 
 		// Check if user exists in localStorage
 		const user = JSON.parse(localStorage.getItem('user'));
-		if (!user) {
-			// If no user is found, redirect to the login page
-			window.location.href = '/login';
-			return;
-		} else {
+		if (user) {
 			window.user = user; // Attach user to the global window object
 			const {id} = window.user;
 			this.setState({
@@ -110,8 +107,7 @@ class Header extends Component {
 
 	// Handle logout functionality
 	handleLogout = () => {
-		// Clear the user data from localStorage
-		localStorage.removeItem('user');
+		authService.logout(); 
 		
 		// Redirect to the login page
 		window.location.href = '/login';
@@ -148,53 +144,6 @@ class Header extends Component {
 									{isPunchedIn ? 'Punch Out' : 'Punch In'}
 								</button>
 								<ul className="nav nav-pills">
-									{/* <li className="nav-item dropdown">
-										<a
-											className="nav-link dropdown-toggle"
-											data-toggle="dropdown"
-
-											role="button"
-											aria-haspopup="true"
-											aria-expanded="false"
-										>
-											Language
-										</a>
-										<div className="dropdown-menu">
-											<a className="dropdown-item" >
-												<img
-													className="w20 mr-2"
-													src="../assets/images/flags/us.svg"
-													alt="fake_url"
-												/>
-												English
-											</a>
-											<div className="dropdown-divider" />
-											<a className="dropdown-item" >
-												<img
-													className="w20 mr-2"
-													src="../assets/images/flags/es.svg"
-													alt="fake_url"
-												/>
-												Spanish
-											</a>
-											<a className="dropdown-item" >
-												<img
-													className="w20 mr-2"
-													src="../assets/images/flags/jp.svg"
-													alt="fake_url"
-												/>
-												japanese
-											</a>
-											<a className="dropdown-item" >
-												<img
-													className="w20 mr-2"
-													src="../assets/images/flags/bl.svg"
-													alt="fake_url"
-												/>
-												France
-											</a>
-										</div>
-									</li> */}
 									<li className="nav-item dropdown">
 										<a
 											className="nav-link dropdown-toggle"

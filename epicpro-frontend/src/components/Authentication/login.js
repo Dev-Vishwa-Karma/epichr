@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
+import authService from '../Authentication/authService';
 
 export default class Login extends Component {
 
@@ -35,16 +36,20 @@ export default class Login extends Component {
 			.then((response) => response.json())
 			.then((data) => {
 				if (data.status === "success") {
-					//alert(data.message);
-
-					// Store user data in local storage
-					localStorage.setItem('user', JSON.stringify(data.data));
 
 					// Update state with user data
 					this.setState({ user: data.data }, () => {
 						// Log user role after state update
 						console.log("User Role:", this.state.user.role);
 					});
+
+					// Store user data in localstorage using authService
+					authService.setUser(data.data);
+
+					// Call onLogin function from App.js
+					if (this.props.onLogin) {
+						this.props.onLogin(data.data);
+					}
 
 					// Redirect to the dashboard or another page
 					this.props.history.push('/');
