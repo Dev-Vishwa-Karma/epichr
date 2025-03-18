@@ -228,12 +228,9 @@ class ViewEmployee extends Component {
 
                     // Update state to re-render UI with new data
                     this.setState({ employee: mergedUserData });
-
-                    console.log("Updated user state:", this.state.employee);
                 } else {
                     // If updating another user from the listing, just update the state
                     this.setState({ employee: updatedUser });
-                    console.log("Updated other employee:", updatedUser);
                 }
 
                 this.setState((prevState) => ({

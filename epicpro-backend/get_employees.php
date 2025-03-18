@@ -419,7 +419,7 @@ if (isset($action)) {
             }
             break;
 
-            // Edit existing user case
+        // Edit existing user case
         case 'edit':
             if (isset($_GET['user_id']) && validateId($_GET['user_id'])) {
                 $id = $_GET['user_id'];
@@ -698,7 +698,7 @@ if (isset($action)) {
                         'email' => $data['email'],
                         'dob' => $data['dob'],
                         'address_line1' => $data['address_line1'],
-                        'role' => $data['role'],
+                        'role' => $data['role'] ?? $logged_in_role,
                         'mobile_no1' => $data['mobile_no1'],
                         'about_me' => $data['about_me'],
                         'joining_date' => $data['joining_date'],
