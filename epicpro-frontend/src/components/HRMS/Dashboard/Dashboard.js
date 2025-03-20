@@ -2,29 +2,41 @@ import React, { Component } from 'react';
 import Columnchart from '../../common/columnchart';
 import { Link } from 'react-router-dom';
 import { connect } from 'react-redux';
+import authService from "../../Authentication/authService";
 
 class Dashboard extends Component {
 	constructor(props) {
 		super(props);
 		this.state = {
-		  totalUsers: 0,
-		  totalEvents: 0,
-		  totalHolidays: 0,
+			totalUsers: 0,
+			totalEmployees: 0,
+			totalEvents: 0,
+			totalHolidays: 0,
+			user: authService.getUser(),
 		};
 	}
 
 	componentDidMount() {
+		var loggedInUser = JSON.parse(localStorage.getItem('user')); // Get logged-in user details
+
 		// Make the GET API call when the component is mounted
-		// fetch('https://cors-anywhere.herokuapp.com/https://abundantpractices.com/hr/get_events.php')
 		fetch(`${process.env.REACT_APP_API_URL}/dashboard.php`)
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {
-				const totalUsers = data.data[0].total_users;
+				let totalUsers = data.data[0].total_users;
+				let totalEmployees = data.data[0].total_employees;
 				const totalHolidays = data.data[0].total_holidays;
 				const totalEvents = data.data[0].total_events;
+
+				// Check user role
+                if (loggedInUser && loggedInUser.role === "employee") {
+                    totalUsers = 0;
+					totalEmployees = 1; // Only show their own count
+                }
+
 				this.setState(
-					{ totalUsers: totalUsers, totalHolidays: totalHolidays, totalEvents: totalEvents}
+					{ totalUsers: totalUsers, totalEmployees: totalEmployees, totalHolidays: totalHolidays, totalEvents: totalEvents}
 				);
 			} else {
 			  	this.setState({ message: data.message }); // Update messages in state
@@ -38,7 +50,7 @@ class Dashboard extends Component {
 
 	render() {
 		const { fixNavbar } = this.props;
-		const { totalUsers, totalHolidays, totalEvents } = this.state;
+		const { totalUsers, totalEmployees, totalHolidays, totalEvents, user } = this.state;
 		return (
 			<>
 				<div>
@@ -56,18 +68,36 @@ class Dashboard extends Component {
 								</div>
 							</div>
 							<div className="row clearfix justify-content-start">
-								<div className="col-6 col-md-4 col-xl-2">
+								<div className="col-6 col-md-4 col-xl-1_7">
 									<div className="card">
 										<div className="card-body ribbon">
 											<div className="ribbon-box green">{totalUsers}</div>
-											<Link to="/hr-users" className="my_sort_cut text-muted">
+											{user.role === "admin" || user.role === "super_admin" ? (
+												<Link to="/hr-users" className="my_sort_cut text-muted">
+													<i className="icon-users" />
+													<span>Users</span>
+												</Link>
+											) : (
+												<div className="my_sort_cut text-muted">
+													<i className="icon-users" />
+													<span>Users</span>
+												</div>
+											)}
+										</div>
+									</div>
+								</div>
+								<div className="col-6 col-md-4 col-xl-1_7">
+									<div className="card">
+										<div className="card-body ribbon">
+											<div className="ribbon-box pink">{totalEmployees}</div>
+											<Link to="/hr-employee" className="my_sort_cut text-muted">
 												<i className="icon-users" />
-												<span>Users</span>
+												<span>Employees</span>
 											</Link>
 										</div>
 									</div>
 								</div>
-								<div className="col-6 col-md-4 col-xl-2">
+								<div className="col-6 col-md-4 col-xl-1_7">
 									<div className="card">
 										<div className="card-body ribbon">
 										<div className="ribbon-box info">{totalHolidays}</div>
@@ -78,7 +108,7 @@ class Dashboard extends Component {
 										</div>
 									</div>
 								</div>
-								<div className="col-6 col-md-4 col-xl-2">
+								<div className="col-6 col-md-4 col-xl-1_7">
 									<div className="card">
 										<div className="card-body ribbon">
 											<div className="ribbon-box orange">{totalEvents}</div>
@@ -89,7 +119,7 @@ class Dashboard extends Component {
 										</div>
 									</div>
 								</div>
-								<div className="col-6 col-md-4 col-xl-2">
+								<div className="col-6 col-md-4 col-xl-1_7">
 									<div className="card">
 										<div className="card-body">
 											<Link to="/hr-payroll" className="my_sort_cut text-muted">
@@ -99,7 +129,7 @@ class Dashboard extends Component {
 										</div>
 									</div>
 								</div>
-								<div className="col-6 col-md-4 col-xl-2">
+								<div className="col-6 col-md-4 col-xl-1_7">
 									<div className="card">
 										<div className="card-body">
 											<Link to="/hr-accounts" className="my_sort_cut text-muted">
@@ -109,7 +139,7 @@ class Dashboard extends Component {
 										</div>
 									</div>
 								</div>
-								<div className="col-6 col-md-4 col-xl-2">
+								<div className="col-6 col-md-4 col-xl-1_7">
 									<div className="card">
 										<div className="card-body">
 											<Link to="/hr-report" className="my_sort_cut text-muted">
@@ -127,13 +157,13 @@ class Dashboard extends Component {
 							<div className="row clearfix row-deck">
 								<div className="col-xl-12 col-lg-12 col-md-12">
 									<div className="card">
-										<div className="card-header">
+										{/* <div className="card-header">
 											<h3 className="card-title">Employee Structure</h3>
 										</div>
 										<div className="card-body text-center">
 											<Columnchart></Columnchart>
 
-										</div>
+										</div> */}
 
 										{/* <div className="card-body text-center">
 												<div className="row clearfix">
@@ -164,10 +194,11 @@ class Dashboard extends Component {
 															<th>#</th>
 															<th>Client Name</th>
 															<th>Team</th>
-															<th>Project</th>
-															<th>Project Cost</th>
+															<th>Project Name</th>
+															<th>Technology</th>
+															{/* <th>Project Cost</th>
 															<th>Payment</th>
-															<th>Status</th>
+															<th>Status</th> */}
 														</tr>
 													</thead>
 													<tbody>
@@ -206,11 +237,12 @@ class Dashboard extends Component {
 																</ul>
 															</td>
 															<td>Angular Admin</td>
-															<td>$14,500</td>
+															<td>Angular</td>
+															{/* <td>$14,500</td>
 															<td>Done</td>
 															<td>
 																<span className="tag tag-success">Delivered</span>
-															</td>
+															</td> */}
 														</tr>
 														<tr>
 															<td>#DF1937</td>
@@ -247,11 +279,12 @@ class Dashboard extends Component {
 																</ul>
 															</td>
 															<td>Angular Admin</td>
-															<td>$14,500</td>
+															<td>Angular</td>
+															{/* <td>$14,500</td>
 															<td>Pending</td>
 															<td>
 																<span className="tag tag-success">Delivered</span>
-															</td>
+															</td> */}
 														</tr>
 														<tr>
 															<td>#YU8585</td>
@@ -273,11 +306,12 @@ class Dashboard extends Component {
 																</ul>
 															</td>
 															<td>One page html Admin</td>
-															<td>$500</td>
+															<td>Html</td>
+															{/* <td>$500</td>
 															<td>Done</td>
 															<td>
 																<span className="tag tag-orange">Submit</span>
-															</td>
+															</td> */}
 														</tr>
 														<tr>
 															<td>#AD1245</td>
@@ -311,11 +345,12 @@ class Dashboard extends Component {
 																</ul>
 															</td>
 															<td>Wordpress One page</td>
-															<td>$1,500</td>
+															<td>Wordpress</td>
+															{/* <td>$1,500</td>
 															<td>Done</td>
 															<td>
 																<span className="tag tag-success">Delivered</span>
-															</td>
+															</td> */}
 														</tr>
 														<tr>
 															<td>#GH8596</td>
@@ -352,11 +387,12 @@ class Dashboard extends Component {
 																</ul>
 															</td>
 															<td>VueJs Application</td>
-															<td>$9,500</td>
+															<td>VueJs</td>
+															{/* <td>$9,500</td>
 															<td>Done</td>
 															<td>
 																<span className="tag tag-success">Delivered</span>
-															</td>
+															</td> */}
 														</tr>
 													</tbody>
 												</table>

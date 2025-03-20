@@ -57,3 +57,11 @@ div.rtl{
     color: #007bff !important;
 }
 
+
+/* Dashboard component css */
+@media (min-width: 1200px) { 
+    .col-xl-1_7 {
+        flex: 0 0 14.2857%;
+        max-width: 14.2857%;
+    }
+}
