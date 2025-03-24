@@ -3,6 +3,7 @@ header("Access-Control-Allow-Origin: *"); // Allow React app
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");   // Allow HTTP methods
 header("Access-Control-Allow-Headers: Content-Type");         // Allow headers like JSON content
 header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
 
 // Include the database connection
 include 'db_connection.php';
@@ -29,20 +30,35 @@ $action = !empty($_GET['action']) ? $_GET['action'] : 'view';
 if (isset($action)) {
     switch ($action) {
         case 'view':
-            if (isset($_GET['id']) && is_numeric($_GET['id']) && $_GET['id'] > 0) {
-                // Prepare SELECT statement with WHERE clause using parameter binding
-                $stmt = $conn->prepare("SELECT * FROM employee_leaves WHERE id = ?");
-                $stmt->bind_param("i", $_GET['id']); // Bind the id as an integer
+            if (isset($_GET['employee_id']) && is_numeric($_GET['employee_id']) && $_GET['employee_id'] > 0) {
+                // Fetch leaves only for the specific employee
+                $stmt = $conn->prepare("SELECT 
+                employee_leaves.id,
+                employee_leaves.employee_id, 
+                employee_leaves.from_date, 
+                employee_leaves.to_date,
+                employee_leaves.reason, 
+                employee_leaves.status,
+                employee_leaves.approved_by,
+                employee_leaves.created_at, 
+                employees.first_name, 
+                employees.last_name, 
+                employees.email
+                FROM employee_leaves
+                INNER JOIN employees ON employee_leaves.employee_id = employees.id
+                WHERE employee_leaves.employee_id = ?");
+                $stmt->bind_param("i", $_GET['employee_id']);
+
                 if ($stmt->execute()) {
                     $result = $stmt->get_result();
                     if ($result) {
                         $employee_leaves = $result->fetch_all(MYSQLI_ASSOC);
-                        sendJsonResponse('success', $employee_leaves, null);
+                        sendJsonResponse('success', $employee_leaves);
                     } else {
-                        sendJsonResponse('error', null, "No leaves found : $conn->error");
+                        sendJsonResponse('error', null, "No leaves found: $conn->error");
                     }
                 } else {
-                    sendJsonResponse('error', null, "Failed to execute query : $stmt->error");
+                    sendJsonResponse('error', null, "Failed to execute query: $stmt->error");
                 }
             } else {
                 // $result = $conn->query("SELECT * FROM employee_leaves");
@@ -71,8 +87,7 @@ if (isset($action)) {
 
         case 'add':
             // Get form data
-            // $employee_id = isset($_POST['employee_id']) ? $_POST['employee_id'] : null;
-            $employee_id = 6;
+            $employee_id = isset($_POST['employee_id']) ? $_POST['employee_id'] : null;
             $from_date = $_POST['from_date'];
             $to_date = $_POST['to_date'];
             $reason = $_POST['reason'];
@@ -131,8 +146,7 @@ if (isset($action)) {
             if (isset($_GET['id']) && is_numeric($_GET['id']) && $_GET['id'] > 0) {
                 $id = $_GET['id'];
                 // Validate and get POST data
-                // $employee_id = isset($_POST['employee_id']) ? $_POST['employee_id'] : null;
-                $employee_id = 7;
+                $employee_id = isset($_POST['employee_id']) ? $_POST['employee_id'] : null;
                 $from_date = $_POST['from_date'];
                 $to_date = $_POST['to_date'];
                 $reason = $_POST['reason'];

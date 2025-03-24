@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { NavLink } from 'react-router-dom';
+import authService from '../Authentication/authService';
 
 class Header extends Component {
 
@@ -11,6 +12,8 @@ class Header extends Component {
 			showModal: false,
 			report: '',
 			error: null,
+			user: null,
+			userId: null,
 			punchError: null,
 			punchSuccess: null,
 			punchErrorModel: null
@@ -21,15 +24,22 @@ class Header extends Component {
 
 		// Check if user exists in localStorage
 		const user = JSON.parse(localStorage.getItem('user'));
-		if (!user) {
-			// If no user is found, redirect to the login page
-			window.location.href = '/login';
-			return;
-		} else {
+		if (user) {
 			window.user = user; // Attach user to the global window object
+			const {id} = window.user;
+			this.setState({
+				user: user,
+				userId: id,
+			})
 		}
 
 		/** Get employees list */
+		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=get_punch_status&user_id=${window.user.id}`, {
+			method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+		})
 		fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=get_punch_status&user_id=${window.user.id}`)
 			.then(response => response.json())
 			.then(data => {
@@ -59,6 +69,9 @@ class Header extends Component {
 		// API call to add break
 		fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=add-by-user`, {
 			method: "POST",
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
 			body: formData,
 		})
 			.then((response) => response.json())
@@ -113,6 +126,9 @@ class Header extends Component {
 		// API call to save the report and punch-out
 		fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=add-by-user`, {
 			method: "POST",
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
 			body: formData,
 		})
 			.then((response) => response.json())
@@ -142,6 +158,8 @@ class Header extends Component {
 
 	// Handle logout functionality
 	handleLogout = () => {
+		authService.logout(); 
+		
 		// Clear the user data from localStorage
 		localStorage.removeItem('user');
 
@@ -151,7 +169,7 @@ class Header extends Component {
 
 	render() {
 		const { fixNavbar, darkHeader } = this.props;
-		const { isPunchedIn, showModal, report, punchError, punchSuccess, punchErrorModel } = this.state;
+		const { isPunchedIn, showModal, report, punchError, punchSuccess, punchErrorModel, userId, user } = this.state;
 		return (
 			<div>
 				<div
@@ -169,14 +187,14 @@ class Header extends Component {
 						<div className="page-header">
 							<div className="left">
 								<h1 className="page-title">{this.props.dataFromSubParent}</h1>
-								<select className="custom-select">
+								{/* <select className="custom-select">
 									<option>Year</option>
 									<option>Month</option>
 									<option>Week</option>
 								</select>
 								<div className="input-group xs-hide">
 									<input type="text" className="form-control" placeholder="Search..." />
-								</div>
+								</div> */}
 							</div>
 							<div className="right">
 								<button
@@ -188,53 +206,6 @@ class Header extends Component {
 									{isPunchedIn ? 'Punch Out' : 'Punch In'}
 								</button>
 								<ul className="nav nav-pills">
-									{/* <li className="nav-item dropdown">
-										<a
-											className="nav-link dropdown-toggle"
-											data-toggle="dropdown"
-
-											role="button"
-											aria-haspopup="true"
-											aria-expanded="false"
-										>
-											Language
-										</a>
-										<div className="dropdown-menu">
-											<a className="dropdown-item" >
-												<img
-													className="w20 mr-2"
-													src="../assets/images/flags/us.svg"
-													alt="fake_url"
-												/>
-												English
-											</a>
-											<div className="dropdown-divider" />
-											<a className="dropdown-item" >
-												<img
-													className="w20 mr-2"
-													src="../assets/images/flags/es.svg"
-													alt="fake_url"
-												/>
-												Spanish
-											</a>
-											<a className="dropdown-item" >
-												<img
-													className="w20 mr-2"
-													src="../assets/images/flags/jp.svg"
-													alt="fake_url"
-												/>
-												japanese
-											</a>
-											<a className="dropdown-item" >
-												<img
-													className="w20 mr-2"
-													src="../assets/images/flags/bl.svg"
-													alt="fake_url"
-												/>
-												France
-											</a>
-										</div>
-									</li> */}
 									<li className="nav-item dropdown">
 										<a
 											className="nav-link dropdown-toggle"
@@ -468,7 +439,7 @@ class Header extends Component {
 											<i className="fa fa-user" />
 										</a>
 										<div className="dropdown-menu dropdown-menu-right dropdown-menu-arrow">
-											<NavLink to="/profile" className="dropdown-item">
+											<NavLink to={{ pathname: "/view-employee", state: { employee: user, employeeId: userId } }} className="dropdown-item">
 												<i className="dropdown-icon fe fe-user" /> Profile
 											</NavLink>
 											<a className="dropdown-item" >

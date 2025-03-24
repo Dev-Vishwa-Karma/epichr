@@ -1,7 +1,5 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import Ckeditor from '../../common/ckeditor';
-import { useState } from "react";
 class Activities extends Component {
 	constructor(props) {
 		super(props);
@@ -31,7 +29,12 @@ class Activities extends Component {
 		apiUrl = `${process.env.REACT_APP_API_URL}/activities.php?user_id=${window.user.id}`;
 		}
 
-		fetch(apiUrl)
+		fetch(apiUrl, {
+			method: "GET",
+			headers: {
+				"ngrok-skip-browser-warning": "true"
+			}
+		})
 			.then(response => response.json())
 			.then(data => {
 				if (data.status === 'success') {
@@ -46,7 +49,12 @@ class Activities extends Component {
 			});
 
 		/** Get employees list */
-		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php`)
+		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php`, {
+			method: "GET",
+			headers: {
+				"ngrok-skip-browser-warning": "true"
+			}
+		})
 			.then(response => response.json())
 			.then(data => {
 				if (data.status === 'success') {
@@ -239,6 +247,9 @@ class Activities extends Component {
 		fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=add-by-admin`, {
 			method: "POST",
 			body: formData,
+			headers: {
+				"ngrok-skip-browser-warning": "true"
+			}
 		})
 			.then((response) => response.json())
 			.then((data) => {

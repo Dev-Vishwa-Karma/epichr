@@ -1,27 +1,473 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCamera } from "@fortawesome/free-solid-svg-icons";
 
 class ViewEmployee extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            employee: {
+                first_name: "",
+                last_name: "",
+                username: "",
+                email: "",
+                mobile_no1: "",
+                dob: "",
+                address_line1: "",
+                about_me: ""
+            },
+            employeeId: null,
+            selectedImage: null,
+            previewImage: null,
+            successMessage: "",
+            showSuccess: false,
+            errorMessage: "",
+            showError: false,
+        };
+    }
+
+    // Function to dismiss messages
+    dismissMessages = () => {
+        this.setState({
+            showSuccess: false,
+            successMessage: "",
+            showError: false,
+            errorMessage: "",
+        });
+    };
+
+    componentDidMount() {
+        const { employee, employeeId } = this.props.location.state || {};
+
+        // Get the logged-in user from localStorage
+        const storedUser = JSON.parse(localStorage.getItem("user")) || null;
+
+        // Set the state with the employee data
+        if (employee) {
+            this.setState({
+                employee: { ...this.state.employee, ...employee },
+                employeeId,
+                previewImage: `${process.env.REACT_APP_API_URL}/${employee.profile}`
+            });
+        }
+
+        // If viewing the logged-in user's profile, use the latest localStorage data
+        if (storedUser && employee && storedUser.id === employee.id) {
+            this.setState({
+                employee: { ...this.state.employee, ...storedUser }, // Merge the latest stored data
+                employeeId: storedUser.id,
+                previewImage: `${process.env.REACT_APP_API_URL}/${storedUser.profile}`
+            });
+        }
+
+        if (employeeId) {
+            this.fetchEmployeeDetails(employeeId);
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        const { employee, employeeId } = this.props.location.state || {};
+        if (employee && employee !== prevProps.location.state?.employee) {
+            this.setState({
+                employee: { ...this.state.employee, ...employee },
+                previewImage: `${process.env.REACT_APP_API_URL}/${employee?.profile || ""}`
+            });
+        }
+    
+        if (employeeId && employeeId !== prevProps.location.state?.employeeId) {
+            this.fetchEmployeeDetails(employeeId);
+        }
+    }
+
+    fetchEmployeeDetails = (employeeId) => {
+        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&user_id=${employeeId}`, {
+            method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.status === "success") {
+                    this.setState(prevState => ({
+                        employee: { ...prevState.employee, ...data.data }, // Merge new data
+                        previewImage: data.data.profile ? `${process.env.REACT_APP_API_URL}/${data.data.profile}` : prevState.previewImage
+                    }));
+                } else {
+                    console.error("Failed to fetch employee details:", data.message);
+                }
+            })
+            .catch((error) => console.error("Error fetching employee details:", error));
+    };
+
+    handleImageChange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            this.setState({
+                selectedImage: file,
+                previewImage: URL.createObjectURL(file),
+            });
+    
+            // Call function to upload image
+            this.uploadImage(file);
+        }
+    };
+
+    uploadImage = (file) => {
+        const {id, role} = window.user;
+        const { employeeId } = this.state;
+        const formData = new FormData();
+        formData.append("employee_id", employeeId);
+        formData.append("logged_in_employee_id", id);
+        formData.append('logged_in_employee_role', role); // Logged-in employee role
+        formData.append("photo", file);
+    
+        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employeeId}`, {
+          method: "POST",
+          headers: {
+              "ngrok-skip-browser-warning": "true"
+          },
+          body: formData,
+        })
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.status === "success") {
+                // Correct the image path and set the previewImage state
+                const profileImagePath = data.data.profile.replace(/\\/g, '/');
+
+                // Update the previewImage state correctly
+                this.setState((prevState) => ({
+                    previewImage: `${process.env.REACT_APP_API_URL}/${profileImagePath}`,
+                    employee: { 
+                        ...prevState.employee, 
+                        profile: profileImagePath // Update the profile in employee data
+                    },
+                    successMessage: "Image uploaded successfully!",
+                    showSuccess: true,
+                    errorMessage: "",
+                    showError: false
+                }));
+                setTimeout(this.dismissMessages, 3000);
+            } else {
+                this.setState({
+                    errorMessage: "Image upload failed!",
+                    showError: true,
+                    showSuccess: false,
+                });
+                // setTimeout(this.dismissMessages, 3000);
+            }
+        })
+        .catch((error) => {
+            console.error("Error uploading image:", error);
+            this.setState({
+                errorMessage: "An error occurred while uploading the image.",
+                showError: true,
+                showSuccess: false,
+            });
+            // setTimeout(this.dismissMessages, 3000);
+        });
+    };
+
+    // Update profile
+    handleProfileChange = (event) => {
+        const { name, value } = event.target;
+        
+        // Update state for the selected user
+        this.setState((prevState) => ({
+            employee: {
+                ...prevState.employee,
+                [name]: value,
+            }
+        }));
+    };
+
+    updateProfile = () => {
+        const { employee } = this.state;
+
+        // Get the logged-in user from localStorage
+        const storedUser = window.user || JSON.parse(localStorage.getItem("user"));
+        if (!storedUser || !storedUser.id) {
+            console.warn("User data missing from localStorage");
+            return;
+        }
+
+        const { id, role } = storedUser;
+        // Create a new FormData object
+        const updatedProfileData = new FormData();
+
+        // Helper function to ensure blank values are stored as empty strings
+        const appendField = (key, value) => {
+            updatedProfileData.append(key, value !== undefined && value !== null ? value : "");
+        };
+
+        appendField("id", employee.id);
+        appendField("logged_in_employee_id", id);
+        appendField("logged_in_employee_role", role);
+        appendField("first_name", employee.first_name);
+        appendField("last_name", employee.last_name);
+        appendField("username", employee.username);
+        appendField("email", employee.email);
+        appendField("mobile_no1", employee.mobile_no1);
+        appendField("dob", employee.dob);
+        appendField("address_line1", employee.address_line1);
+        appendField("about_me", employee.about_me);
+
+        // Preserve social media URLs even if not updated
+        appendField("facebook_url", employee.facebook_url);
+        appendField("twitter_url", employee.twitter_url);
+    
+        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employee.id}`, {
+            method: "POST",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
+            body: updatedProfileData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                const updatedUser = data.data;
+
+                // Only update the logged-in user's data
+                if (employee.id === id) {
+                    const mergedUserData = { ...storedUser, ...updatedUser };
+
+                    // Store updated data in local storage
+                    localStorage.setItem("user", JSON.stringify(mergedUserData));
+                    window.user = mergedUserData;
+
+                    // Update state to re-render UI with new data
+                    this.setState({ employee: mergedUserData });
+                } else {
+                    // If updating another user from the listing, just update the state
+                    this.setState({ employee: updatedUser });
+                }
+
+                this.setState((prevState) => ({
+                    successMessage: "Profile updated successfully!",
+                    showSuccess: true,
+                    errorMessage: "",
+                    showError: false
+                }));
+    
+                // Auto-hide success message after 5 seconds
+                setTimeout(this.dismissMessages, 5000);
+            } else {
+                this.setState({
+                    errorMessage: "Failed to update profile.",
+                    showError: true,
+                    showSuccess: false
+                });
+    
+                // setTimeout(this.dismissMessages, 3000);
+            }
+        })
+        .catch(error => {
+            console.error("Error updating profile:", error);
+            this.setState({
+                errorMessage: "An error occurred while updating the profile.",
+                showError: true,
+                showSuccess: false,
+            });
+
+            // setTimeout(this.dismissMessages, 3000);
+        });
+    };
+
+    // Render function for Bootstrap toast messages
+    renderAlertMessages = () => {
+        return (
+            
+            <>
+                {/* Add the alert for success messages */}
+                <div 
+                    className={`alert alert-success alert-dismissible fade show ${this.state.showSuccess ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-circle-check me-2"></i>
+                    {this.state.successMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showSuccess: false })}
+                    >
+                    </button>
+                </div>
+
+                {/* Add the alert for error messages */}
+                <div 
+                    className={`alert alert-danger alert-dismissible fade show ${this.state.showError ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                    {this.state.errorMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showError: false })}
+                    >
+                    </button>
+                </div>
+            </>
+        );
+    };
+    
     render() {
-        const { fixNavbar } = this.props;
+        const { fixNavbar} = this.props;
+        const {employee} = this.state;
+        // Handle case where employee data is not available
+        if (!employee) {
+            return <p>Loading employee details...</p>;
+        }
         return (
             <>
+                {this.renderAlertMessages()} {/* Show Toast Messages */}
+
                 <div className={`section-body ${fixNavbar ? "marginTop" : ""} `}>
                     <div className="container-fluid">
                         <div className="row clearfix">
                             <div className="col-md-12">
                                 <div className="card card-profile">
                                     <div className="card-body text-center">
-                                        <img className="card-profile-img" src="../assets/images/sm/avatar1.jpg" alt="fake_url" />
-                                        <h4 className="mb-3">Sara Hopkins</h4>
+                                        {/* <img className="card-profile-img" src={`${process.env.REACT_APP_API_URL}/${employee.profile}`} alt="fake_url" /> */}
+
+                                        <div style={{ position: "relative", display: "inline-block" }}>
+                                            {/* Profile Image */}
+                                            <img
+                                                className="card-profile-img"
+                                                src={this.state.previewImage}
+                                                alt="Profile"
+                                                style={{
+                                                    borderRadius: "50%",
+                                                    objectFit: "cover",
+                                                }}
+                                            />
+
+                                            {/* Camera Icon Overlay */}
+                                            <label
+                                                htmlFor="imageUpload"
+                                                className='card-profile-img'
+                                                style={{
+                                                    position: "absolute",
+                                                    bottom: "0px",
+                                                    right: "0px",
+                                                    background: "#ececec",
+                                                    color: "#000000",
+                                                    borderRadius: "50%",
+                                                    padding: "5px",
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                <FontAwesomeIcon icon={faCamera} />
+                                                <input
+                                                    id="imageUpload"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={this.handleImageChange}
+                                                    style={{ display: "none" }}
+                                                />
+                                            </label>
+                                        </div>
+
+                                        <h4 className="mb-3">{`${employee.first_name} ${employee.last_name || ''}`}</h4>
                                         <ul className="social-links list-inline mb-3 mt-2">
-                                            <li className="list-inline-item"><a href="fake_url" title="Facebook" data-toggle="tooltip"><i className="fa fa-facebook" /></a></li>
-                                            <li className="list-inline-item"><a href="fake_url" title="Twitter" data-toggle="tooltip"><i className="fa fa-twitter" /></a></li>
-                                            <li className="list-inline-item"><a href="fake_url" title={1234567890} data-toggle="tooltip"><i className="fa fa-phone" /></a></li>
-                                            <li className="list-inline-item"><a href="fake_url" title="@skypename" data-toggle="tooltip"><i className="fa fa-skype" /></a></li>
+                                            {/* Facebook Link */}
+                                            {employee.facebook_url && employee.facebook_url !== "null" && employee.facebook_url.trim() !== "" ? (
+                                                <li className="list-inline-item">
+                                                    <a href={employee.facebook_url} title="Facebook" data-toggle="tooltip" target="_blank" rel="noopener noreferrer">
+                                                        <i className="fa fa-facebook" />
+                                                    </a>
+                                                </li>
+                                            ) : (
+                                                <li className="list-inline-item">
+                                                    <a 
+                                                        href="#"
+                                                        onClick={(e) => e.preventDefault()} 
+                                                        title="Facebook (No link available)" 
+                                                        data-toggle="tooltip"
+                                                        style={{ cursor: "default" }}
+                                                    >
+                                                        <i className="fa fa-facebook" />
+                                                    </a>
+                                                </li>
+                                            )}
+
+                                            {/* Twitter Link */}
+                                            {employee.twitter_url && employee.twitter_url !== "null" && employee.twitter_url.trim() !== "" ? (
+                                                <li className="list-inline-item">
+                                                    <a href={employee.twitter_url} title="Twitter" data-toggle="tooltip" target="_blank" rel="noopener noreferrer">
+                                                        <i className="fa fa-twitter" />
+                                                    </a>
+                                                </li>
+                                            ) : (
+                                                <li className="list-inline-item">
+                                                    <a 
+                                                        href="#"
+                                                        onClick={(e) => e.preventDefault()}
+                                                        title="Twitter (No link available)" 
+                                                        data-toggle="tooltip"
+                                                        style={{ cursor: "default" }}
+                                                    >
+                                                        <i className="fa fa-twitter" />
+                                                    </a>
+                                                </li>
+                                            )}
+
+                                            {/* Phone Link */}
+                                            {employee.mobile_no1 && employee.mobile_no1 !== "null" && employee.mobile_no1.trim() !== "" ? (
+                                                <li className="list-inline-item">
+                                                    <a href={`tel:${employee.mobile_no1}`} title={employee.mobile_no1} data-toggle="tooltip">
+                                                        <i className="fa fa-phone" />
+                                                    </a>
+                                                </li>
+                                            ) : (
+                                                <li className="list-inline-item">
+                                                    <a 
+                                                        href="#"
+                                                        onClick={(e) => e.preventDefault()}
+                                                        title="Mobile Number not available" 
+                                                        data-toggle="tooltip"
+                                                        style={{ cursor: "default" }}
+                                                    >
+                                                        <i className="fa fa-phone" />
+                                                    </a>
+                                                </li>
+                                            )}
+
+                                            {/* Skype Link with Full Name */}
+                                            {employee.first_name && employee.last_name && (
+                                                <li className="list-inline-item">
+                                                    <a 
+                                                        href={`skype:${employee.first_name.toLowerCase()}.${employee.last_name.toLowerCase()}?chat`}
+                                                        title={`${employee.first_name} ${employee.last_name}`} 
+                                                        data-toggle="tooltip"
+                                                    >
+                                                        <i className="fa fa-skype" />
+                                                    </a>
+                                                </li>
+                                            )}
                                         </ul>
-                                        <p className="mb-4">Contrary to popular belief, Lorem Ipsum is not simply random text.<br /> It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old.</p>
-                                        <button className="btn btn-outline-primary btn-sm"><span className="fa fa-twitter" /> Follow</button>
+                                        <p className="mb-4" style={{ whiteSpace: "pre-line" }}>{employee.about_me}</p>
+                                        {/* <button className="btn btn-outline-primary btn-sm"><span className="fa fa-twitter" /> Follow</button> */}
                                     </div>
                                 </div>
                             </div>
@@ -219,72 +665,107 @@ class ViewEmployee extends Component {
                                             </div>
                                             <div className="card-body">
                                                 <div className="row clearfix">
-                                                    <div className="col-md-5">
-                                                        <div className="form-group">
-                                                            <label className="form-label">Company</label>
-                                                            <input type="text" className="form-control" disabled placeholder="Company" defaultValue="Epic Theme" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-sm-6 col-md-3">
-                                                        <div className="form-group">
-                                                            <label className="form-label">Username</label>
-                                                            <input type="text" className="form-control" placeholder="Username" defaultValue="michael23" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-sm-6 col-md-4">
-                                                        <div className="form-group">
-                                                            <label className="form-label">Email address</label>
-                                                            <input type="email" className="form-control" placeholder="Email" />
-                                                        </div>
-                                                    </div>
                                                     <div className="col-sm-6 col-md-6">
                                                         <div className="form-group">
                                                             <label className="form-label">First Name</label>
-                                                            <input type="text" className="form-control" placeholder="Company" defaultValue="Jane" />
+                                                            <input
+                                                                type="text"
+                                                                name='first_name'
+                                                                className="form-control" placeholder="First Name"
+                                                                value={employee.first_name || ""}
+                                                                onChange={this.handleProfileChange}
+                                                            />
                                                         </div>
                                                     </div>
                                                     <div className="col-sm-6 col-md-6">
                                                         <div className="form-group">
                                                             <label className="form-label">Last Name</label>
-                                                            <input type="text" className="form-control" placeholder="Last Name" defaultValue="Pearson" />
+                                                            <input
+                                                                type="text"
+                                                                name='last_name'
+                                                                className="form-control"
+                                                                placeholder="Last Name"
+                                                                value={employee.last_name || ""}
+                                                                onChange={this.handleProfileChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-sm-6 col-md-6">
+                                                        <div className="form-group">
+                                                            <label className="form-label">Username</label>
+                                                            <input
+                                                                type="text"
+                                                                name='username'
+                                                                className="form-control"
+                                                                placeholder="Username"
+                                                                value={employee.username || ""}
+                                                                onChange={this.handleProfileChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-sm-6 col-md-6">
+                                                        <div className="form-group">
+                                                            <label className="form-label">Email address</label>
+                                                            <input
+                                                                type="email"
+                                                                name='email'
+                                                                className="form-control"
+                                                                placeholder="Email"
+                                                                value={employee.email || ""}
+                                                                onChange={this.handleProfileChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-sm-6 col-md-6">
+                                                        <div className="form-group">
+                                                            <label className="form-label">Mobile No</label>
+                                                            <input
+                                                                type="tel"
+                                                                name="mobile_no1"
+                                                                id="mobile_no1"
+                                                                className="form-control"
+                                                                placeholder="Enter Mobile No"
+                                                                value={employee.mobile_no1 || ""}
+                                                                onChange={this.handleProfileChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-sm-6 col-md-6">
+                                                        <div className="form-group">
+                                                            <label className="form-label">DOB</label>
+                                                            <input
+                                                                type="date"
+                                                                id="dob"
+                                                                name="dob"
+                                                                className="form-control"
+                                                                value={employee.dob || ""}
+                                                                onChange={this.handleProfileChange}
+                                                            />
                                                         </div>
                                                     </div>
                                                     <div className="col-md-12">
                                                         <div className="form-group">
                                                             <label className="form-label">Address</label>
-                                                            <input type="text" className="form-control" placeholder="Home Address" defaultValue="455 S. Airport St. Moncks Corner" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-sm-6 col-md-4">
-                                                        <div className="form-group">
-                                                            <label className="form-label">City</label>
-                                                            <input type="text" className="form-control" placeholder="City" defaultValue="New York" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-sm-6 col-md-3">
-                                                        <div className="form-group">
-                                                            <label className="form-label">Postal Code</label>
-                                                            <input type="number" className="form-control" placeholder="ZIP Code" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-md-5">
-                                                        <div className="form-group">
-                                                            <label className="form-label">Country</label>
-                                                            <select className="form-control custom-select">
-                                                                <option value>USA</option>
-                                                            </select>
+                                                            <input
+                                                                type="text"
+                                                                name='address_line1'
+                                                                className="form-control"
+                                                                placeholder="Home Address"
+                                                                value={employee.address_line1 || ""}
+                                                                onChange={this.handleProfileChange}
+                                                            />
                                                         </div>
                                                     </div>
                                                     <div className="col-md-12">
                                                         <div className="form-group mb-0">
                                                             <label className="form-label">About Me</label>
-                                                            <textarea rows={5} className="form-control" placeholder="Here can be your description" defaultValue={"Oh so, your weak rhyme You doubt I'll bother, reading into it I'll probably won't, left to my own devices But that's the difference in our opinions."} />
+                                                            <textarea rows={5} name='about_me' className="form-control" placeholder="Here can be your description" value={employee.about_me || ""} onChange={this.handleProfileChange}/>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="card-footer text-right">
-                                                <button type="submit" className="btn btn-primary">Update Profile</button>
+                                                <button type="submit" className="btn btn-primary" onClick={this.updateProfile}>Update Profile</button>
                                             </div>
                                         </div>
                                     </div>
@@ -403,7 +884,7 @@ class ViewEmployee extends Component {
                                                                         <strong>Wayne Holland: </strong>
                                                                         Donec id elit non mi porta gravida at eget metus. Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor. Donec ullamcorper nulla non metus
                                                                         auctor fringilla. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Sed posuere consectetur est at lobortis.
-                            </div>
+                                                                    </div>
                                                                 </li>
                                                             </ul>
                                                         </div>
@@ -556,7 +1037,6 @@ class ViewEmployee extends Component {
                         </div>
                     </div>
                 </div>
-
             </>
         )
     }

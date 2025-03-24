@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux';
-import CountUp from 'react-countup';
 import Modal from 'react-modal';
 
 class Report extends Component {
@@ -35,6 +34,11 @@ class Report extends Component {
 
         let apiUrl = '';
 
+        if (window.user.role === 'super_admin' || window.user.role === 'admin') {
+            apiUrl = `${process.env.REACT_APP_API_URL}/reports.php`;
+        } else {
+            apiUrl = `${process.env.REACT_APP_API_URL}/reports.php?user_id=${window.user.id}`;
+        }
         //if (window.user.role == 'super_admin' || window.user.role == 'admin') {
         apiUrl = `${process.env.REACT_APP_API_URL}/activities.php`;
         // } else {
@@ -42,7 +46,12 @@ class Report extends Component {
         // }
 
         // Make the GET API call when the component is mounted
-        fetch(apiUrl)
+        fetch(apiUrl, {
+            method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
@@ -57,7 +66,12 @@ class Report extends Component {
             });
 
         /** Get employees list */
-        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php`)
+        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php`, {
+            method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
@@ -318,6 +332,9 @@ class Report extends Component {
         // API call to add break
         fetch(`${process.env.REACT_APP_API_URL}/activities.php?action=add-by-admin`, {
             method: "POST",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
             body: formData,
         })
             .then((response) => response.json())

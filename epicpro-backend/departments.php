@@ -3,6 +3,7 @@
     header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
     header("Access-Control-Allow-Credentials: true");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
     
     if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
         http_response_code(200);
@@ -24,8 +25,14 @@
             case 'view':
                 if (isset($_GET['id']) && is_numeric($_GET['id']) && $_GET['id'] > 0) {
                     // Prepare SELECT statement with WHERE clause using parameter binding
-                    $stmt = $conn->prepare("SELECT * FROM departments WHERE id = ?");
-                    $stmt->bind_param("i", $_GET['id']); // Bind the id as an integer
+                    // $stmt = $conn->prepare("SELECT * FROM departments WHERE id = ?");
+                    $stmt = $conn->prepare("
+                        SELECT d.*, 
+                            (SELECT COUNT(*) FROM employees e WHERE e.department_id = d.department_id AND e.deleted_at IS NULL) AS total_employee
+                        FROM departments d
+                        WHERE d.id = ?
+                    ");
+                    $stmt->bind_param("i", $_GET['id']);
                     if ($stmt->execute()) {
                         $result = $stmt->get_result();
                         if ($result) {
@@ -41,7 +48,12 @@
                         echo json_encode(['error' => 'Failed to execute query', 'query_error' => $stmt->error]);
                     }
                 } else {
-                    $result = $conn->query("SELECT * FROM departments");
+                    // $result = $conn->query("SELECT * FROM departments");
+                    $result = $conn->query("
+                        SELECT d.*, 
+                            (SELECT COUNT(*) FROM employees e WHERE e.department_id = d.id AND e.deleted_at IS NULL) AS total_employee
+                        FROM departments d
+                    ");
                     if ($result) {
                         $departments = $result->fetch_all(MYSQLI_ASSOC);
                         echo json_encode([

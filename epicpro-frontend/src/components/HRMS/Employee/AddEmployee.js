@@ -5,8 +5,11 @@ class AddEmployee extends Component {
     constructor(props) {
         super(props);
         this.state = {
+            selectedDepartment: "",
+            departments: [],
             firstName: "",
             lastName: "",
+            username: "",
             email: "",
             gender: "",
             photo: null,
@@ -14,6 +17,7 @@ class AddEmployee extends Component {
             joiningDate: "",
             mobile1: "",
             mobile2: "",
+            password: "",
             address1: "",
             address2: "",
             emergencyContact1: "",
@@ -41,6 +45,10 @@ class AddEmployee extends Component {
             instagram: "",
             upworkProfile: "",
             resume: null,
+            successMessage: "",
+            showSuccess: false,
+            errorMessage: "",
+            showError: false,
         };
 
         // Create refs for each file input
@@ -52,6 +60,32 @@ class AddEmployee extends Component {
             resume: React.createRef()
         };
     }
+
+    // Function to dismiss messages
+    dismissMessages = () => {
+        this.setState({
+            showSuccess: false,
+            successMessage: "",
+            showError: false,
+            errorMessage: "",
+        });
+    };
+
+    componentDidMount() {
+        // Get department data from departments table
+		fetch(`${process.env.REACT_APP_API_URL}/departments.php`, {
+            method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+			this.setState({ departments: data.data });
+        })
+        .catch(error => console.error("Error fetching departments:", error));
+    }
+
     handleChange = (e) => {
         const { name, value } = e.target;
         this.setState({
@@ -100,9 +134,13 @@ class AddEmployee extends Component {
 
     addEmployee = async (e) => {
 		e.preventDefault();
+        const {id, role} = window.user;
 
-        const { firstName,
+        const { 
+            selectedDepartment,
+            firstName,
             lastName,
+            username,
             email,
             gender,
             photo,
@@ -110,6 +148,7 @@ class AddEmployee extends Component {
             joiningDate,
             mobile1,
             mobile2,
+            password,
             address1,
             address2,
             emergencyContact1,
@@ -137,8 +176,10 @@ class AddEmployee extends Component {
             resume } = this.state;
 
 		const addEmployeeData = new FormData();
+        addEmployeeData.append('department_id', selectedDepartment)
         addEmployeeData.append('first_name', firstName);
         addEmployeeData.append('last_name', lastName);
+        addEmployeeData.append('username', username);
         addEmployeeData.append('email', email);
         addEmployeeData.append('gender', gender);
         addEmployeeData.append('photo', photo);
@@ -146,6 +187,7 @@ class AddEmployee extends Component {
         addEmployeeData.append('joining_date', joiningDate);
         addEmployeeData.append('mobile_no1', mobile1);
         addEmployeeData.append('mobile_no2', mobile2);
+        addEmployeeData.append('password', password);
         addEmployeeData.append('address_line1', address1);
         addEmployeeData.append('address_line2', address2);
         addEmployeeData.append('emergency_contact1', emergencyContact1);
@@ -176,20 +218,26 @@ class AddEmployee extends Component {
         addEmployeeData.append('instagram_url', instagram);
         addEmployeeData.append('upwork_profile_url', upworkProfile);
         addEmployeeData.append('resume', resume);
+        addEmployeeData.append('logged_in_employee_id', id);
+        addEmployeeData.append('logged_in_employee_role', role);
 
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=add`, {
             method: "POST",
             body: addEmployeeData,
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
         })
         .then((response) => response.json())
         .then((data) => {
-            console.log('data = ', data);
             if (data.status === "success") {
                 // Update the department list
                 this.setState((prevState) => ({
                     //users: [...(prevState.users || []), data.data], // Assuming the backend returns the new department
+                    selectedDepartment: "",
                     firstName: "",
                     lastName: "",
+                    username: "",
                     email: "",
                     gender: "",
                     photo: null,
@@ -197,6 +245,7 @@ class AddEmployee extends Component {
                     joiningDate: "",
                     mobile1: "",
                     mobile2: "",
+                    password: "",
                     address1: "",
                     address2: "",
                     emergencyContact1: "",
@@ -224,26 +273,102 @@ class AddEmployee extends Component {
                     instagram: "",
                     upworkProfile: "",
                     resume: null,
+                    showSuccess: true,
+                    successMessage: "Employee added successfully!",
+                    errorMessage: "",
+                    showError: false,
                 }));
+
+                setTimeout(this.dismissMessages, 5000);
 
                 // Clear all file inputs
                 Object.values(this.fileInputRefs).forEach((ref) => {
                     if (ref.current) ref.current.value = "";
                 });
             } else {
-                console.log("Failed to add employee details");
+                console.error("Failed to add employee details:", data);
+                this.setState({
+                    errorMessage: data.message || "Failed to add employee.",
+                    showError: true,
+                    showSuccess: false,
+                });
             }
         })
-        .catch((error) => console.error("Error:", error));
+        .catch(error => {
+            console.error("Error adding employee:", error);
+            this.setState({
+                errorMessage: "An error occurred while adding the employee.",
+                showError: true,
+                showSuccess: false,
+            });
+
+            // setTimeout(this.dismissMessages, 3000);
+        });
 	};
 
     handleBack = () => {
         this.props.history.goBack(); // Navigate to the previous page
     };
 
+    // Render function for Bootstrap toast messages
+    renderAlertMessages = () => {
+        return (
+            
+            <>
+                {/* Add the alert for success messages */}
+                <div 
+                    className={`alert alert-success alert-dismissible fade show ${this.state.showSuccess ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-circle-check me-2"></i>
+                    {this.state.successMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showSuccess: false })}
+                    >
+                    </button>
+                </div>
+
+                {/* Add the alert for error messages */}
+                <div 
+                    className={`alert alert-danger alert-dismissible fade show ${this.state.showError ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                    {this.state.errorMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showError: false })}
+                    >
+                    </button>
+                </div>
+            </>
+        );
+    };
+
     render() {
 		const { fixNavbar } = this.props;
-        const { firstName, lastName, email, gender, dob, joiningDate, mobile1, mobile2, address1, address2, emergencyContact1, emergencyContact2, emergencyContact3, skillsFrontend, skillsBackend,  bankAccountName, bankAccountNo, bankName, ifscCode, bankAddress, salaryDetails, aadharCardNumber, drivingLicenseNumber, panCardNumber, facebook, twitter, linkedin, instagram, upworkProfile} = this.state;
+        const { firstName, lastName, username, email, gender, dob, joiningDate, mobile1, mobile2, password, address1, address2, emergencyContact1, emergencyContact2, emergencyContact3, skillsFrontend, skillsBackend,  bankAccountName, bankAccountNo, bankName, ifscCode, bankAddress, salaryDetails, aadharCardNumber, drivingLicenseNumber, panCardNumber, facebook, twitter, linkedin, instagram, upworkProfile} = this.state;
         
         // const { skillsFrontend, skillsBackend } = this.state;
         // Frontend and Backend Skill Options
@@ -252,6 +377,8 @@ class AddEmployee extends Component {
 
 		return (
             <>
+                {/* Show success and error Messages */}
+                {this.renderAlertMessages()}
                 <div>
 					<div className={`section-body ${fixNavbar ? "marginTop" : ""}`}>
 						<div className="container-fluid">
@@ -299,6 +426,21 @@ class AddEmployee extends Component {
                                                 </div>
                                                 <div className="col-sm-6 col-md-4">
                                                     <div className="form-group">
+                                                        <label className="form-label">User Name</label>
+                                                        <input
+                                                            type="text"
+                                                            name="username"
+                                                            id='username'
+                                                            className="form-control"
+                                                            placeholder="Enter user name"
+                                                            value={username}
+                                                            onChange={this.handleChange}
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="col-sm-6 col-md-4">
+                                                    <div className="form-group">
                                                         <label className="form-label">Email address</label>
                                                         <input
                                                             type="email"
@@ -312,6 +454,24 @@ class AddEmployee extends Component {
                                                         />
                                                     </div>
                                                 </div>
+                                                <div className="col-md-4 col-sm-12">
+                                                    <label className="form-label">Select Department</label>
+													<div className="form-group">
+														<select
+															className="form-control show-tick"
+															value={this.state.selectedDepartment}
+															onChange={this.handleChange}
+															name="selectedDepartment"
+														>
+															<option value="">Select Department</option>
+															{this.state.departments.map((dept) => (
+																<option key={dept.id} value={dept.id}>
+																	{dept.department_name}
+																</option>
+															))}
+														</select>
+													</div>
+												</div>
                                                 <div className="col-sm-6 col-md-4">
                                                     <div className="form-group">
                                                         <label className="form-label">Gender</label>
@@ -369,7 +529,7 @@ class AddEmployee extends Component {
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="col-sm-6 col-md-6">
+                                                <div className="col-sm-6 col-md-4">
                                                     <div className="form-group">
                                                         <label className="form-label">Mobile No (1)</label>
                                                         <input
@@ -383,7 +543,7 @@ class AddEmployee extends Component {
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="col-sm-6 col-md-6">
+                                                <div className="col-sm-6 col-md-4">
                                                     <div className="form-group">
                                                         <label className="form-label">Mobile No (2)</label>
                                                         <input
@@ -397,6 +557,19 @@ class AddEmployee extends Component {
                                                         />
                                                     </div>
                                                 </div>
+                                                <div className="col-md-4 col-sm-12">
+													<div className="form-group">
+                                                        <label className="form-label">Password</label>
+														<input
+															type="password"
+															className="form-control"
+															placeholder="Password"
+															name='password'
+															value={password}
+															onChange={this.handleChange}
+														/>
+													</div>
+												</div>
                                                 <div className="col-md-12">
                                                     <div className="form-group">
                                                         <label className="form-label">Address Line 1</label>

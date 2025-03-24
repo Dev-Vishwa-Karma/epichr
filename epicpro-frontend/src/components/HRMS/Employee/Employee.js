@@ -68,12 +68,19 @@ class Employee extends Component {
 			},
 			// Set state for add employee leave
 			employee_id: '',
+			logged_in_employee_id: '',
+			logged_in_employee_role: '',
 			from_date: '',
 			to_date: '',
 			reason: '',
 			status: '',
 			selectedEmployeeLeave: '',
 			deleteEmployeeLeave: '',
+			searchQuery: "",
+			currentPageEmployees: 1,
+			currentPageLeaves: 1,
+            dataPerPage: 10,
+			loading: true
 		};
 	}
 	handleStatistics(e) {
@@ -84,7 +91,6 @@ class Employee extends Component {
 	}
 
 	calculateLeaveCounts = (employeeLeavesData) => {
-		console.log('employeeLeavesData = ', employeeLeavesData);
 		let totalLeaves = 0;
 		let pendingLeaves = 0;
 		let approvedLeaves = 0;
@@ -113,7 +119,17 @@ class Employee extends Component {
 		return { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves };
 	};	
 
-	componentDidMount() {
+	/* componentDidMount() {
+		if (window.user) {
+			const { id, role } = window.user;
+			this.setState({
+				employee_id: id || null,
+				logged_in_employee_role: role || null,
+			});
+		} else {
+			console.warn("window.user is undefined");
+		}
+
 		const apiUrl = process.env.REACT_APP_API_URL;
 
 		// Make the GET API call when the component is mounted
@@ -127,24 +143,99 @@ class Employee extends Component {
 
 			this.setState({
 				employeeData: employeesData.data,
+				filterEmployeesData: employeesData.data,
 				employeeLeavesData: employeeLeavesData.data,
 				totalLeaves: totalLeaves,
 				pendingLeaves: pendingLeaves,
 				approvedLeaves: approvedLeaves,
-				rejectedLeaves: rejectedLeaves
+				rejectedLeaves: rejectedLeaves,
+				loading: false
 			});
-
 		})
 		.catch(err => {
-			this.setState({ message: 'Failed to fetch data' });
+			this.setState({ message: 'Failed to fetch data', loading: false });
 			console.error(err);
 		});
+	} */
+
+	componentDidMount() {
+		if (window.user) {
+			const { id, role } = window.user;
+			this.setState({
+				employee_id: id || null,
+				logged_in_employee_role: role || null,
+			});
+	
+			const apiUrl = process.env.REACT_APP_API_URL;
+			let employeesUrl = "";
+			let leavesUrl = "";
+	
+			// Role-based API selection
+			if (role === "admin" || role === "super_admin") {
+				employeesUrl = `${apiUrl}/get_employees.php?action=view&role=employee`; // Fetch all employees
+				leavesUrl = `${apiUrl}/employee_leaves.php`; // Fetch all leaves
+			} else if (role === "employee") {
+				employeesUrl = `${apiUrl}/get_employees.php?action=view&user_id=${id}`; // Fetch only logged-in employee
+				leavesUrl = `${apiUrl}/employee_leaves.php?employee_id=${id}`; // Fetch only logged-in employee's leaves
+			} else {
+				console.warn("Invalid role or role not found.");
+				return;
+			}
+	
+			// Fetch employees & leaves based on role
+			Promise.all([
+				fetch(employeesUrl, {
+					method: "GET",
+					headers: {
+						"ngrok-skip-browser-warning": "true"
+					}
+				}).then(res => res.json()),
+				fetch(leavesUrl, {
+					method: "GET",
+					headers: {
+						"ngrok-skip-browser-warning": "true"
+					}
+				}).then(res => res.json()),
+			])
+			.then(([employeesData, employeeLeavesData]) => {
+				// If only a single employee is returned, convert it to an array
+				let employeesArray = Array.isArray(employeesData.data) ? employeesData.data : [employeesData.data];
+
+				let employeesLeaveArray = Array.isArray(employeeLeavesData.data) ? employeeLeavesData.data : [employeeLeavesData.data];
+
+				// Calculate leaves
+				const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = 
+					this.calculateLeaveCounts(employeeLeavesData.data);
+	
+				this.setState({
+					employeeData: employeesArray,
+					filterEmployeesData: employeesArray,
+					employeeLeavesData: employeesLeaveArray,
+					totalLeaves,
+					pendingLeaves,
+					approvedLeaves,
+					rejectedLeaves,
+					loading: false
+				});
+			})
+			.catch(err => {
+				this.setState({ message: "Failed to fetch data", loading: false });
+				console.error(err);
+			});
+		} else {
+			console.warn("window.user is undefined");
+		}
 	}
+		
 
 	goToEditEmployee(employee, employeeId) {
-		console.log(employee)
 		// Fetch salary details based on employee_id
-		fetch(`${process.env.REACT_APP_API_URL}/employee_salary_details.php?action=view&employee_id=${employeeId}`)
+		fetch(`${process.env.REACT_APP_API_URL}/employee_salary_details.php?action=view&employee_id=${employeeId}`,{
+			method: "POST",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+		})
         .then((res) => res.json())
         .then((salaryDetails) => {
             if (salaryDetails.data) {
@@ -165,8 +256,14 @@ class Employee extends Component {
         });
 	}
 
-	viewEmployee() {
-		this.props.history.push("/view-employee");
+	viewEmployee(employee, employeeId) {
+		this.props.history.push({
+			pathname: `/view-employee`,
+			state: { 
+				employee, 
+				employeeId,
+			}
+		});
 	}
 
 	// Function to handle tab change
@@ -198,27 +295,58 @@ class Employee extends Component {
     };
 
 	confirmDelete = () => {
-        const { deleteUser } = this.state;
-      
-        if (!deleteUser) return;
-      
-        // fetch(`http://localhost/react/epicpro-backend/users.php?action=delete&user_id=${deleteUser}`, {
-		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=delete&user_id=${deleteUser}`, {
-          	method: 'DELETE'
-        })
-        .then((response) => response.json())
-        .then((data) => {
+		const { deleteUser, currentPageEmployees, employeeData, dataPerPage } = this.state;
+		const {id, role} = window.user;
+		const loggedInUserId = id; // Get logged-in user ID
+		const loggedInUserRole = role; // Get logged-in user role
+	
+		if (!deleteUser) return;
+	
+		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=delete`, {
+			method: "POST",  // Change method from DELETE to POST
+			headers: {
+				"Content-Type": "application/json",
+				method: "POST",
+                "ngrok-skip-browser-warning": "true"
+			},
+			body: JSON.stringify({
+				user_id: deleteUser,
+				logged_in_employee_id: loggedInUserId,
+				logged_in_employee_role: loggedInUserRole,
+			}),
+		})
+		.then((response) => response.json())
+		.then((data) => {
 			if (data.status === "success") {
-				this.setState((prevState) => ({
-					employeeData: prevState.employeeData.filter((d) => d.id !== deleteUser),
-				}));
+				// Update users state after deletion
+				const updatedEmployees = employeeData.filter((d) => d.id !== deleteUser);
+
+				// Calculate the total pages after deletion
+				const totalPages = Math.ceil(updatedEmployees.length / dataPerPage);
+	
+				// Adjust currentPageEmployees if necessary (if we're on a page that no longer has data)
+				let newPage = currentPageEmployees;
+				if (updatedEmployees.length === 0) {
+					newPage = 1;
+				} else if (currentPageEmployees > totalPages) {
+					newPage = totalPages;
+				}
+
+				this.setState({
+					employeeData: updatedEmployees,
+					successMessage: "Employee deleted successfully",
+					showSuccess: true,
+					currentPageEmployees: newPage, // Update currentPageEmployees to the new page
+					deleteUser: null,  // Clear the deleteUser state
+				});
 				document.querySelector("#deleteEmployeeModal .close").click();
 			} else {
-				alert('Failed to delete department.');
+				alert("Failed to delete employee.");
 			}
-        })
-        .catch((error) => console.error('Error:', error));
-    };
+		})
+		.catch((error) => console.error("Error:", error));
+	};
+	
 
 	// Function to close the modal
     closeModal = () => {
@@ -232,7 +360,7 @@ class Employee extends Component {
     };
 
 	handleLeaveStatus = (event) => {
-		const { name, value } = event.target;
+		const { value } = event.target;
 		this.setState({
             status: value, // Update selectedRole in state
         });
@@ -249,25 +377,37 @@ class Employee extends Component {
 	}
 
 	// API endpoint to add employee leave data
-    addLeave = () => {
-        const { employee_id, from_date, to_date, reason, status} = this.state;
+    addLeave = (event) => {
+		event.preventDefault();
+
+        const { employee_id, from_date, to_date, reason, status, logged_in_employee_role} = this.state;
 
         // Validate form inputs
         if (!from_date || !to_date || !reason) {
-            alert("Please fill in all fields");
+            console.log("Please fill in all fields");
             return;
         }
 
+		// If role is 'employee', force status to 'pending'
+		// const finalStatus = logged_in_employee_role === "employee" ? "pending" : status;
+		const finalStatus = status || "pending"; 
+
+		// Ensure correct employee_id is sent
+		const selectedEmployeeId = logged_in_employee_role === "employee" ? window.user.id : employee_id;
+
         const addEmployeeLeaveData = new FormData();
-        addEmployeeLeaveData.append('employee_id', employee_id);
+        addEmployeeLeaveData.append('employee_id', selectedEmployeeId);
         addEmployeeLeaveData.append('from_date', from_date);
         addEmployeeLeaveData.append('to_date', to_date);
         addEmployeeLeaveData.append('reason', reason);
-        addEmployeeLeaveData.append('status', status);
+        addEmployeeLeaveData.append('status', finalStatus);
 
         // API call to add employee leave
         fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=add`, {
             method: "POST",
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
             body: addEmployeeLeaveData,
         })
         .then((response) => response.json())
@@ -323,11 +463,14 @@ class Employee extends Component {
 		// Example API call
 		fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=edit&id=${selectedEmployeeLeave.id}`, {
 			method: 'POST',
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
 			body: updateEmployeeLeaveData,
 		})
 		.then((response) => response.json())
 		.then((data) => {
-			if (data.status == "success") {
+			if (data.status === "success") {
 				this.setState((prevState) => {
 					// Update the employee leave data with the new data
 					const updatedEmployeeLeavesData = prevState.employeeLeavesData.map((leave) => {
@@ -366,13 +509,18 @@ class Employee extends Component {
     };
 
 	confirmDeleteForEmployeeLeave = () => {
-        const { deleteEmployeeLeave } = this.state;
+        const { deleteEmployeeLeave, currentPageLeaves, dataPerPage } = this.state;
       
-        if (!deleteEmployeeLeave) return;
-      
-        // fetch(`http://localhost/react/epicpro-backend/users.php?action=delete&user_id=${deleteUser}`, {
-		fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=delete&id=${deleteEmployeeLeave}`, {
-          	method: 'DELETE'
+        if (!deleteEmployeeLeave) {
+			console.error("No employee leave ID selected for deletion.");
+			return;
+		}
+
+        fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=delete&id=${deleteEmployeeLeave}`, {
+          	method: 'DELETE',
+			headers: {
+				"ngrok-skip-browser-warning": "true"
+			}
         })
         .then((response) => response.json())
         .then((data) => {
@@ -383,6 +531,17 @@ class Employee extends Component {
 			
 					// Calculate the leave counts
 					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
+
+					// Calculate the total pages after deletion
+					const totalPages = Math.ceil(updatedEmployeeLeavesData.length / dataPerPage);
+		
+					// Adjust currentPage if necessary (if we're on a page that no longer has data)
+					let newPage = currentPageLeaves;
+					if (updatedEmployeeLeavesData.length === 0) {
+						newPage = 1;
+					} else if (currentPageLeaves > totalPages) {
+						newPage = totalPages;
+					}
 			
 					// Return the updated state
 					return {
@@ -390,7 +549,8 @@ class Employee extends Component {
 						totalLeaves,
 						pendingLeaves,
 						approvedLeaves,
-						rejectedLeaves
+						rejectedLeaves,
+						currentPageLeaves: newPage
 					};
 				});
 				// Close the modal after deletion
@@ -402,10 +562,61 @@ class Employee extends Component {
         .catch((error) => console.error('Error:', error));
     };
 
+	// Handle Pagination of employee listing and employee leaves listing
+	handlePageChange = (newPage, listType) => {
+		if (listType === 'employees') {
+			const totalPages = Math.ceil(this.state.employeeData.length / this.state.dataPerPage);
+			if (newPage >= 1 && newPage <= totalPages) {
+				this.setState({ currentPageEmployees: newPage });
+			}
+		} else if (listType === 'leaves') {
+			const totalPages = Math.ceil(this.state.employeeLeavesData.length / this.state.dataPerPage);
+			if (newPage >= 1 && newPage <= totalPages) {
+				this.setState({ currentPageLeaves: newPage });
+			}
+		}
+	};	
 
+	// Add searching user by name and email
+	handleSearch = (event) => {
+        const query = event.target.value.toLowerCase(); // Get search input
+        this.setState({ searchQuery: query }, () => {
+			if (query === "") {
+				// If search is empty, reset users to the original list
+				this.setState({ employeeData: this.state.filterEmployeesData, currentPageEmployees: 1 });
+			} else {
+				const filtered = this.state.filterEmployeesData.filter(employee => {
+					return (
+						employee.first_name.toLowerCase().includes(query) ||
+						employee.last_name.toLowerCase().includes(query) ||
+						`${employee.first_name.toLowerCase()} ${employee.last_name.toLowerCase()}`.includes(query) ||  
+						employee.email.toLowerCase().includes(query)
+					);
+				});
+				this.setState({ employeeData: filtered, currentPageEmployees: 1});
+			}
+        });
+    };
 	render() {
 		const { fixNavbar, /* statisticsOpen, statisticsClose */ } = this.props;
-		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave } = this.state;
+		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave, currentPageEmployees,  currentPageLeaves, dataPerPage, loading } = this.state;
+
+		// Handle empty employee data safely
+		const employeeList = (employeeData || []).length > 0 ? employeeData : [];
+		const leaveList = (employeeLeavesData || []).length > 0 ? employeeLeavesData : [];
+
+		// Pagination Logic for Employees
+		const indexOfLastEmployee = this.state.currentPageEmployees * dataPerPage;
+		const indexOfFirstEmployee = indexOfLastEmployee - dataPerPage;
+		const currentEmployees = employeeList.slice(indexOfFirstEmployee, indexOfLastEmployee);
+		const totalPagesEmployees = Math.ceil(employeeList.length / dataPerPage);
+
+		// Pagination logic for employee leaves
+		const indexOfLastLeave = this.state.currentPageLeaves * dataPerPage;
+		const indexOfFirstLeave = indexOfLastLeave - dataPerPage;
+		const currentEmployeeLeaves = leaveList.slice(indexOfFirstLeave, indexOfLastLeave);
+		const totalPagesLeaves = Math.ceil(leaveList.length / dataPerPage);
+
 		return (
 			<>
 				<div>
@@ -540,215 +751,284 @@ class Employee extends Component {
 											<div className="card-header">
 												<h3 className="card-title">Employee List</h3>
 												<div className="card-options">
-													<form>
-														<div className="input-group">
+													<div className="input-group">
+														<div className="input-icon ml-2">
+															<span className="input-icon-addon">
+																<i className="fe fe-search" />
+															</span>
 															<input
 																type="text"
-																className="form-control form-control-sm"
-																placeholder="Search something..."
-																name="s"
+																className="form-control"
+																placeholder="Search employee..."
+																// name="s"
+																value={this.state.searchQuery}
+																onChange={this.handleSearch}
 															/>
-															<span className="input-group-btn ml-2">
-																<button className="btn btn-icon btn-sm" type="submit">
-																	<span className="fe fe-search" />
-																</button>
-															</span>
 														</div>
-													</form>
+													</div>
 												</div>
 											</div>
 											<div className="card-body">
-												<div className="table-responsive">
-													<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
-														<thead>
-															<tr>
-																<th>#</th>
-																<th>Name</th>
-																<th>Employee ID</th>
-																<th>Phone</th>
-																<th>Join Date</th>
-																<th>Role</th>
-																<th>Action</th>
-															</tr>
-														</thead>
-														<tbody>
-															{employeeData.length > 0 ? (
-																employeeData.map((employee, index) => (
-																	<tr key={index}>
-																		<td className="w40">
-																			<label className="custom-control custom-checkbox">
-																				<input
-																					type="checkbox"
-																					className="custom-control-input"
-																					name="example-checkbox1"
-																					defaultValue="option1"
-																				/>
-																				<span className="custom-control-label">
-																					&nbsp;
+												{loading ? (
+													<div className="card-body">
+														<div className="dimmer active">
+															<div className="loader" />
+														</div>
+													</div>
+                                                ) : ( // Show Table after loading is false
+													<div className="table-responsive">
+														<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
+															<thead>
+																<tr>
+																	<th>#</th>
+																	<th>Name</th>
+																	<th>Employee ID</th>
+																	<th>Phone</th>
+																	<th>Join Date</th>
+																	<th>Role</th>
+																	<th>Action</th>
+																</tr>
+															</thead>
+															<tbody>
+																{currentEmployees.length > 0 ? (
+																	currentEmployees.map((employee, index) => (
+																		<tr key={index}>
+																			<td className="w40">
+																				<label className="custom-control custom-checkbox">
+																					<input
+																						type="checkbox"
+																						className="custom-control-input"
+																						name="example-checkbox1"
+																						defaultValue="option1"
+																					/>
+																					<span className="custom-control-label">
+																						&nbsp;
+																					</span>
+																				</label>
+																			</td>
+																			<td className="d-flex">
+																				<span
+																					className="avatar avatar-blue"
+																					data-toggle="tooltip"
+																					data-original-title="Avatar Name"
+																				>
+																					{employee.first_name.charAt(0).toUpperCase()}{employee.last_name.charAt(0).toUpperCase()}
 																				</span>
-																			</label>
-																		</td>
-																		<td className="d-flex">
-																			<span
-																				className="avatar avatar-blue"
-																				data-toggle="tooltip"
-																				data-original-title="Avatar Name"
-																			>
-																				{employee.first_name.charAt(0).toUpperCase()}{employee.last_name.charAt(0).toUpperCase()}
-																			</span>
-																			<div className="ml-3">
-																				<h6 className="mb-0">
-																					{`${employee.first_name} ${employee.last_name}`}
-																				</h6>
-																				<span className="text-muted">
-																					{employee.email}
-																				</span>
-																			</div>
-																		</td>
-																		<td>
-																			<span>{employee.code}</span>
-																		</td>
-																		<td>
-																			<span>{employee.mobile_no1}</span>
-																		</td>
-																		<td>
-																			{new Intl.DateTimeFormat('en-US', {
-																				day: '2-digit',
-																				month: 'short',
-																				year: 'numeric',
-																			}).format(new Date(employee.joining_date))}
-																		</td>
-																		<td>{employee.job_role}</td>
-																		<td>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="View"
-																				onClick={() => this.viewEmployee()}
-																			>
-																				<i className="fa fa-eye" />
-																			</button>
-																			<button
-																				onClick={() => this.goToEditEmployee(employee, employee.id)}
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="Edit"
-																			>
-																				<i className="fa fa-edit" />
-																			</button>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm js-sweetalert"
-																				title="Delete"
-																				data-type="confirm"
-																				data-toggle="modal"
-																				data-target="#deleteEmployeeModal"
-																				onClick={() => this.openDeleteModal(employee.id)}
-																			>
-																				<i className="fa fa-trash-o text-danger" />
-																			</button>
-																		</td>
-																	</tr>
-																))
-															): (
-																!message && <tr><td>No employees found</td></tr>
-															)}
-														</tbody>
-													</table>
-												</div>
+																				<div className="ml-3">
+																					<h6 className="mb-0">
+																						{`${employee.first_name} ${employee.last_name}`}
+																					</h6>
+																					<span className="text-muted">
+																						{employee.email}
+																					</span>
+																				</div>
+																			</td>
+																			<td>
+																				<span>{employee.code}</span>
+																			</td>
+																			<td>
+																				<span>{employee.mobile_no1}</span>
+																			</td>
+																			<td>
+																				{new Intl.DateTimeFormat('en-US', {
+																					day: '2-digit',
+																					month: 'short',
+																					year: 'numeric',
+																				}).format(new Date(employee.joining_date))}
+																			</td>
+																			<td>{employee.department_name}</td>
+																			<td>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="View"
+																					onClick={() => this.viewEmployee(employee, employee.id)}
+																				>
+																					<i className="fa fa-eye" />
+																				</button>
+																				<button
+																					onClick={() => this.goToEditEmployee(employee, employee.id)}
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="Edit"
+																				>
+																					<i className="fa fa-edit" />
+																				</button>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm js-sweetalert"
+																					title="Delete"
+																					data-type="confirm"
+																					data-toggle="modal"
+																					data-target="#deleteEmployeeModal"
+																					onClick={() => this.openDeleteModal(employee.id)}
+																				>
+																					<i className="fa fa-trash-o text-danger" />
+																				</button>
+																			</td>
+																		</tr>
+																	))
+																): (
+																	!message && <tr><td>No employees found</td></tr>
+																)}
+															</tbody>
+														</table>
+													</div>
+												)}
 											</div>
 										</div>
+
+										{/* Only show pagination if there are employees */}
+										{totalPagesEmployees > 1 && (
+											<nav aria-label="Page navigation">
+												<ul className="pagination mb-0 justify-content-end">
+													<li className={`page-item ${currentPageEmployees === 1 ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageEmployees - 1, 'employees')}>
+															Previous
+														</button>
+													</li>
+													{[...Array(totalPagesEmployees)].map((_, i) => (
+														<li key={i} className={`page-item ${currentPageEmployees === i + 1 ? 'active' : ''}`}>
+															<button className="page-link" onClick={() => this.handlePageChange(i + 1, 'employees')}>
+																{i + 1}
+															</button>
+														</li>
+													))}
+													<li className={`page-item ${currentPageEmployees === totalPagesEmployees ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageEmployees + 1, 'employees')}>
+															Next
+														</button>
+													</li>
+												</ul>
+											</nav>
+										)}
 									</div>
 									<div className="tab-pane fade" id="Employee-Request" role="tabpanel">
 										<div className="card">
+											<div className="card-header">
+												<h3 className="card-title">Leave List</h3>
+											</div>
 											<div className="card-body">
-												<div className="table-responsive">
-													<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
-														<thead>
-															<tr>
-																<th>#</th>
-																<th>Name</th>
-																<th>Date</th>
-																<th>Reason</th>
-																<th>Status</th>
-																<th>Action</th>
-															</tr>
-														</thead>
-														<tbody>
-															{employeeLeavesData.length > 0 ? (
-																employeeLeavesData.map((leave, index) => (
-																	<tr key={index}>
-																		<td className="width45">
-																			<span
-																				className="avatar avatar-orange"
-																				data-toggle="tooltip"
-																				title="Avatar Name"
-																			>
-																				{leave.first_name.charAt(0).toUpperCase()}{leave.last_name.charAt(0).toUpperCase()}
-																			</span>
-																		</td>
-																		<td>
-																			<div className="font-15">
-																				{`${leave.first_name} ${leave.last_name}`}
-																			</div>
-																		</td>
-																		<td>
-																		{`${new Intl.DateTimeFormat('en-US', {
-																			day: '2-digit',
-																			month: 'short',
-																			year: 'numeric',
-																			}).format(new Date(leave.from_date))} to ${new Intl.DateTimeFormat('en-US', {
-																			day: '2-digit',
-																			month: 'short',
-																			year: 'numeric',
-																			}).format(new Date(leave.to_date))}`}
-																		</td>
-																		<td>{leave.reason}</td>
-																		<td>
-																			<span className={
-																				`tag ${
-																				leave.status === 'approved'
-																				  ? 'tag-success'
-																				  : leave.status === 'pending'
-																				  ? 'tag-warning'
-																				  : 'tag-danger'
-																			  	}`}>
-																					{leave.status}
-																			</span>
-																		</td>
-																		<td>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="Edit"
-																				data-toggle="modal"
-																				data-target="#editLeaveRequestModal"
-																				onClick={() => this.handleEditClickForEmployeeLeave(leave)}
-																			>
-																				<i className="fa fa-edit" />
-																			</button>
-																			<button
-																				type="button"
-																				className="btn btn-icon btn-sm js-sweetalert"
-																				title="Delete"
-																				data-type="confirm"
-																				data-toggle="modal"
-																				data-target="#deleteLeaveRequestModal"
-																				onClick={() => this.openDeleteLeaveModal(leave.id)}
-																			>
-																				<i className="fa fa-trash-o text-danger" />
-																			</button>
-																		</td>
-																	</tr>
-																))
-															): (
-																!message && <tr><td>No leaves found</td></tr>
-															)}
-														</tbody>
-													</table>
-												</div>
+												{loading ? (
+													<div className="card-body">
+														<div className="dimmer active">
+															<div className="loader" />
+														</div>
+													</div>
+                                                ) : ( // Show Table after loading is false
+													<div className="table-responsive">
+														<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
+															<thead>
+																<tr>
+																	<th>#</th>
+																	<th>Name</th>
+																	<th>Date</th>
+																	<th>Reason</th>
+																	<th>Status</th>
+																	<th>Action</th>
+																</tr>
+															</thead>
+															<tbody>
+																{currentEmployeeLeaves.length > 0 ? (
+																	currentEmployeeLeaves.map((leave, index) => (
+																		<tr key={index}>
+																			<td className="width45">
+																				<span
+																					className="avatar avatar-orange"
+																					data-toggle="tooltip"
+																					title="Avatar Name"
+																				>
+																					{leave.first_name.charAt(0).toUpperCase()}{leave.last_name.charAt(0).toUpperCase()}
+																				</span>
+																			</td>
+																			<td>
+																				<div className="font-15">
+																					{`${leave.first_name} ${leave.last_name}`}
+																				</div>
+																			</td>
+																			<td>
+																			{`${new Intl.DateTimeFormat('en-US', {
+																				day: '2-digit',
+																				month: 'short',
+																				year: 'numeric',
+																				}).format(new Date(leave.from_date))} to ${new Intl.DateTimeFormat('en-US', {
+																				day: '2-digit',
+																				month: 'short',
+																				year: 'numeric',
+																				}).format(new Date(leave.to_date))}`}
+																			</td>
+																			<td>{leave.reason}</td>
+																			<td>
+																				<span className={
+																					`tag ${
+																					leave.status === 'approved'
+																					? 'tag-success'
+																					: leave.status === 'pending'
+																					? 'tag-warning'
+																					: 'tag-danger'
+																					}`}>
+																						{leave.status}
+																				</span>
+																			</td>
+																			<td>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="Edit"
+																					data-toggle="modal"
+																					data-target="#editLeaveRequestModal"
+																					onClick={() => this.handleEditClickForEmployeeLeave(leave)}
+																				>
+																					<i className="fa fa-edit" />
+																				</button>
+																				<button
+																					type="button"
+																					className="btn btn-icon btn-sm js-sweetalert"
+																					title="Delete"
+																					data-type="confirm"
+																					data-toggle="modal"
+																					data-target="#deleteLeaveRequestModal"
+																					onClick={() => this.openDeleteLeaveModal(leave.id)}
+																				>
+																					<i className="fa fa-trash-o text-danger" />
+																				</button>
+																			</td>
+																		</tr>
+																	))
+																): (
+																	!message && <tr><td>No leaves found</td></tr>
+																)}
+															</tbody>
+														</table>
+													</div>
+												)}
 											</div>
 										</div>
+
+										{/* Only show pagination if there are employee leaves */}
+										{totalPagesLeaves > 1 && (
+											<nav aria-label="Page navigation">
+												<ul className="pagination mb-0 justify-content-end">
+													<li className={`page-item ${currentPageLeaves === 1 ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageLeaves - 1, 'leaves')}>
+															Previous
+														</button>
+													</li>
+													{[...Array(totalPagesLeaves)].map((_, i) => (
+														<li key={i} className={`page-item ${currentPageLeaves === i + 1 ? 'active' : ''}`}>
+															<button className="page-link" onClick={() => this.handlePageChange(i + 1, 'leaves')}>
+																{i + 1}
+															</button>
+														</li>
+													))}
+													<li className={`page-item ${currentPageLeaves === totalPagesLeaves ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageLeaves + 1, 'leaves')}>
+															Next
+														</button>
+													</li>
+												</ul>
+											</nav>
+										)}
 									</div>
 								</div>
 							</div>
@@ -774,9 +1054,30 @@ class Employee extends Component {
 										className="form-control"
 										placeholder="employeeId"
 										name='employeeId'
-										value={this.state.employee_id || 6}
+										value={this.state.employee_id}
 										onChange={this.handleInputChangeForAddLeaves}
 									/>
+									{(this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin") && (
+										<div className="col-md-12">
+											<div className="form-group">
+												<label className="form-label">Select Employee</label>
+												<select 
+													name="employee_id"
+													className="form-control"
+													onChange={this.handleInputChangeForAddLeaves}
+													value={this.state.employee_id}
+												>
+													<option value="">Select Employee</option>
+													{this.state.employeeData.map((emp) => (
+														<option key={emp.id} value={emp.id}>
+															{emp.first_name} {emp.last_name}
+														</option>
+													))}
+												</select>
+											</div>
+										</div>
+									)}
+
 									<div className="col-md-6">
 										<div className="form-group">
 											<label className="form-label">From Date</label>
@@ -814,23 +1115,24 @@ class Employee extends Component {
 											/>
 										</div>
 									</div>
-									<div className="col-sm-6 col-md-6">
-										<div className="form-group">
-											<label className="form-label">Status</label>
-											<select 
-												name="status"
-												className="form-control"
-												id='status'
-												onChange={this.handleLeaveStatus}
-												value={this.state.status}
-											>
-												<option value="">Select Status</option>
-												<option value="approved" >Approved</option>
-												<option value="pending" >Pending</option>
-												<option value="rejected" >Rejected</option>
-											</select>
+									{(this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin") && (
+										<div className="col-sm-6 col-md-6">
+											<div className="form-group">
+												<label className="form-label">Status</label>
+												<select 
+													name="status"
+													className="form-control"
+													id="status"
+													onChange={this.handleLeaveStatus}
+													value={this.state.status}
+												>
+													<option value="pending">Pending</option> 
+													<option value="approved">Approved</option>
+													<option value="rejected">Rejected</option>
+												</select>
+											</div>
 										</div>
-									</div>
+									)}
 								</div>
 							</div>
 							<div className="modal-footer">
@@ -916,9 +1218,18 @@ class Employee extends Component {
 														onChange={this.handleInputChangeForEditEmployeeLeave}
 													>
 														<option value="">Select Status</option>
-														<option value="approved" >Approved</option>
-														<option value="pending" >Pending</option>
-														<option value="rejected" >Rejected</option>
+														{this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin" ? (
+															<>
+																<option value="approved">Approved</option>
+																<option value="pending">Pending</option>
+																<option value="rejected">Rejected</option>
+															</>
+														) : (
+															<>
+																<option value="pending">Pending</option>
+																<option value="rejected">Rejected</option>
+															</>
+														)}
 													</select>
 												</div>
 											</div>
