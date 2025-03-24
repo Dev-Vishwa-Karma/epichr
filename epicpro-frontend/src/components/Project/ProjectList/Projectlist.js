@@ -381,7 +381,7 @@ class ProjectList extends Component {
 
     render() {
         const { fixNavbar, boxOpen, box2Open, box3Open, box4Open, box5Open, box6Open } = this.props;
-        const { projectName, projectDescription, projectTechnology, projectStartDate, projectEndDate, clients, selectedClient, teamMembers, employees, projects, projectData, message, loading } = this.state;
+        const { projectName, projectDescription, projectTechnology, projectStartDate, projectEndDate, clients, selectedClient, teamMembers, employees, projects, projectData, message} = this.state;
 
         return (
             <>
