@@ -772,8 +772,14 @@ if (isset($action)) {
             $password = $_POST['password'] ?? null;
 
             /** Validate */
-            if (!$email || !$password) {
-                sendJsonResponse('error', null, 'Please provide all required fields');
+            if (!$email) {
+                sendJsonResponse('error', null, 'Email is required');
+            }
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                sendJsonResponse('error', null, 'Please enter a valid email address');
+            }
+            if (!$password) {
+                sendJsonResponse('error', null, 'Password is required');
             }
 
             $stmt = $conn->prepare("SELECT * FROM employees WHERE email = ? AND deleted_at IS NULL LIMIT 1");
@@ -783,11 +789,11 @@ if (isset($action)) {
 
             /** Validate email */
             if ($result->num_rows == 0) {
-                sendJsonResponse('error', null, 'Invalid Email or Account Deleted.');
+                sendJsonResponse('error', null, 'Please enter a valid registered email address.');
             } else {
                 $row = $result->fetch_assoc();
                 if ($password != $row['password']) {
-                    sendJsonResponse('error', null, 'Invalid Password.');
+                    sendJsonResponse('error', null, 'The password you entered is incorrect.');
                 } else {
                     sendJsonResponse('success', $row, 'Login successful!');
                 }

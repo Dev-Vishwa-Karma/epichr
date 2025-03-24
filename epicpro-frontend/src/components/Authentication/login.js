@@ -10,7 +10,13 @@ export default class Login extends Component {
 			email: "",
 			password: "",
 			error: null,
-			user: null
+			user: null,
+			emailError: false,
+			passwordError: false,
+			loginError: false,
+			emailErrorMessage: '',
+			passwordErrorMessage: '',
+			loading: false, // State to manage the loader
 		};
 	}
 
@@ -18,11 +24,40 @@ export default class Login extends Component {
 
 		const { email, password } = this.state;
 
-		// Validate form inputs
-		if (!email || !password) {
-			alert("All the fields are required!");
-			return;
+		// Reset error messages
+		let emailError = false;
+		let passwordError = false;
+		let emailErrorMessage = '';
+		let passwordErrorMessage = '';
+
+		// Validate email
+		const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+		if (!email) {
+			emailError = true;
+			emailErrorMessage = 'Email is required';
+		} else if (!emailRegex.test(email)) {
+			emailError = true;
+			emailErrorMessage = 'Please enter a valid email address';
 		}
+
+		// Validate password
+		if (!password) {
+			passwordError = true;
+			passwordErrorMessage = 'Password is required';
+		}
+
+		if (emailError || passwordError) {
+			this.setState({
+				emailError,
+				passwordError,
+				emailErrorMessage,
+				passwordErrorMessage,
+			});
+			return; // Prevent API call if validation fails
+		}
+
+		// Start loader when the login process begins
+		this.setState({ loading: true });
 
 		const formData = new FormData();
 		formData.append('email', email);
@@ -35,7 +70,13 @@ export default class Login extends Component {
 		})
 			.then((response) => response.json())
 			.then((data) => {
+				// Stop loader when API response is received
+				this.setState({ loading: false });
+
 				if (data.status === "success") {
+
+					// Store user data in local storage
+					localStorage.setItem('user', JSON.stringify(data.data));
 
 					// Update state with user data
 					this.setState({ user: data.data }, () => {
@@ -55,11 +96,25 @@ export default class Login extends Component {
 					this.props.history.push('/');
 
 				} else {
-					alert(data.message);
+					this.setState({ loginError: data.message, emailError: false, passwordError: false });
 					console.log("Failed to login");
+
+					// Hide the error message after 5 seconds
+					setTimeout(() => {
+						this.setState({ loginError: null });
+					}, 5000);
 				}
 			})
-			.catch((error) => console.error("Error:", error));
+			.catch((error) => {
+				// Stop loader in case of error
+				this.setState({ loading: false });
+				this.setState({ loginError: 'Something went wrong. Please try again.', emailError: false, passwordError: false });
+				console.error("Error:", error);
+				// Hide the error message after 5 seconds
+				setTimeout(() => {
+					this.setState({ loginError: null });
+				}, 5000);
+			});
 
 	};
 
@@ -74,7 +129,7 @@ export default class Login extends Component {
 	};
 
 	render() {
-		const { email, password } = this.state;
+		const { email, password, emailError, passwordError, loginError, emailErrorMessage, passwordErrorMessage, loading } = this.state;
 		return (
 			<div className="auth">
 				<div className="auth_left">
@@ -84,52 +139,41 @@ export default class Login extends Component {
 								<i className="fe fe-command brand-logo" />
 							</Link>
 						</div>
-						<div className="card-body">
+						{loginError && <div className="card-alert alert alert-danger mb-0">{loginError}</div>}
+						<div className={`card-body ${loading ? 'dimmer active' : 'dimmer'}`}>
 							<div className="card-title">Login to your account</div>
-							{/* <div className="form-group">
-								<select className="custom-select">
-									<option>HR Dashboard</option>
-									<option>Project Dashboard</option>
-									<option>Job Portal</option>
-								</select>
-							</div> */}
-							<div className="form-group">
-								<input
-									type="email"
-									className="form-control"
-									id="exampleInputEmail1"
-									aria-describedby="emailHelp"
-									placeholder="Enter email"
-									value={email}
-									onChange={this.handleEmailChange}
-								/>
-							</div>
-							<div className="form-group">
-								<label className="form-label">
-									{/* Password */}
-									{/* <Link className="float-right small" to="/forgotpassword">
-										I forgot password
-									</Link> */}
-								</label>
-								<input
-									type="password"
-									className="form-control"
-									id="exampleInputPassword1"
-									placeholder="Password"
-									value={password}
-									onChange={this.handlePasswordChange}
-								/>
-							</div>
-							{/* <div className="form-group">
-								<label className="custom-control custom-checkbox">
-									<input type="checkbox" className="custom-control-input" />
-									<span className="custom-control-label">Remember me</span>
-								</label>
-							</div> */}
-							<div className="form-footer">
-								<a className="btn btn-primary btn-block" href="#" onClick={this.handleLoginIn}>
-									Click to login
-								</a>
+							{loading && <div className="loader"></div>}
+							<div className="dimmer-content">
+								<div className="form-group">
+									<input
+										type="email"
+										className={`form-control ${emailError ? 'is-invalid' : ''}`}
+										id="exampleInputEmail1"
+										aria-describedby="emailHelp"
+										placeholder="Enter email"
+										value={email}
+										onChange={this.handleEmailChange}
+									/>
+									{emailError && <div className="invalid-feedback">{emailErrorMessage}</div>}
+								</div>
+								<div className="form-group">
+									<label className="form-label">
+									</label>
+									<input
+										type="password"
+										className={`form-control ${passwordError ? 'is-invalid' : ''}`}
+										id="exampleInputPassword1"
+										placeholder="Password"
+										value={password}
+										onChange={this.handlePasswordChange}
+									/>
+									{passwordError && <div className="invalid-feedback">{passwordErrorMessage}</div>}
+								</div>
+								<div className="form-footer">
+									<a className="btn btn-primary btn-block" href="#" onClick={this.handleLoginIn}>
+										Click to login
+									</a>
+								</div>
 							</div>
 						</div>
 					</div>
