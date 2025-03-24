@@ -20,7 +20,13 @@ class Dashboard extends Component {
 		var loggedInUser = JSON.parse(localStorage.getItem('user')); // Get logged-in user details
 
 		// Make the GET API call when the component is mounted
-		fetch(`${process.env.REACT_APP_API_URL}/dashboard.php`)
+		// fetch(`${process.env.REACT_APP_API_URL}/dashboard.php`)
+		fetch(`${process.env.REACT_APP_API_URL}/dashboard.php`, {
+			method: "GET",
+			headers: {
+				"ngrok-skip-browser-warning": "true"
+			}
+		})
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {

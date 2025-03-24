@@ -24,7 +24,12 @@ class departments extends Component {
 	}
 
     componentDidMount() {
-        fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=view`)
+        fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=view`, {
+            method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
 		.then(response => response.json())
 		.then(data => {
             if (data.status === 'success') {
@@ -105,6 +110,7 @@ class departments extends Component {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                "ngrok-skip-browser-warning": "true"
             },
             body: JSON.stringify({
                 department_name: selectedDepartment.department_name,
@@ -192,6 +198,10 @@ class departments extends Component {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
+            method: "POST",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
           },
         })
         .then((response) => response.json())
@@ -288,6 +298,9 @@ class departments extends Component {
         fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=add`, {
             method: "POST",
             body: addDepartmentFormData,
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
         })
         .then((response) => response.json())
         .then((data) => {
@@ -520,7 +533,8 @@ class departments extends Component {
 
                     </div>
                     {/* Add Department Modal */}
-                    <div className="modal fade" id="addDepartmentModal" tabIndex={-1} role="dialog" aria-labelledby="addDepartmentModalLabel" /* aria-hidden="true" */>
+                    <div className="modal fade" id="addDepartmentModal" tabIndex={-1} role="dialog" aria-labelledby="addDepartmentModalLabel" data-backdrop="static" 
+                    data-keyboard="false">
                         <div className="modal-dialog" role="document">
                             <div className="modal-content">
                                 <div className="modal-header">

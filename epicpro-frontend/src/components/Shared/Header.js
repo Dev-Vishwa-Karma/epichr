@@ -31,7 +31,12 @@ class Header extends Component {
 		}
 
 		/** Get employees list */
-		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=get_punch_status&user_id=${window.user.id}`)
+		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=get_punch_status&user_id=${window.user.id}`, {
+			method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+		})
 			.then(response => response.json())
 			.then(data => {
 				if (data.status === 'success') {
@@ -57,6 +62,9 @@ class Header extends Component {
 		// API call to add break
 		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=add`, {
 			method: "POST",
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
 			body: formData,
 		})
 			.then((response) => response.json())
@@ -90,6 +98,9 @@ class Header extends Component {
 		// API call to save the report and punch-out
 		fetch(`${process.env.REACT_APP_API_URL}/reports.php?action=add`, {
 			method: "POST",
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
 			body: formData,
 		})
 			.then((response) => response.json())

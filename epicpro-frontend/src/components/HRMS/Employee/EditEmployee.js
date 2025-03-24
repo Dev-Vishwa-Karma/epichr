@@ -76,7 +76,12 @@ class EditEmployee extends Component {
         }
 
         // Fetch latest employee data from API
-        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&user_id=${employeeId}`)
+        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&user_id=${employeeId}`, {
+            method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
         .then(response => response.json())
         .then(data => {
             if (data.status === "success" && data.data) {
@@ -135,7 +140,12 @@ class EditEmployee extends Component {
         });
 
         // Get department data from departments table
-		fetch(`${process.env.REACT_APP_API_URL}/departments.php`)
+		fetch(`${process.env.REACT_APP_API_URL}/departments.php`, {
+            method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
         .then(response => response.json())
         .then(data => {
 			this.setState({ departments: data.data });
@@ -324,6 +334,9 @@ class EditEmployee extends Component {
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employeeId}`, {
             method: "POST",
             body: updateEmployeeData,
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
         })
         .then((response) => {
             if (!response.ok) {

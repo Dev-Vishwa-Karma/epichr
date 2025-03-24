@@ -37,7 +37,12 @@ class Gallery extends Component {
         // Check if user is admin or superadmin
         if (role === 'admin' || role === 'super_admin') {
             // Fetch employees data if user is admin or super_admin
-            fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=employee`)
+            fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=employee`, {
+                method: "GET",
+                headers: {
+                    "ngrok-skip-browser-warning": "true"
+                }
+            })
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
@@ -55,7 +60,12 @@ class Gallery extends Component {
             });
 
             // Fetch gallery data (as in the previous code)
-            fetch(`${process.env.REACT_APP_API_URL}/gallery.php?action=view`)
+            fetch(`${process.env.REACT_APP_API_URL}/gallery.php?action=view`, {
+                method: "GET",
+                headers: {
+                    "ngrok-skip-browser-warning": "true"
+                }
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -188,6 +198,9 @@ class Gallery extends Component {
         // Send images using fetch or axios
         fetch(`${process.env.REACT_APP_API_URL}/gallery.php?action=add`, {
             method: 'POST',
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
             body: uploadImageData,
         })
         .then(response => response.json())

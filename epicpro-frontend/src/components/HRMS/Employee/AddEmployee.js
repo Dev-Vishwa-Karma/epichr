@@ -73,7 +73,12 @@ class AddEmployee extends Component {
 
     componentDidMount() {
         // Get department data from departments table
-		fetch(`${process.env.REACT_APP_API_URL}/departments.php`)
+		fetch(`${process.env.REACT_APP_API_URL}/departments.php`, {
+            method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
         .then(response => response.json())
         .then(data => {
 			this.setState({ departments: data.data });
@@ -219,6 +224,9 @@ class AddEmployee extends Component {
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=add`, {
             method: "POST",
             body: addEmployeeData,
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
         })
         .then((response) => response.json())
         .then((data) => {

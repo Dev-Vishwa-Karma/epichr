@@ -12,7 +12,12 @@ class Events extends Component {
 
 	componentDidMount() {
 		// Make the GET API call when the component is mounted
-		fetch(`${process.env.REACT_APP_API_URL}/events.php`)
+		fetch(`${process.env.REACT_APP_API_URL}/events.php`, {
+			method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+		})
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {

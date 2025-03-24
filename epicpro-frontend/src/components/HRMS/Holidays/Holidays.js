@@ -38,7 +38,12 @@ class Holidays extends Component {
 		});
 
 		// Make the GET API call when the component is mounted
-		fetch(`${process.env.REACT_APP_API_URL}/events.php`)
+		fetch(`${process.env.REACT_APP_API_URL}/events.php`, {
+			method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+		})
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {
@@ -176,6 +181,9 @@ class Holidays extends Component {
 			// API call to add employee leave
 			fetch(`${process.env.REACT_APP_API_URL}/events.php?action=add`, {
 				method: "POST",
+				headers: {
+					"ngrok-skip-browser-warning": "true"
+				},
 				body: addEventData,
 			})
 			.then((response) => response.json())
@@ -261,6 +269,9 @@ class Holidays extends Component {
         // Example API call
         fetch(`${process.env.REACT_APP_API_URL}/events.php?action=edit&event_id=${selectedEvent.id}`, {
             method: 'POST',
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
             body: updateEventData,
         })
         .then((response) => response.json())
@@ -333,7 +344,10 @@ class Holidays extends Component {
         if (!deleteHoliday) return;
 
 		fetch(`${process.env.REACT_APP_API_URL}/events.php?action=delete&event_id=${deleteHoliday}`, {
-          	method: 'DELETE'
+          	method: 'DELETE',
+			headers: {
+				"ngrok-skip-browser-warning": "true"
+			}
         })
         .then((response) => response.json())
         .then((data) => {

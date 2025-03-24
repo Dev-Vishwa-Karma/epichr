@@ -42,7 +42,12 @@ class Users extends Component {
 		}
 
 		// Make the GET API call when the component is mounted
-		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=admin`)
+		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=admin`, {
+			method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+		})
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {
@@ -61,7 +66,12 @@ class Users extends Component {
 		});
 
 		// Fetch all users to generate the correct employee code
-		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view`)
+		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view`, {
+			method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+		})
 		.then(response => response.json())
 		.then(data => {
 			if (data.status === 'success') {
@@ -78,7 +88,12 @@ class Users extends Component {
 		});
 
 		// Get department data from departments table
-		fetch(`${process.env.REACT_APP_API_URL}/departments.php`)
+		fetch(`${process.env.REACT_APP_API_URL}/departments.php`, {
+			method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+		})
         .then(response => response.json())
         .then(data => {
 			this.setState({ departments: data.data });
@@ -148,6 +163,9 @@ class Users extends Component {
         // API call to add user
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=add`, {
             method: "POST",
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
             body: addUserData,
         })
         .then((response) => response.json())
@@ -230,8 +248,11 @@ class Users extends Component {
         // Example API call
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${selectedUser.id}`, {
             method: 'POST',
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
             body: updateProfileData,
-        })
+		})
         .then((response) => response.json())
         .then((data) => {
             if (data.status === "success") {
@@ -283,6 +304,7 @@ class Users extends Component {
           	method: 'DELETE',
 			headers: {
 				"Content-Type": "application/json",
+				"ngrok-skip-browser-warning": "true"
 			},
 			body: JSON.stringify({
 				user_id: deleteUser,

@@ -184,8 +184,18 @@ class Employee extends Component {
 	
 			// Fetch employees & leaves based on role
 			Promise.all([
-				fetch(employeesUrl).then(res => res.json()),
-				fetch(leavesUrl).then(res => res.json()),
+				fetch(employeesUrl, {
+					method: "GET",
+					headers: {
+						"ngrok-skip-browser-warning": "true"
+					}
+				}).then(res => res.json()),
+				fetch(leavesUrl, {
+					method: "GET",
+					headers: {
+						"ngrok-skip-browser-warning": "true"
+					}
+				}).then(res => res.json()),
 			])
 			.then(([employeesData, employeeLeavesData]) => {
 				// If only a single employee is returned, convert it to an array
@@ -220,7 +230,12 @@ class Employee extends Component {
 
 	goToEditEmployee(employee, employeeId) {
 		// Fetch salary details based on employee_id
-		fetch(`${process.env.REACT_APP_API_URL}/employee_salary_details.php?action=view&employee_id=${employeeId}`)
+		fetch(`${process.env.REACT_APP_API_URL}/employee_salary_details.php?action=view&employee_id=${employeeId}`,{
+			method: "POST",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+		})
         .then((res) => res.json())
         .then((salaryDetails) => {
             if (salaryDetails.data) {
@@ -291,6 +306,8 @@ class Employee extends Component {
 			method: "POST",  // Change method from DELETE to POST
 			headers: {
 				"Content-Type": "application/json",
+				method: "POST",
+                "ngrok-skip-browser-warning": "true"
 			},
 			body: JSON.stringify({
 				user_id: deleteUser,
@@ -388,6 +405,9 @@ class Employee extends Component {
         // API call to add employee leave
         fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=add`, {
             method: "POST",
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
             body: addEmployeeLeaveData,
         })
         .then((response) => response.json())
@@ -443,6 +463,9 @@ class Employee extends Component {
 		// Example API call
 		fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=edit&id=${selectedEmployeeLeave.id}`, {
 			method: 'POST',
+			headers: {
+                "ngrok-skip-browser-warning": "true"
+            },
 			body: updateEmployeeLeaveData,
 		})
 		.then((response) => response.json())
@@ -494,7 +517,10 @@ class Employee extends Component {
 		}
 
         fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=delete&id=${deleteEmployeeLeave}`, {
-          	method: 'DELETE'
+          	method: 'DELETE',
+			headers: {
+				"ngrok-skip-browser-warning": "true"
+			}
         })
         .then((response) => response.json())
         .then((data) => {

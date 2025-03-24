@@ -3,6 +3,7 @@ header("Access-Control-Allow-Origin: *"); // Allow React app
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");   // Allow HTTP methods
 header("Access-Control-Allow-Headers: Content-Type");         // Allow headers like JSON content
 header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
 
 // Include the database connection
 include 'db_connection.php';

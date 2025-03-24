@@ -2,6 +2,7 @@
 header("Access-Control-Allow-Origin: *");  // Temporarily allow all origins for development
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");  // Allow HTTP methods
 header("Access-Control-Allow-Headers: Content-Type, X-Requested-With"); // Allow specific headers
+header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
 
 // Handle preflight (OPTIONS) requests
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
