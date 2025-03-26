@@ -136,9 +136,9 @@ if (isset($action)) {
                     'status' => $status,
                 ];
                 // If successful, send success response
-                sendJsonResponse('success', $addEmployeeLeaveData, "Leave request added successfully");
+                sendJsonResponse('success', $addEmployeeLeaveData, "Leave added successfully");
             } else {
-                sendJsonResponse('error', null, "Failed to add leave request $stmt->error");
+                sendJsonResponse('error', null, "Failed to add leave $stmt->error");
             }
             break;
 
@@ -186,7 +186,7 @@ if (isset($action)) {
                         'status' => $status,
                         'updated_at' => $updated_at
                     ];
-                    sendJsonResponse('success', $updatedEmployeeLeaveData, 'Employee Leave updated successfully');
+                    sendJsonResponse('success', $updatedEmployeeLeaveData, 'Leave updated successfully');
                 } else {
                     sendJsonResponse('error', null, 'Failed to update employee leave');
                 }
@@ -204,10 +204,10 @@ if (isset($action)) {
                 $stmt = $conn->prepare("DELETE FROM employee_leaves WHERE id = ?");
                 $stmt->bind_param('i', $_GET['id']);
                 if ($stmt->execute()) {
-                    sendJsonResponse('success', null, 'Record deleted successfully');
+                    sendJsonResponse('success', null, 'Leave deleted successfully');
                 } else {
                     http_response_code(500);
-                    sendJsonResponse('error', null, 'Failed to delete record');
+                    sendJsonResponse('error', null, 'Failed to delete leave');
                 }
                 exit;
             } else {

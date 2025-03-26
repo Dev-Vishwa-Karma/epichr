@@ -97,7 +97,10 @@
                         echo json_encode(['status' => 'error', 'message' => 'Failed to execute query', 'query_error' => $stmt->error]);
                     }
                 } else {
-                    $stmt = $conn->prepare("
+                    $logged_in_employee_id = $_GET['logged_in_employee_id'] ?? null;
+                    $role = $_GET['role'] ?? '';
+
+                    $query = "
                         SELECT 
                             p.id AS project_id,
                             p.client_id,
@@ -117,7 +120,18 @@
                         LEFT JOIN clients c ON p.client_id = c.id
                         LEFT JOIN project_assignments pa ON p.id = pa.project_id
                         LEFT JOIN employees e ON pa.employee_id = e.id
-                    ");
+                    ";
+                    if ($role === 'employee') {
+                        $query .= " WHERE p.id IN (SELECT project_id FROM project_assignments WHERE employee_id = ?) ";
+                    }
+                    
+                    $query .= " ORDER BY p.created_at DESC";
+                    
+                    $stmt = $conn->prepare($query);
+                    
+                    if ($role === 'employee') {
+                        $stmt->bind_param("i", $logged_in_employee_id);
+                    }
                     
                     if ($stmt->execute()) {
                         $result = $stmt->get_result();
@@ -178,13 +192,13 @@
                 $project_description = $_POST['project_description'] ?? '';
                 $project_technology = $_POST['project_technology'] ?? '';
                 $client_id = !empty($_POST['client_id']) ? $_POST['client_id'] : NULL;
-                $team_members = $_POST['team_members'] ?? '';
+                $team_members_id = $_POST['team_members'] ?? '';
                 $project_start_date = !empty($_POST['project_start_date']) ? $_POST['project_start_date'] : NULL;
                 $project_end_date = !empty($_POST['project_end_date']) ? $_POST['project_end_date'] : NULL;
                 $created_at = date('Y-m-d H:i:s'); // Current timestamp for `created_at`
                 $created_by = $_POST['logged_in_employee_id'] ?? '';
             
-                if ($project_name && $project_technology && $team_members && $created_by) {
+                if ($project_name && $project_technology && $team_members_id && $created_by) {
                     // Prepare the SQL insert statement
                     $stmt = $conn->prepare("INSERT INTO projects (client_id, name, description, technology, start_date, end_date, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     $stmt->bind_param("issssssi", $client_id, $project_name, $project_description, $project_technology, $project_start_date, $project_end_date, $created_at, $created_by);
@@ -199,8 +213,8 @@
                         }
                         
                         // Ensure team members are an array
-                        if (!is_array($team_members)) {
-                            $team_members = explode(",", $team_members); // Convert comma-separated values to an array
+                        if (!is_array($team_members_id)) {
+                            $team_members_id = explode(",", $team_members_id); // Convert comma-separated values to an array
                         }
 
                         // Insert team members details into the project_assignments table
@@ -208,8 +222,8 @@
                             "INSERT INTO project_assignments (project_id, employee_id, created_at, created_by) VALUES (?, ?, ?, ?)"
                         );
 
-                        if (!empty($team_members) && is_array($team_members)) {
-                            foreach ($team_members as $team_member_id) {
+                        if (!empty($team_members_id) && is_array($team_members_id)) {
+                            foreach ($team_members_id as $team_member_id) {
                                 if (empty($team_member_id)) continue; // Skip invalid IDs
                                 $project_assignments_stmt->bind_param("iisi", $project_id, $team_member_id, $created_at, $created_by);
                                 if (!$project_assignments_stmt->execute()) {
@@ -220,7 +234,34 @@
                         } else {
                             echo json_encode(['error' => 'Invalid team members data']);
                             exit();
-                        }                        
+                        }
+                        
+                        // Fetch client details
+                        $client_stmt = $conn->prepare("SELECT name, location FROM clients WHERE id = ?");
+                        $client_stmt->bind_param("i", $client_id);
+                        $client_stmt->execute();
+                        $client_result = $client_stmt->get_result()->fetch_assoc();
+                        $client_name = $client_result['name'] ?? null;
+                        // $client_location = $client_result['location'] ?? null;
+
+                        // Fetch team member details
+                        $team_members = [];
+                        if (!empty($team_members_id)) {
+                            $placeholders = implode(',', array_fill(0, count($team_members_id), '?'));
+                            $types = str_repeat('i', count($team_members_id)); // Bind as integers
+                            $team_stmt = $conn->prepare("SELECT id, first_name, last_name FROM employees WHERE id IN ($placeholders)");
+                            $team_stmt->bind_param($types, ...$team_members_id);
+                            $team_stmt->execute();
+                            $team_result = $team_stmt->get_result();
+                            
+                            while ($member = $team_result->fetch_assoc()) {
+                                $team_members[] = [
+                                    'employee_id' => $member['id'],
+                                    'first_name' => $member['first_name'],
+                                    'last_name' => $member['last_name']
+                                ];
+                            }
+                        }
 
                         $newProjectData = [
                             'project_id' => $project_id,

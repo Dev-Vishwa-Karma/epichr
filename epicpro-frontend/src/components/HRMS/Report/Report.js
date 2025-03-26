@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux';
-import Modal from 'react-modal';
 
 class Report extends Component {
 
@@ -136,21 +135,21 @@ class Report extends Component {
             }, 5000)
             return;
         }
-        if (existingActivitySatus == 'active' && existingActivityOutTime) {
+        if (existingActivitySatus === 'active' && existingActivityOutTime) {
             this.setState({ editReportByAdminError: 'Please leave the Out-Time field empty when the status is set to Active!' });
             setTimeout(() => {
                 this.setState({ editReportByAdminError: null });
             }, 5000)
             return;
         }
-        if (existingActivitySatus == 'completed' && !existingActivityOutTime) {
+        if (existingActivitySatus === 'completed' && !existingActivityOutTime) {
             this.setState({ editReportByAdminError: 'Please enter the Out-Time when the status is set to Completed' });
             setTimeout(() => {
                 this.setState({ editReportByAdminError: null });
             }, 5000)
             return;
         }
-        if (existingActivitySatus == 'auto closed' && !existingActivityOutTime) {
+        if (existingActivitySatus === 'auto closed' && !existingActivityOutTime) {
             this.setState({ editReportByAdminError: 'Please enter the Out-Time when the status is set to Auto Closed' });
             setTimeout(() => {
                 this.setState({ editReportByAdminError: null });
@@ -168,21 +167,21 @@ class Report extends Component {
                 return;
             }
         }
-        if (existingActivityType == 'Punch' && existingActivityInTime && existingActivityOutTime && !existingActivityDescription) {
+        if (existingActivityType === 'Punch' && existingActivityInTime && existingActivityOutTime && !existingActivityDescription) {
             this.setState({ editReportByAdminError: 'Punch-out Report/Description is required!' });
             setTimeout(() => {
                 this.setState({ editReportByAdminError: null });
             }, 5000)
             return;
         }
-        if (existingActivityType == 'Break' && existingActivityInTime && !existingActivityOutTime && !existingActivityDescription) {
+        if (existingActivityType === 'Break' && existingActivityInTime && !existingActivityOutTime && !existingActivityDescription) {
             this.setState({ editReportByAdminError: 'Break Reason/Description is required!' });
             setTimeout(() => {
                 this.setState({ editReportByAdminError: null });
             }, 5000)
             return;
         }
-        if (existingActivityType == 'Break' && existingActivityInTime && existingActivityOutTime && !existingActivityDescription) {
+        if (existingActivityType === 'Break' && existingActivityInTime && existingActivityOutTime && !existingActivityDescription) {
             this.setState({ editReportByAdminError: 'Break Reason/Description is required!' });
             setTimeout(() => {
                 this.setState({ editReportByAdminError: null });
@@ -313,7 +312,7 @@ class Report extends Component {
             return;
         }
 
-        if (selectedStatus == 'completed' && !punchOutReport) {
+        if (selectedStatus === 'completed' && !punchOutReport) {
             this.setState({ addReportByAdminError: 'Please provide the punch-out report' });
             setTimeout(() => {
                 this.setState({ addReportByAdminError: null });
@@ -363,7 +362,7 @@ class Report extends Component {
 
     render() {
         const { fixNavbar } = this.props;
-        const { reports, selectedReport, isModalOpen, error, employeeData, selectedStatus, selectedEmployee, punchOutReport, activityId, reportError, reportSuccess, addReportByAdminError, existingFullName, existingActivityType, existingActivityDescription, existingActivityInTime, existingActivityOutTime, existingActivitySatus, existingActivityId, editReportByAdminError } = this.state;
+        const { reports, error, employeeData, selectedStatus, selectedEmployee, punchOutReport, reportError, reportSuccess, addReportByAdminError, existingFullName, existingActivityType, existingActivityDescription, existingActivityInTime, existingActivityOutTime, existingActivitySatus, editReportByAdminError } = this.state;
         return (
             <>
                 <div>

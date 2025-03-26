@@ -195,16 +195,16 @@ class Menu extends Component {
 						"label": "Dashboard",
 						"to": "/"
 					},
-					{
+					/* {
 						"id": 4,
 						"label": "Users",
 						"to": "/hr-users"
-					},
-					{
+					}, */
+					/* {
 						"id": 5,
 						"label": "Department",
 						"to": "/hr-department"
-					},
+					}, */
 					{
 						"id": 6,
 						"label": "Employee",
@@ -338,12 +338,44 @@ class Menu extends Component {
 				// Find the HRMS section
 				const hrmsSection = content.find(item => item.id === 1);
 				if (hrmsSection) {
+					// Add the "Users" item to the HRMS section after the dashboard item
+					const usersItem = {
+						"id": 4,
+						"label": "Users",
+						"to": "/hr-users"
+					};
+
+					// Find the index of "Dashboard" (id: 3)
+					const dashboardIndex = hrmsSection.content.findIndex(item => item.id === 3);
+
+					if (dashboardIndex !== -1) {
+						// Insert "Users" right after "Dashboard"
+						hrmsSection.content.splice(dashboardIndex + 1, 0, usersItem);
+					}
+
+					// Add the "Users" item to the HRMS section after the dashboard item
+					const departmentItem = {
+						"id": 5,
+						"label": "Department",
+						"to": "/hr-department"
+					};
+
+					// Find the index of "Users" (id: 4)
+					const usersIndex = hrmsSection.content.findIndex(item => item.id === 4);
+
+					if (usersIndex !== -1) {
+						// Insert "Users" right after "Dashboard"
+						hrmsSection.content.splice(usersIndex + 1, 0, departmentItem);
+					}
+					
 					// Add the "Reports" item to the HRMS section
-					hrmsSection.content.push({
-						"id": 12,
-						"label": "Reports",
-						"to": "/hr-report"
-					});
+					hrmsSection.content.push(
+						{
+							"id": 12,
+							"label": "Reports",
+							"to": "/hr-report"
+						}
+					);
 				}
 			}
 		}

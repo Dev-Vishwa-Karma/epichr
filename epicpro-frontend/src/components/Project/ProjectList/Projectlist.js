@@ -15,7 +15,6 @@ class ProjectList extends Component {
             teamMembers: [],
             projectStartDate: "",
             projectEndDate: "",
-            projectData: [], // To store the list of projects
             successMessage: "",
             errorMessage: "",
             dropdownOpen: false,
@@ -81,7 +80,7 @@ class ProjectList extends Component {
 
 
         // Get projects data
-        fetch(`${process.env.REACT_APP_API_URL}/projects.php?action=view`, {
+        fetch(`${process.env.REACT_APP_API_URL}/projects.php?action=view&logged_in_employee_id=${window.user.id}&role=${window.user.role}`, {
             method: "GET",
             headers: {
                 "ngrok-skip-browser-warning": "true"
@@ -253,7 +252,7 @@ class ProjectList extends Component {
             if (data.success) {
                 // Update the project list
                 this.setState((prevState) => ({
-                    projectData: [...(prevState.projectData || []), data.newProject], // Assuming the backend returns the new project
+                    projects: [data.newProject, ...(prevState.projects || [])], // Add project at the start
                     projectName: "",
                     projectDescription: "",
                     projectTechnology: "",
@@ -381,7 +380,7 @@ class ProjectList extends Component {
 
     render() {
         const { fixNavbar, boxOpen, box2Open, box3Open, box4Open, box5Open, box6Open } = this.props;
-        const { projectName, projectDescription, projectTechnology, projectStartDate, projectEndDate, clients, selectedClient, teamMembers, employees, projects, projectData, message} = this.state;
+        const { projectName, projectDescription, projectTechnology, projectStartDate, projectEndDate, clients, selectedClient, teamMembers, employees, projects, message} = this.state;
 
         return (
             <>
@@ -444,23 +443,10 @@ class ProjectList extends Component {
                                                                 <div className="avatar-list avatar-list-stacked">
                                                                     {project.team_members.map((member) => (
                                                                         <span
-																			className="avatar avatar-blue"
+																			className="avatar avatar-blue add-space"
 																			data-toggle="tooltip"
 																			data-placement="top"
                                                                             title={`${member.first_name} ${member.last_name}`}
-                                                                            style={{
-                                                                                marginRight: "5px", // Spacing between avatars
-                                                                                width: "32px", // Adjust size
-                                                                                height: "32px",
-                                                                                display: "inline-flex",
-                                                                                alignItems: "center",
-                                                                                justifyContent: "center",
-                                                                                fontSize: "14px", // Make initials more readable
-                                                                                fontWeight: "bold",
-                                                                                backgroundColor: "#E0E7FF", // Soft blue background
-                                                                                borderRadius: "50%", // Make it fully rounded
-                                                                                border: "1px solid #C7D2FE", // Light border for clarity
-                                                                            }}
 																		>
 																			{member.first_name.charAt(0).toUpperCase()}{member.last_name.charAt(0).toUpperCase()}
 																		</span>

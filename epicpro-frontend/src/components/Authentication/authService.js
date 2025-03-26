@@ -15,8 +15,6 @@ const authService = {
         authService.notifySubscribers(null);
     },
 
-    subscribers: [],
-
     subscribe: (callback) => {
         authService.subscribers.push(callback);
     },

@@ -59,12 +59,12 @@ function uploadFile($file, $targetDir, $allowedTypes = [], $maxSize = 2 * 1024 *
         // Generate a unique file name
         $uniqueFileName = uniqid() . '-' . basename($file['name']);
 
-
         $targetPath = $targetDir . DIRECTORY_SEPARATOR . $uniqueFileName;
 
-        // Ensure the target directory exists
+        // Ensure the target directory exists and set permissions
         if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0777, true);
+            mkdir($targetDir, 0777, true); // Create directory with full permissions
+            chmod($targetDir, 0777); // Ensure permissions are set
         }
 
         // Move the file to the target directory
@@ -84,8 +84,6 @@ if (isset($action)) {
         case 'view':
             if (isset($_GET['user_id']) && validateId($_GET['user_id'])) {
                 // Prepare SELECT statement with WHERE clause using a placeholder to prevent SQL injection
-                // $stmt = $conn->prepare("SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL");
-                // Get specific employee with department info
                 $stmt = $conn->prepare("
                     SELECT e.*, 
                         d.department_name, 
@@ -206,7 +204,7 @@ if (isset($action)) {
             if ($profileImage) {
                 try {
                     // Upload to profile folder
-                    $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png']);
+                    $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png', 'image/webp']);
                     
                     if ($profilePath) {
                         $data['profile'] = $profilePath;
@@ -228,25 +226,25 @@ if (isset($action)) {
             // Upload Aadhaar card
             $aadharCardFile = $_FILES['aadhar_card_file'] ?? "";
             if ($aadharCardFile) {
-                $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
             }
 
             // Upload PAN card
             $panCardFile = $_FILES['pan_card_file'] ?? "";
             if ($panCardFile) {
-                $data['pan_card_file'] = uploadFile($panCardFile, 'uploads/documents/pan', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                $data['pan_card_file'] = uploadFile($panCardFile, 'uploads/documents/pan', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
             }
 
             // Upload driving license
             $drivingLicenseFile = $_FILES['driving_license_file'] ?? "";
             if ($drivingLicenseFile) {
-                $data['driving_license_file'] = uploadFile($drivingLicenseFile, 'uploads/documents/driving_license', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                $data['driving_license_file'] = uploadFile($drivingLicenseFile, 'uploads/documents/driving_license', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
             }
 
             // Upload resume
             $resumeFile = $_FILES['resume'] ?? "";
             if ($resumeFile) {
-                $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
+                $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/webp']);
             }
 
             if (in_array(strtolower($logged_in_user_role), ['admin', 'super_admin'])) {
@@ -544,7 +542,7 @@ if (isset($action)) {
                 if ($profileImage) {
                     try {
                         // Upload to profile folder
-                        $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png']);
+                        $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png', 'image/webp']);
                         
                         if ($profilePath) {
                             $data['profile'] = $profilePath;
@@ -566,25 +564,25 @@ if (isset($action)) {
                 // Upload Aadhaar card
                 $aadharCardFile = $_FILES['aadhar_card_file'];
                 if ($aadharCardFile) {
-                    $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/octet-stream']);
+                    $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/octet-stream']);
                 }
 
                 // Upload PAN card
                 $panCardFile = $_FILES['pan_card_file'];
                 if ($panCardFile) {
-                    $data['pan_card_file'] = uploadFile($panCardFile, 'uploads/documents/pan', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                    $data['pan_card_file'] = uploadFile($panCardFile, 'uploads/documents/pan', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
                 }
 
                 // Upload driving license
                 $drivingLicenseFile = $_FILES['driving_license_file'];
                 if ($drivingLicenseFile) {
-                    $data['driving_license_file'] = uploadFile($drivingLicenseFile, 'uploads/documents/driving_license', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                    $data['driving_license_file'] = uploadFile($drivingLicenseFile, 'uploads/documents/driving_license', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
                 }
 
                 // Upload resume
                 $resumeFile = $_FILES['resume'];
                 if ($resumeFile) {
-                    $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/octet-stream']);
+                    $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/octet-stream', 'image/jpeg', 'image/png', 'image/webp']);
                 }
 
                 // Check if admin or super_admin is updating another user's profile

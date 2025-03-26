@@ -22,7 +22,7 @@ class Activities extends Component {
 
 		let apiUrl = '';
 
-		if (window.user.role == 'super_admin' || window.user.role == 'admin') {
+		if (window.user.role === 'super_admin' || window.user.role === 'admin') {
 		apiUrl = `${process.env.REACT_APP_API_URL}/activities.php`;
 		}
 		else {
@@ -224,7 +224,7 @@ class Activities extends Component {
 			return;
 		}
 
-		if (selectedStatus == 'active' && !breakReason) {
+		if (selectedStatus === 'active' && !breakReason) {
 			this.setState({ activityError: 'Please enter the reason for break' });
 			// Hide the error message after 5 seconds
 			setTimeout(() => {

@@ -21,9 +21,10 @@ class Employee extends Component {
 			employeeLeavesData: [],
 			selectedSalaryDetails: [],
 			totalLeaves: 0,
-			pendingLeaves: 0,
 			approvedLeaves: 0,
 			rejectedLeaves: 0,
+			cancelledLeaves: 0,
+			pendingLeaves: 0,
 			message: null,
 			deleteUser: null,
 			// Initialize all fields with empty string or null
@@ -80,7 +81,11 @@ class Employee extends Component {
 			currentPageEmployees: 1,
 			currentPageLeaves: 1,
             dataPerPage: 10,
-			loading: true
+			loading: true,
+			showSuccess: false,
+			successMessage: '',
+			showError: false,
+			errorMessage: ''
 		};
 	}
 	handleStatistics(e) {
@@ -95,68 +100,32 @@ class Employee extends Component {
 		let pendingLeaves = 0;
 		let approvedLeaves = 0;
 		let rejectedLeaves = 0;
-	
+		let cancelledLeaves = 0;
 		// Iterate over the employee leaves data and calculate counts
 		employeeLeavesData.forEach((leave) => {
 			if (leave) {
-			totalLeaves += 1;
-			switch (leave.status) {
-				case 'pending':
-					pendingLeaves += 1;
-					break;
-				case 'approved':
-					approvedLeaves += 1;
-					break;
-				case 'rejected':
-					rejectedLeaves += 1;
-					break;
-				default:
-					break;
-			}
+				totalLeaves += 1;
+				switch (leave.status) {
+					case 'pending':
+						pendingLeaves += 1;
+						break;
+					case 'approved':
+						approvedLeaves += 1;
+						break;
+					case 'rejected':
+						rejectedLeaves += 1;
+						break;
+					case 'cancelled':
+						cancelledLeaves += 1;
+						break;
+					default:
+						break;
+				}
 			}
 		});
 	
-		return { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves };
-	};	
-
-	/* componentDidMount() {
-		if (window.user) {
-			const { id, role } = window.user;
-			this.setState({
-				employee_id: id || null,
-				logged_in_employee_role: role || null,
-			});
-		} else {
-			console.warn("window.user is undefined");
-		}
-
-		const apiUrl = process.env.REACT_APP_API_URL;
-
-		// Make the GET API call when the component is mounted
-		Promise.all([
-            fetch(`${apiUrl}/get_employees.php?action=view&role=employee`).then((res) => res.json()),
-            fetch(`${apiUrl}/employee_leaves.php`).then((res) => res.json()),
-        ])
-		.then(([employeesData, employeeLeavesData]) => {
-			// Calculate leaves
-			const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(employeeLeavesData.data);
-
-			this.setState({
-				employeeData: employeesData.data,
-				filterEmployeesData: employeesData.data,
-				employeeLeavesData: employeeLeavesData.data,
-				totalLeaves: totalLeaves,
-				pendingLeaves: pendingLeaves,
-				approvedLeaves: approvedLeaves,
-				rejectedLeaves: rejectedLeaves,
-				loading: false
-			});
-		})
-		.catch(err => {
-			this.setState({ message: 'Failed to fetch data', loading: false });
-			console.error(err);
-		});
-	} */
+		return { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves };
+	};
 
 	componentDidMount() {
 		if (window.user) {
@@ -204,10 +173,10 @@ class Employee extends Component {
 				let employeesLeaveArray = Array.isArray(employeeLeavesData.data) ? employeeLeavesData.data : [employeeLeavesData.data];
 
 				// Calculate leaves
-				const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = 
+				const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves } = 
 					this.calculateLeaveCounts(employeeLeavesData.data);
 	
-				this.setState({
+				/* this.setState({
 					employeeData: employeesArray,
 					filterEmployeesData: employeesArray,
 					employeeLeavesData: employeesLeaveArray,
@@ -215,8 +184,23 @@ class Employee extends Component {
 					pendingLeaves,
 					approvedLeaves,
 					rejectedLeaves,
+					cancelledLeaves,
 					loading: false
-				});
+				}); */
+
+				setTimeout(() => {
+					this.setState({
+						employeeData: employeesArray,
+						filterEmployeesData: employeesArray,
+						employeeLeavesData: employeesLeaveArray,
+						totalLeaves,
+						pendingLeaves,
+						approvedLeaves,
+						rejectedLeaves,
+						cancelledLeaves,
+						loading: false
+					});
+				}, 3000);
 			})
 			.catch(err => {
 				this.setState({ message: "Failed to fetch data", loading: false });
@@ -417,7 +401,7 @@ class Employee extends Component {
 					const updatedEmployeeLeavesData = [...(prevState.employeeLeavesData || []), data.data];
 					
 					// Calculate the leave counts
-					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
+					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
 					
 					// Return the updated state
 					return {
@@ -426,20 +410,34 @@ class Employee extends Component {
 						pendingLeaves,
 						approvedLeaves,
 						rejectedLeaves,
-						
+						cancelledLeaves,
 						// Clear form fields after submission
 						from_date: "",
 						to_date: "",
 						reason: "",
-						status: ""
+						status: "",
+						showSuccess: true,
+						successMessage: data.message
 					};
 				});
 				document.querySelector("#addLeaveRequestModal .close").click();
+				setTimeout(() => this.setState({ showSuccess: false }), 3000);
             } else {
-                console.log("Failed to employee leave");
+				this.setState({
+					showError: true,
+					errorMessage: data.message,
+				});
+				setTimeout(() => this.setState({ showError: false }), 3000);
             }
         })
-        .catch((error) => console.error("Error:", error));
+        .catch((error) => {
+			console.error("Error:", error);
+			this.setState({
+				showError: true,
+				errorMessage: "An error occurred. Please try again later.",
+			});
+			setTimeout(() => this.setState({ showError: false }), 3000);
+		});
     };
 
 	
@@ -481,7 +479,7 @@ class Employee extends Component {
 					});
 	
 					// Calculate the leave counts, excluding the totalLeaves count
-					const { pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
+					const { pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
 					
 					// Return the updated state
 					return {
@@ -489,16 +487,30 @@ class Employee extends Component {
 						pendingLeaves,
 						approvedLeaves,
 						rejectedLeaves,
+						cancelledLeaves,
+						showSuccess: true,
+						successMessage: data.message
 					};
 				});
 
 				document.querySelector("#editLeaveRequestModal .close").click();
-				// Optionally reload the department data here
+				setTimeout(() => this.setState({ showSuccess: false }), 3000);
 			} else {
-				console.log('Failed to update employee leave!');
+				this.setState({
+					showError: true,
+					errorMessage: data.message,
+				});
+				setTimeout(() => this.setState({ showError: false }), 3000);
 			}
 		})
-		.catch((error) => console.error('Error updating user:', error));
+		.catch((error) => {
+			console.error("Error:", error);
+			this.setState({
+				showError: true,
+				errorMessage: "An error occurred. Please try again later.",
+			});
+			setTimeout(() => this.setState({ showError: false }), 3000);
+		});
 	};
 
 	// Delete Employee leave
@@ -512,7 +524,7 @@ class Employee extends Component {
         const { deleteEmployeeLeave, currentPageLeaves, dataPerPage } = this.state;
       
         if (!deleteEmployeeLeave) {
-			console.error("No employee leave ID selected for deletion.");
+			console.error("Employee leave ID is not found for deletion.");
 			return;
 		}
 
@@ -530,7 +542,7 @@ class Employee extends Component {
 					const updatedEmployeeLeavesData = prevState.employeeLeavesData.filter((d) => d.id !== deleteEmployeeLeave);
 			
 					// Calculate the leave counts
-					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
+					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
 
 					// Calculate the total pages after deletion
 					const totalPages = Math.ceil(updatedEmployeeLeavesData.length / dataPerPage);
@@ -550,16 +562,31 @@ class Employee extends Component {
 						pendingLeaves,
 						approvedLeaves,
 						rejectedLeaves,
-						currentPageLeaves: newPage
+						cancelledLeaves,
+						currentPageLeaves: newPage,
+						showSuccess: true,
+						successMessage: data.message
 					};
 				});
 				// Close the modal after deletion
 				document.querySelector("#deleteLeaveRequestModal .close").click();
+				setTimeout(() => this.setState({ showSuccess: false }), 3000);
 			} else {
-				console.log('Failed to delete employee leave.');
+				this.setState({
+					showError: true,
+					errorMessage: data.message,
+				});
+				setTimeout(() => this.setState({ showError: false }), 3000);
 			}
         })
-        .catch((error) => console.error('Error:', error));
+		.catch((error) => {
+			console.error("Error:", error);
+			this.setState({
+				showError: true,
+				errorMessage: "An error occurred. Please try again later.",
+			});
+			setTimeout(() => this.setState({ showError: false }), 3000);
+		});
     };
 
 	// Handle Pagination of employee listing and employee leaves listing
@@ -597,9 +624,65 @@ class Employee extends Component {
 			}
         });
     };
+
+	// Render function for success and error messages
+    renderAlertMessages = () => {
+        return (
+            <>
+                {/* Add the alert for success messages */}
+                <div 
+                    className={`alert alert-success alert-dismissible fade show ${this.state.showSuccess ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-circle-check me-2"></i>
+                    {this.state.successMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showSuccess: false })}
+                    >
+                    </button>
+                </div>
+
+                {/* Add the alert for error messages */}
+                <div 
+                    className={`alert alert-danger alert-dismissible fade show ${this.state.showError ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                    {this.state.errorMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showError: false })}
+                    >
+                    </button>
+                </div>
+            </>
+        );
+    };
+
 	render() {
 		const { fixNavbar, /* statisticsOpen, statisticsClose */ } = this.props;
-		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave, currentPageEmployees,  currentPageLeaves, dataPerPage, loading } = this.state;
+		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves, message, selectedEmployeeLeave, currentPageEmployees,  currentPageLeaves, dataPerPage, loading } = this.state;
 
 		// Handle empty employee data safely
 		const employeeList = (employeeData || []).length > 0 ? employeeData : [];
@@ -619,6 +702,7 @@ class Employee extends Component {
 
 		return (
 			<>
+				{this.renderAlertMessages()} {/* Show Messages */}
 				<div>
 					<div>
 						<div className={`section-body ${fixNavbar ? "marginTop" : ""} `}>
@@ -661,85 +745,36 @@ class Employee extends Component {
 											</button>
 									</div>
 								</div>
+								{/* Show leave count */}
 								<div className="row">
-									<div className="col-lg-3 col-md-6">
-										<div className="card">
-											<div className="card-body w_sparkline">
-												<div className="details">
-													<span>Total Leaves</span>
-													<h3 className="mb-0">
-														<span className="counter">	<CountUp end={totalLeaves} /></span>
-													</h3>
-												</div>
-												<div className="w_chart">
-													<div id="mini-bar-chart1" className="mini-bar-chart" />
-												</div>
-											</div>
-										</div>
-										{/* 
-											<div className="w_chart">
-													<span
-														ref={this.sparkline1}
-														id="mini-bar-chart1"
-														className="mini-bar-chart"
-													></span>
-												</div>
-										*/}
-									</div>
-									<div className="col-lg-3 col-md-6">
-										<div className="card">
-											<div className="card-body w_sparkline">
-												<div className="details">
-													<span>Approved Leaves</span>
-													<h3 className="mb-0">
-														<CountUp end={approvedLeaves} />
-														{/* <span >124</span> */}
-													</h3>
-												</div>
-												<div className="w_chart">
-													<span
-														ref={this.sparkline2}
-														id="mini-bar-chart2"
-														className="mini-bar-chart"
-													/>
+									{[
+										{ label: "Total Leaves", value: totalLeaves },
+										{ label: "Approved Leaves", value: approvedLeaves },
+										{ label: "Rejected Leaves", value: rejectedLeaves },
+										{ label: "Pending Leaves", value: pendingLeaves },
+										{ label: "Cancelled Leaves", value: cancelledLeaves}
+									].map((item, index) => (
+										<div className="col-lg-2 custom-col col-md-6" key={index}>
+											<div className="card">
+												<div className="card-body w_sparkline">
+													<div className="details">
+														<span>{item.label}</span>
+														{loading ? (
+															<div className="d-flex" style={{ height: "20px" }}>
+																<div className="spinner-border" role="status" style={{ width: "20px", height: "20px", borderWidth: "2px" }}>
+																<span className="sr-only">Loading...</span>
+																</div>
+															</div>
+														) : (
+															<h3 className="mb-0 counter">
+																<CountUp end={item.value} />
+															</h3>
+														)}
+													</div>
 												</div>
 											</div>
 										</div>
-									</div>
-									<div className="col-lg-3 col-md-6">
-										<div className="card">
-											<div className="card-body w_sparkline">
-												<div className="details">
-													<span>Rejected Leaves</span>
-													<h3 className="mb-0 counter">	<CountUp end={rejectedLeaves} /></h3>
-												</div>
-												<div className="w_chart">
-													<span
-														ref={this.sparkline3}
-														id="mini-bar-chart3"
-														className="mini-bar-chart"
-													/>
-												</div>
-											</div>
-										</div>
-									</div>
-									<div className="col-lg-3 col-md-6">
-										<div className="card">
-											<div className="card-body w_sparkline">
-												<div className="details">
-													<span>Pending Leaves</span>
-													<h3 className="mb-0 counter">	<CountUp end={pendingLeaves} /></h3>
-												</div>
-												<div className="w_chart">
-													<span
-														ref={this.sparkline4}
-														id="mini-bar-chart4"
-														className="mini-bar-chart"
-													/>
-												</div>
-											</div>
-										</div>
-									</div>
+									))}
 								</div>
 							</div>
 						</div>
@@ -794,17 +829,9 @@ class Employee extends Component {
 																	currentEmployees.map((employee, index) => (
 																		<tr key={index}>
 																			<td className="w40">
-																				<label className="custom-control custom-checkbox">
-																					<input
-																						type="checkbox"
-																						className="custom-control-input"
-																						name="example-checkbox1"
-																						defaultValue="option1"
-																					/>
-																					<span className="custom-control-label">
-																						&nbsp;
-																					</span>
-																				</label>
+																				{((this.state.currentPageEmployees - 1) * dataPerPage + index + 1)
+																				.toString()
+																				.padStart(2, '0')}
 																			</td>
 																			<td className="d-flex">
 																				<span
@@ -1126,7 +1153,8 @@ class Employee extends Component {
 													onChange={this.handleLeaveStatus}
 													value={this.state.status}
 												>
-													<option value="pending">Pending</option> 
+													<option value="pending">Pending</option>
+													<option value="cancelled">Cancelled</option> 
 													<option value="approved">Approved</option>
 													<option value="rejected">Rejected</option>
 												</select>
@@ -1217,17 +1245,21 @@ class Employee extends Component {
 														value={selectedEmployeeLeave?.status || ""}
 														onChange={this.handleInputChangeForEditEmployeeLeave}
 													>
-														<option value="">Select Status</option>
+														{/* Instead of "Select Status", show the assigned status */}
+														<option value={selectedEmployeeLeave?.status}>
+															{selectedEmployeeLeave?.status.charAt(0).toUpperCase() + selectedEmployeeLeave?.status.slice(1)}
+														</option>
 														{this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin" ? (
 															<>
-																<option value="approved">Approved</option>
-																<option value="pending">Pending</option>
-																<option value="rejected">Rejected</option>
+																{selectedEmployeeLeave?.status !== "approved" && <option value="approved">Approved</option>}
+																{selectedEmployeeLeave?.status !== "pending" && <option value="pending">Pending</option>}
+																{selectedEmployeeLeave?.status !== "rejected" && <option value="rejected">Rejected</option>}
 															</>
 														) : (
 															<>
-																<option value="pending">Pending</option>
-																<option value="rejected">Rejected</option>
+																{this.state.logged_in_employee_role === "employee" && selectedEmployeeLeave?.status === "pending" && (
+																	<option value="cancelled">Cancelled</option>
+																)}
 															</>
 														)}
 													</select>

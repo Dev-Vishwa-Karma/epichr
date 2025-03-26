@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import Columnchart from '../../common/columnchart';
 import { Link } from 'react-router-dom';
 import { connect } from 'react-redux';
 import authService from "../../Authentication/authService";
@@ -13,6 +12,7 @@ class Dashboard extends Component {
 			totalEvents: 0,
 			totalHolidays: 0,
 			user: authService.getUser(),
+			projects: []
 		};
 	}
 
@@ -20,7 +20,6 @@ class Dashboard extends Component {
 		var loggedInUser = JSON.parse(localStorage.getItem('user')); // Get logged-in user details
 
 		// Make the GET API call when the component is mounted
-		// fetch(`${process.env.REACT_APP_API_URL}/dashboard.php`)
 		fetch(`${process.env.REACT_APP_API_URL}/dashboard.php`, {
 			method: "GET",
 			headers: {
@@ -52,11 +51,34 @@ class Dashboard extends Component {
 			this.setState({ message: 'Failed to fetch data' });
 			console.error(err);
 		});
+
+		// Get projects data
+        fetch(`${process.env.REACT_APP_API_URL}/projects.php?action=view&logged_in_employee_id=${window.user.id}&role=${window.user.role}`, {
+            method: "GET",
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                this.setState({
+                    projects: data.status === 'success' ? data.data : [],
+                    loading: false
+                });
+            } else {
+                this.setState({ error: data.message, loading: false });
+            }
+        })
+        .catch(err => {
+            this.setState({ error: 'Failed to fetch employees data' });
+            console.error(err);
+        });
 	}
 
 	render() {
 		const { fixNavbar } = this.props;
-		const { totalUsers, totalEmployees, totalHolidays, totalEvents, user } = this.state;
+		const { totalUsers, totalEmployees, totalHolidays, totalEvents, user, projects, message } = this.state;
 		return (
 			<>
 				<div>
@@ -65,97 +87,102 @@ class Dashboard extends Component {
 							<div className="row clearfix">
 								<div className="col-lg-12">
 									<div className={`section-body ${fixNavbar ? "mb-4 mt-3" : "mb-4"}`}>
-										<h4>Welcome Jason Porter!</h4>
-										<small>
+										<h6 className="text-muted font-weight-normal mb-1">Welcome</h6>
+										<h3 className="text-primary mb-0">
+											{`${window.user.first_name} ${window.user.last_name}`}
+										</h3>
+										{/* <small>
 											Measure How Fast You’re Growing Monthly Recurring Revenue.{' '}
 											<a href="fake_url">Learn More</a>
-										</small>
+										</small> */}
 									</div>
 								</div>
 							</div>
-							<div className="row clearfix justify-content-start">
-								<div className="col-6 col-md-4 col-xl-1_7">
-									<div className="card">
-										<div className="card-body ribbon">
-											<div className="ribbon-box green">{totalUsers}</div>
-											{user.role === "admin" || user.role === "super_admin" ? (
-												<Link to="/hr-users" className="my_sort_cut text-muted">
+							{(user.role === "admin" || user.role === "super_admin") && (
+								<div className="row clearfix justify-content-start">
+									<div className="col-6 col-md-4 col-xl-1_7">
+										<div className="card">
+											<div className="card-body ribbon">
+												<div className="ribbon-box green">{totalUsers}</div>
+												{user.role === "admin" || user.role === "super_admin" ? (
+													<Link to="/hr-users" className="my_sort_cut text-muted">
+														<i className="icon-users" />
+														<span>Users</span>
+													</Link>
+												) : (
+													<div className="my_sort_cut text-muted">
+														<i className="icon-users" />
+														<span>Users</span>
+													</div>
+												)}
+											</div>
+										</div>
+									</div>
+									<div className="col-6 col-md-4 col-xl-1_7">
+										<div className="card">
+											<div className="card-body ribbon">
+												<div className="ribbon-box pink">{totalEmployees}</div>
+												<Link to="/hr-employee" className="my_sort_cut text-muted">
 													<i className="icon-users" />
-													<span>Users</span>
+													<span>Employees</span>
 												</Link>
-											) : (
-												<div className="my_sort_cut text-muted">
-													<i className="icon-users" />
-													<span>Users</span>
-												</div>
-											)}
+											</div>
+										</div>
+									</div>
+									<div className="col-6 col-md-4 col-xl-1_7">
+										<div className="card">
+											<div className="card-body ribbon">
+											<div className="ribbon-box info">{totalHolidays}</div>
+												<Link to="/hr-holidays" className="my_sort_cut text-muted">
+													<i className="icon-like" />
+													<span>Holidays</span>
+												</Link>
+											</div>
+										</div>
+									</div>
+									<div className="col-6 col-md-4 col-xl-1_7">
+										<div className="card">
+											<div className="card-body ribbon">
+												<div className="ribbon-box orange">{totalEvents}</div>
+												<Link to="/hr-events" className="my_sort_cut text-muted">
+													<i className="icon-calendar" />
+													<span>Events</span>
+												</Link>
+											</div>
+										</div>
+									</div>
+									<div className="col-6 col-md-4 col-xl-1_7">
+										<div className="card">
+											<div className="card-body">
+												<Link to="/hr-payroll" className="my_sort_cut text-muted">
+													<i className="icon-credit-card" />
+													<span>Payroll</span>
+												</Link>
+											</div>
+										</div>
+									</div>
+									<div className="col-6 col-md-4 col-xl-1_7">
+										<div className="card">
+											<div className="card-body">
+												<Link to="/hr-accounts" className="my_sort_cut text-muted">
+													<i className="icon-calculator" />
+													<span>Accounts</span>
+												</Link>
+											</div>
+										</div>
+									</div>
+									<div className="col-6 col-md-4 col-xl-1_7">
+										<div className="card">
+											<div className="card-body">
+												<Link to="/hr-report" className="my_sort_cut text-muted">
+													<i className="icon-pie-chart" />
+													<span>Report</span>
+												</Link>
+											</div>
 										</div>
 									</div>
 								</div>
-								<div className="col-6 col-md-4 col-xl-1_7">
-									<div className="card">
-										<div className="card-body ribbon">
-											<div className="ribbon-box pink">{totalEmployees}</div>
-											<Link to="/hr-employee" className="my_sort_cut text-muted">
-												<i className="icon-users" />
-												<span>Employees</span>
-											</Link>
-										</div>
-									</div>
-								</div>
-								<div className="col-6 col-md-4 col-xl-1_7">
-									<div className="card">
-										<div className="card-body ribbon">
-										<div className="ribbon-box info">{totalHolidays}</div>
-											<Link to="/hr-holidays" className="my_sort_cut text-muted">
-												<i className="icon-like" />
-												<span>Holidays</span>
-											</Link>
-										</div>
-									</div>
-								</div>
-								<div className="col-6 col-md-4 col-xl-1_7">
-									<div className="card">
-										<div className="card-body ribbon">
-											<div className="ribbon-box orange">{totalEvents}</div>
-											<Link to="/hr-events" className="my_sort_cut text-muted">
-												<i className="icon-calendar" />
-												<span>Events</span>
-											</Link>
-										</div>
-									</div>
-								</div>
-								<div className="col-6 col-md-4 col-xl-1_7">
-									<div className="card">
-										<div className="card-body">
-											<Link to="/hr-payroll" className="my_sort_cut text-muted">
-												<i className="icon-credit-card" />
-												<span>Payroll</span>
-											</Link>
-										</div>
-									</div>
-								</div>
-								<div className="col-6 col-md-4 col-xl-1_7">
-									<div className="card">
-										<div className="card-body">
-											<Link to="/hr-accounts" className="my_sort_cut text-muted">
-												<i className="icon-calculator" />
-												<span>Accounts</span>
-											</Link>
-										</div>
-									</div>
-								</div>
-								<div className="col-6 col-md-4 col-xl-1_7">
-									<div className="card">
-										<div className="card-body">
-											<Link to="/hr-report" className="my_sort_cut text-muted">
-												<i className="icon-pie-chart" />
-												<span>Report</span>
-											</Link>
-										</div>
-									</div>
-								</div>
-							</div>
+							)}
 						</div>
 					</div>
 					<div className="section-body">
@@ -202,204 +229,36 @@ class Dashboard extends Component {
 															<th>Team</th>
 															<th>Project Name</th>
 															<th>Technology</th>
-															{/* <th>Project Cost</th>
-															<th>Payment</th>
-															<th>Status</th> */}
 														</tr>
 													</thead>
 													<tbody>
-														<tr>
-															<td>#AD1245</td>
-															<td>Sean Black</td>
-															<td>
-																<ul className="list-unstyled team-info sm margin-0 w150">
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar1.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar2.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar3.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar4.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li className="ml-2">
-																		<span>2+</span>
-																	</li>
-																</ul>
-															</td>
-															<td>Angular Admin</td>
-															<td>Angular</td>
-															{/* <td>$14,500</td>
-															<td>Done</td>
-															<td>
-																<span className="tag tag-success">Delivered</span>
-															</td> */}
-														</tr>
-														<tr>
-															<td>#DF1937</td>
-															<td>Sean Black</td>
-															<td>
-																<ul className="list-unstyled team-info sm margin-0 w150">
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar1.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar2.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar3.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar4.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li className="ml-2">
-																		<span>2+</span>
-																	</li>
-																</ul>
-															</td>
-															<td>Angular Admin</td>
-															<td>Angular</td>
-															{/* <td>$14,500</td>
-															<td>Pending</td>
-															<td>
-																<span className="tag tag-success">Delivered</span>
-															</td> */}
-														</tr>
-														<tr>
-															<td>#YU8585</td>
-															<td>Merri Diamond</td>
-															<td>
-																<ul className="list-unstyled team-info sm margin-0 w150">
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar1.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar2.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																</ul>
-															</td>
-															<td>One page html Admin</td>
-															<td>Html</td>
-															{/* <td>$500</td>
-															<td>Done</td>
-															<td>
-																<span className="tag tag-orange">Submit</span>
-															</td> */}
-														</tr>
-														<tr>
-															<td>#AD1245</td>
-															<td>Sean Black</td>
-															<td>
-																<ul className="list-unstyled team-info sm margin-0 w150">
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar1.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar2.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar3.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar4.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																</ul>
-															</td>
-															<td>Wordpress One page</td>
-															<td>Wordpress</td>
-															{/* <td>$1,500</td>
-															<td>Done</td>
-															<td>
-																<span className="tag tag-success">Delivered</span>
-															</td> */}
-														</tr>
-														<tr>
-															<td>#GH8596</td>
-															<td>Allen Collins</td>
-															<td>
-																<ul className="list-unstyled team-info sm margin-0 w150">
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar1.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar2.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar3.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li>
-																		<img
-																			src="/assets/images/xs/avatar4.jpg"
-																			alt="Avatar"
-																		/>
-																	</li>
-																	<li className="ml-2">
-																		<span>2+</span>
-																	</li>
-																</ul>
-															</td>
-															<td>VueJs Application</td>
-															<td>VueJs</td>
-															{/* <td>$9,500</td>
-															<td>Done</td>
-															<td>
-																<span className="tag tag-success">Delivered</span>
-															</td> */}
-														</tr>
+														{projects && projects.length > 0 ? (
+                                    						projects.map((project, index) => (
+																<tr key={project.id || index}>
+																	<td>{(index + 1).toString().padStart(2, '0')}</td>
+																	<td>{project.client_name}</td>
+																	<td>
+																		<ul className="list-unstyled team-info sm margin-0 w150">
+																			{project.team_members.map((member, index) => (
+																				<li key={index} data-toggle="tooltip" data-placement="top" title={`${member.first_name} ${member.last_name}`}
+																				style={{
+																					marginLeft:"3px"
+																				}}
+																				>
+																					<span className="avatar avatar-blue add-space">
+																						{member.first_name.charAt(0).toUpperCase()}{member.last_name.charAt(0).toUpperCase()}
+																					</span>
+																				</li>
+																			))}
+																		</ul>
+																	</td>
+																	<td>{project.project_name}</td>
+																	<td>{project.project_technology}</td>
+																</tr>
+															))
+														): (
+															!message && <tr><td>projects not available.</td></tr>
+														)}
 													</tbody>
 												</table>
 											</div>

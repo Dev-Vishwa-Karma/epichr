@@ -65,3 +65,39 @@ div.rtl{
         max-width: 14.2857%;
     }
 }
+
+/* Add this css for projectlist.js file */
+.avatar-list-stacked .avatar.add-space {
+    margin-right: 3px !important;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #E0E7FF;
+    border-radius: 50%;
+    border: 1px solid #C7D2FE
+}
+
+/* Employee section css */
+.custom-col {
+    flex: 1 1 20%; /* Ensures five equal sections */
+    max-width: 20%;
+}
+  
+@media (max-width: 1200px) {
+    .custom-col {
+      flex: 1 1 33%; /* Adjust for smaller screens */
+      max-width: 33%;
+    }
+}
+  
+@media (max-width: 768px) {
+    .custom-col {
+        flex: 1 1 50%;
+        max-width: 50%;
+    }
+}
+  
