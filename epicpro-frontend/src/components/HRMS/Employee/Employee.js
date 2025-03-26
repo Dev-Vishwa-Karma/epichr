@@ -176,7 +176,7 @@ class Employee extends Component {
 				const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves } = 
 					this.calculateLeaveCounts(employeeLeavesData.data);
 	
-				/* this.setState({
+				this.setState({
 					employeeData: employeesArray,
 					filterEmployeesData: employeesArray,
 					employeeLeavesData: employeesLeaveArray,
@@ -186,21 +186,7 @@ class Employee extends Component {
 					rejectedLeaves,
 					cancelledLeaves,
 					loading: false
-				}); */
-
-				setTimeout(() => {
-					this.setState({
-						employeeData: employeesArray,
-						filterEmployeesData: employeesArray,
-						employeeLeavesData: employeesLeaveArray,
-						totalLeaves,
-						pendingLeaves,
-						approvedLeaves,
-						rejectedLeaves,
-						cancelledLeaves,
-						loading: false
-					});
-				}, 3000);
+				});
 			})
 			.catch(err => {
 				this.setState({ message: "Failed to fetch data", loading: false });
