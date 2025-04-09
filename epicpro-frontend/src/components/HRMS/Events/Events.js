@@ -20,15 +20,58 @@ class Events extends Component {
       		errorMessage: "",
 			showSuccess: false,
       		showError: false,
-			loading: true
+			loading: true,
+			employees: [],
+			todos: [],
+			selectedEmployeeId: '',
+			logged_in_employee_id: '',
+			logged_in_employee_role: '',
 		}
 	}
 
 	componentDidMount() {
+		const {role, id} = window.user;
 		// Get the logged in user id
-		this.setState({
-			employee_id: window.user.id,
-		});
+		this.setState(
+			{
+				employee_id: id,
+				logged_in_employee_id: id,
+				logged_in_employee_role: role,
+				selectedEmployeeId: role === 'employee' ? id : ''
+			},
+			() => {
+				if (role === 'employee') {
+					// Fetch for employees only
+					this.fetchTodos(this.state.logged_in_employee_id); // Fetch for employees only
+				}
+			}
+		);
+
+		// Check if user is admin or superadmin
+        if (role === 'admin' || role === 'super_admin') {
+            // Fetch employees data if user is admin or super_admin
+            fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=employee`, {
+                method: "GET",
+                headers: {
+                    "ngrok-skip-browser-warning": "true"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    this.setState({
+                        employees: data.status === 'success' ? data.data : [],
+                        loading: false
+                    });
+                } else {
+                    this.setState({ error: data.message, loading: false });
+                }
+            })
+            .catch(err => {
+                this.setState({ error: 'Failed to fetch employees data' });
+                console.error(err);
+            });
+        }
 
 		// Make the GET API call when the component is mounted
 		fetch(`${process.env.REACT_APP_API_URL}/events.php`, {
@@ -54,6 +97,34 @@ class Events extends Component {
 			console.error(err);
 		});
 	}
+
+	fetchTodos = (employeeId) => {
+		if (!employeeId) {
+			this.setState({ todos: [] }); // Ensure todos is always an array
+			return;
+		}
+	
+		this.setState({ loading: true });
+	
+		fetch(`${process.env.REACT_APP_API_URL}/project_todo.php?action=view&employee_id=${employeeId}`, {
+			method: "GET",
+			headers: {
+				"ngrok-skip-browser-warning": "true"
+			}
+		})
+		.then((res) => res.json())
+		.then((data) => {
+			if (data.status === 'success' && Array.isArray(data.data)) {
+				this.setState({ todos: data.data, loading: false });
+			} else {
+				this.setState({ todos: [], loading: false });
+			}
+		})
+		.catch((error) => {
+			console.error("Error fetching todos:", error);
+			this.setState({ todos: [], loading: false });
+		});
+	};
 
 	// Handle year selection
 	handleYearChange = (event) => {
@@ -204,9 +275,19 @@ class Events extends Component {
 		}
     };
 
+	handleEmployeeSelection = (e) => {
+        const selectedEmployeeId = e.target.value;
+
+        this.setState({ selectedEmployeeId, todos: [] }, () => {
+			if (selectedEmployeeId) {
+				this.fetchTodos(selectedEmployeeId);
+			}
+		});
+    };
+
     render() {
         const { fixNavbar} = this.props;
-		const {events, selectedYear, showAddEventModal, loading  } = this.state;
+		const {events, selectedYear, showAddEventModal, loading, employees, logged_in_employee_id, logged_in_employee_role, selectedEmployeeId, todos } = this.state;
 
 		// Dynamic generation of years (last 50 years to next 10 years)
 		const currentDate = new Date();
@@ -272,7 +353,6 @@ class Events extends Component {
         return (
             <>
 					<div>
-						{/* Show success and error messages */}
 						{/* Add the alert for success messages */}
 						<div 
 						className={`alert alert-success alert-dismissible fade show ${this.state.showSuccess ? "d-block" : "d-none"}`} 
@@ -383,67 +463,68 @@ class Events extends Component {
 													)}
 												</div>
 											)}
+
+											{(logged_in_employee_role === "admin" || logged_in_employee_role === "super_admin" || (Array.isArray(todos) && todos.length > 0)) && (
 											<div className="todo_list mt-4">
-												<h3 className="card-title">
-													ToDo List <small>This Month task list</small>
-												</h3>
-												<ul className="list-unstyled mb-0">
-													<li>
-														<label className="custom-control custom-checkbox">
-															<input
-																type="checkbox"
-																className="custom-control-input"
-																name="example-checkbox1"
-																defaultValue="option1"
-																defaultChecked
-															/>
-															<span className="custom-control-label">
-																Report Panel Usag
-																</span>
-														</label>
-													</li>
-													<li>
-														<label className="custom-control custom-checkbox">
-															<input
-																type="checkbox"
-																className="custom-control-input"
-																name="example-checkbox1"
-																defaultValue="option1"
-															/>
-															<span className="custom-control-label">
-																Report Panel Usag
-																</span>
-														</label>
-													</li>
-													<li>
-														<label className="custom-control custom-checkbox">
-															<input
-																type="checkbox"
-																className="custom-control-input"
-																name="example-checkbox1"
-																defaultValue="option1"
-																defaultChecked
-															/>
-															<span className="custom-control-label">
-																New logo design for Angular Admin
-																</span>
-														</label>
-													</li>
-													<li>
-														<label className="custom-control custom-checkbox">
-															<input
-																type="checkbox"
-																className="custom-control-input"
-																name="example-checkbox1"
-																defaultValue="option1"
-															/>
-															<span className="custom-control-label">
-																Design PSD files for Angular Admin
-																</span>
-														</label>
-													</li>
-												</ul>
+
+												{(logged_in_employee_role === "admin" || logged_in_employee_role === "super_admin" || (Array.isArray(todos) && todos.length > 0)) && (
+													<h3 className="card-title">
+														ToDo List {/* <small>This Month task list</small> */}
+													</h3>
+												)}
+												
+												{/* Show dropdown only if user is admin/super_admin */}
+												{(logged_in_employee_role === "admin" || logged_in_employee_role === "super_admin") && (
+													<div className="form-group mt-3">
+														<label htmlFor="employeeSelect" className="form-label font-weight-bold">Select Employee</label>
+														<select
+															name="selectEmployee"
+															id="selectEmployee"
+															className="form-control custom-select"
+															value={selectedEmployeeId}
+															onChange={this.handleEmployeeSelection}
+														>
+															<option value="">Select an Employee</option>
+															{employees.map((employee) => (
+																<option key={employee.id} value={employee.id}>
+																	{employee.first_name} {employee.last_name}
+																</option>
+															))}
+														</select>
+													</div>
+												)}
+
+												{/* Show only if todos exist */}
+												{Array.isArray(todos) && (					
+													<div className="todo-container mt-3" style={{ maxHeight: "250px", overflowY: "auto" }}>
+														<ul className="list-unstyled mb-0">
+															{selectedEmployeeId === "" ? (
+																<li className="text-center w-100 small" /* style={{color: "#dc3545"}} */>Select an employee to view the To-Do list</li>
+															) : Array.isArray(todos) && todos.length > 0 ? (
+																todos.map((todo) => (
+																<li key={todo.id}>
+																	<label className="custom-control custom-checkbox">
+																		<input
+																			type="checkbox"
+																			className="custom-control-input"
+																			name="example-checkbox1"
+																			defaultValue="option1"
+																			/* defaultChecked */
+																		/>
+																		<span className="custom-control-label">
+																			{todo.title}
+																		</span>
+																	</label>
+																</li>
+																))
+															) : (
+																<li className="text-center w-100 small" style={{color: "#dc3545"}}>No todos available for this employee</li>
+															)}
+														</ul>
+													</div>
+												)}
 											</div>
+											)}
 										</div>
 									</div>
 								</div>
