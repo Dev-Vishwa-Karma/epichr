@@ -27,7 +27,7 @@ class Gallery extends Component {
     }
 
     componentDidMount() {
-        const {role} = window.user;
+        const {role, id} = window.user;
         if (window.user?.id) {
             this.setState({
                 logged_in_employee_id: window.user.id,
@@ -39,9 +39,6 @@ class Gallery extends Component {
             // Fetch employees data if user is admin or super_admin
             fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=employee`, {
                 method: "GET",
-                headers: {
-                    "ngrok-skip-browser-warning": "true"
-                }
             })
             .then(response => response.json())
             .then(data => {
@@ -58,35 +55,36 @@ class Gallery extends Component {
                 this.setState({ error: 'Failed to fetch employees data' });
                 console.error(err);
             });
-
-            // Fetch gallery data (as in the previous code)
-            fetch(`${process.env.REACT_APP_API_URL}/gallery.php?action=view`, {
-                method: "GET",
-                headers: {
-                    "ngrok-skip-browser-warning": "true"
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const sortedImages = this.sortImages(data.data, this.state.sortOrder);
-                        this.setState({
-                            images: sortedImages,
-                            filteredImages: sortedImages,
-                            loading: false
-                        });
-                    } else {
-                        this.setState({ message: data.message, loading: false });
-                    }
-                })
-                .catch(err => {
-                    this.setState({ message: 'Failed to fetch data', loading: false });
-                    console.error(err);
-                });
-        } else {
-            // Employees should not see the gallery
-            this.setState({ images: [], filteredImages: [], message: 'Access denied', loading: false });
         }
+
+        // Fetch gallery data
+        let galleryUrl = `${process.env.REACT_APP_API_URL}/gallery.php?action=view`;
+        if (role === "employee") {
+            // Add employee ID param if role is employee
+            galleryUrl += `&id=${id}`;
+        }
+
+        // Fetch gallery data (as in the previous code)
+        fetch(galleryUrl, {
+            method: "GET",
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const sortedImages = this.sortImages(data.data, this.state.sortOrder);
+                this.setState({
+                    images: sortedImages,
+                    filteredImages: sortedImages,
+                    loading: false
+                });
+            } else {
+                this.setState({ message: data.message, loading: false });
+            }
+        })
+        .catch(err => {
+            this.setState({ message: 'Failed to fetch data', loading: false });
+            console.error(err);
+        });
     }
 
     openModal = () => {
@@ -153,10 +151,20 @@ class Gallery extends Component {
         let errors = {};
         let isValid = true;
 
-         // Validate if employee is selected
-        if (!selectedEmployeeId) {
-            errors.selectedEmployeeId = "Please select an employee.";
-            isValid = false;
+        // Determine employee_id based on role
+        const userRole = window.user?.role;
+
+        let employeeIdToSend = "";
+
+        if (userRole === "admin" || userRole === "super_admin") {
+            if (!selectedEmployeeId) {
+                errors.selectedEmployeeId = "Please select an employee.";
+                isValid = false;
+            } else {
+                employeeIdToSend = selectedEmployeeId;
+            }
+        } else if (userRole === "employee") {
+            employeeIdToSend = logged_in_employee_id;
         }
 
         if (selectedImages.length === 0) {
@@ -172,11 +180,6 @@ class Gallery extends Component {
             isValid = false;
         }
 
-        if (window.user.role === 'employee') {
-            errors.selectedImages = "You do not have permission to upload images. Please contact an administrator.";
-            isValid = false;
-        }
-
         // If validation fails, set error messages and return
         if (!isValid) {
             this.setState({ errors });
@@ -185,7 +188,7 @@ class Gallery extends Component {
 
         // Prepare FormData to send images via AJAX
         const uploadImageData = new FormData();
-        uploadImageData.append('employee_id', selectedEmployeeId);
+        uploadImageData.append('employee_id', employeeIdToSend);
         uploadImageData.append('created_by', logged_in_employee_id);
 
         // Ensure only image files are processed
@@ -198,9 +201,6 @@ class Gallery extends Component {
         // Send images using fetch or axios
         fetch(`${process.env.REACT_APP_API_URL}/gallery.php?action=add`, {
             method: 'POST',
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            },
             body: uploadImageData,
         })
         .then(response => response.json())
@@ -338,13 +338,9 @@ class Gallery extends Component {
                                                 </span>
                                                 <input type="text" className="form-control" placeholder="Search photo" value={this.state.searchQuery} onChange={this.handleSearch}/>
                                             </div>
-                                            {(window.user?.role === "admin" || window.user?.role === "super_admin") && (
-                                                <button type="button" className="btn btn-primary ml-2" onClick={this.openModal}>
-                                                    Upload New
-                                                </button>
-                                            )}
-                                            {/* <button type="button" className="btn btn-primary ml-2" onClick={this.openModal}>Upload New</button> */}
-                                            {/* Modal For Uploading Images */}
+                                            <button type="button" className="btn btn-primary ml-2" onClick={this.openModal}>
+                                                Upload New
+                                            </button>
                                             <div
                                                 className={`modal fade ${this.state.isModalOpen ? 'show' : ''}`}
                                                 id="uploadImageModal"
@@ -371,25 +367,27 @@ class Gallery extends Component {
                                                             )}
                                                             
                                                             {/* Employee Selection Section */}
-                                                            <div className="mt-3">
-                                                                <label htmlFor="employeeSelect" className="form-label">Select Employee</label>
-                                                                <select
-                                                                    id="employeeSelect"
-                                                                    className="form-control"
-                                                                    value={this.state.selectedEmployeeId}
-                                                                    onChange={this.handleEmployeeSelection}
-                                                                >
-                                                                    <option value="">Select an Employee</option>
-                                                                    {employees.map((employee) => (
-                                                                        <option key={employee.id} value={employee.id}>
-                                                                            {employee.first_name} {employee.last_name}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                                {this.state.errors.selectedEmployeeId && (
-                                                                    <small className={`invalid-feedback ${this.state.errors.selectedEmployeeId ? 'd-block' : ''}`}>{this.state.errors.selectedEmployeeId}</small>
-                                                                )}
-                                                            </div>
+                                                            {(window.user?.role === "admin" || window.user?.role === "super_admin") && (
+                                                                <div className="mt-3">
+                                                                    <label htmlFor="employeeSelect" className="form-label">Select Employee</label>
+                                                                    <select
+                                                                        id="employeeSelect"
+                                                                        className="form-control"
+                                                                        value={this.state.selectedEmployeeId}
+                                                                        onChange={this.handleEmployeeSelection}
+                                                                    >
+                                                                        <option value="">Select an Employee</option>
+                                                                        {employees.map((employee) => (
+                                                                            <option key={employee.id} value={employee.id}>
+                                                                                {employee.first_name} {employee.last_name}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                    {this.state.errors.selectedEmployeeId && (
+                                                                        <small className={`invalid-feedback ${this.state.errors.selectedEmployeeId ? 'd-block' : ''}`}>{this.state.errors.selectedEmployeeId}</small>
+                                                                    )}
+                                                                </div>
+                                                            )}
 
                                                             {/* File Input */}
                                                             <div className="mt-3">
@@ -461,13 +459,13 @@ class Gallery extends Component {
                                 </div>
                             )}
             
-                            {!loading && window.user?.role === "employee" && ( // Check if logged-in user is an employee
+                            {/* {!loading && window.user?.role === "employee" && (
                                 <div className="col-12">
                                     <div className="card p-3 d-flex align-items-center justify-content-center" style={{ height: '300px' }}>
                                         <span className="text-danger fw-bold">Access Denied</span>
                                     </div>
                                 </div>
-                            )}
+                            )} */}
                             
                             {!loading && filteredImages.length > 0 && ( // If not employee, show images if available
                                 currentImages.map((image, index) => (
@@ -479,7 +477,7 @@ class Gallery extends Component {
                                 ))
                             )}
                             
-                            {!loading && (window.user?.role === "admin" || window.user?.role === "super_admin") && filteredImages.length === 0 && (
+                            {!loading && filteredImages.length === 0 && (
                                 <div className="col-12">
                                     <div className="card p-3 d-flex align-items-center justify-content-center" style={{ height: '300px' }}>
                                         <span>Image not available</span>

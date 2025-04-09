@@ -3,7 +3,6 @@
     header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
     header("Access-Control-Allow-Credentials: true");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
     
     if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
         http_response_code(200);
@@ -115,7 +114,6 @@
                         $query .= " WHERE pt.employee_id = ?";  // Restrict to logged-in employee
                     }
 
-                    // $query .= " ORDER BY pt.due_date ASC";
                     $query .= " ORDER BY pt.created_at DESC";
                     $stmt = $conn->prepare($query);
 
@@ -194,7 +192,7 @@
                         $todosData = [
                             'id' => $todo_id,
                             'employee_id' => $employee_id,
-                            'first_name' => $employee['first_name'] ?? '', // Default empty if not found
+                            'first_name' => $employee['first_name'] ?? '',
                             'last_name' => $employee['last_name'] ?? '',
                             'title' => $title,
                             'due_date' => $due_date,

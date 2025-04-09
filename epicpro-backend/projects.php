@@ -3,7 +3,6 @@
     header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
     header("Access-Control-Allow-Credentials: true");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
     
     if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
         http_response_code(200);
@@ -14,9 +13,6 @@
 
     // Set the header for JSON response
     header('Content-Type: application/json');
-    
-    // SQL query to get all dapartments
-    $sql = "SELECT * FROM projects";
 
     $action = !empty($_GET['action']) ? $_GET['action'] : 'view';
 
@@ -72,7 +68,7 @@
                                     'created_by' => $row['created_by'],
                                     'client_name' => $row['client_name'],
                                     'client_location' => $row['client_location'],
-                                    'team_members' => [] // Initialize empty array for team members
+                                    'team_members' => []
                                 ];
                             }
                 
@@ -195,7 +191,7 @@
                 $team_members_id = $_POST['team_members'] ?? '';
                 $project_start_date = !empty($_POST['project_start_date']) ? $_POST['project_start_date'] : NULL;
                 $project_end_date = !empty($_POST['project_end_date']) ? $_POST['project_end_date'] : NULL;
-                $created_at = date('Y-m-d H:i:s'); // Current timestamp for `created_at`
+                $created_at = date('Y-m-d H:i:s');
                 $created_by = $_POST['logged_in_employee_id'] ?? '';
             
                 if ($project_name && $project_technology && $team_members_id && $created_by) {
@@ -224,7 +220,7 @@
 
                         if (!empty($team_members_id) && is_array($team_members_id)) {
                             foreach ($team_members_id as $team_member_id) {
-                                if (empty($team_member_id)) continue; // Skip invalid IDs
+                                if (empty($team_member_id)) continue;
                                 $project_assignments_stmt->bind_param("iisi", $project_id, $team_member_id, $created_at, $created_by);
                                 if (!$project_assignments_stmt->execute()) {
                                     echo json_encode(['error' => "Failed to add team member ID $team_member_id: " . $project_assignments_stmt->error]);
@@ -242,13 +238,12 @@
                         $client_stmt->execute();
                         $client_result = $client_stmt->get_result()->fetch_assoc();
                         $client_name = $client_result['name'] ?? null;
-                        // $client_location = $client_result['location'] ?? null;
 
                         // Fetch team member details
                         $team_members = [];
                         if (!empty($team_members_id)) {
                             $placeholders = implode(',', array_fill(0, count($team_members_id), '?'));
-                            $types = str_repeat('i', count($team_members_id)); // Bind as integers
+                            $types = str_repeat('i', count($team_members_id));
                             $team_stmt = $conn->prepare("SELECT id, first_name, last_name FROM employees WHERE id IN ($placeholders)");
                             $team_stmt->bind_param($types, ...$team_members_id);
                             $team_stmt->execute();
@@ -290,10 +285,6 @@
             case 'edit':
                 if (isset($_GET['id']) && is_numeric($_GET['id']) && $_GET['id'] > 0) {
                     $id = $_GET['id'];
-                    // Validate and get POST data
-                    /* $department_name = isset($_POST['department_name']) ? $_POST['department_name'] : null;
-                    $department_head = isset($_POST['department_head']) ? $_POST['department_head'] : null; */
-
                     // Read the raw POST data
                     $inputData = json_decode(file_get_contents('php://input'), true);
 
@@ -307,7 +298,7 @@
                     $department_name = isset($inputData['department_name']) ? $inputData['department_name'] : null;
                     $department_head = isset($inputData['department_head']) ? $inputData['department_head'] : null;
 
-                    $updated_at = date('Y-m-d H:i:s'); // Set current timestamp for `updated_at`
+                    $updated_at = date('Y-m-d H:i:s');
 
                     if ($department_name && $department_head) {
                         // Prepare the SQL update statement

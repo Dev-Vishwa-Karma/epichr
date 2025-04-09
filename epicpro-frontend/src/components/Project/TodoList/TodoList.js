@@ -41,9 +41,6 @@ class TodoList extends Component {
 		// Make the GET API call when the component is mounted
 		fetch(`${process.env.REACT_APP_API_URL}/project_todo.php?action=view&logged_in_employee_id=${window.user.id}&role=${window.user.role}`, {
 			method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
 		})
 		.then(response => response.json())
 		.then(data => {
@@ -68,9 +65,6 @@ class TodoList extends Component {
             // Fetch employees data if user is admin or super_admin
             fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=employee`, {
                 method: "GET",
-                headers: {
-                    "ngrok-skip-browser-warning": "true"
-                }
             })
             .then(response => response.json())
             .then(data => {
@@ -175,9 +169,6 @@ class TodoList extends Component {
         fetch(`${process.env.REACT_APP_API_URL}/project_todo.php?action=add`, {
             method: "POST",
             body: addTodoFormData,
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then((response) => response.json())
         .then((data) => {

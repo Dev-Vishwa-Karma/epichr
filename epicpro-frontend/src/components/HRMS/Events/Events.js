@@ -52,9 +52,6 @@ class Events extends Component {
             // Fetch employees data if user is admin or super_admin
             fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&role=employee`, {
                 method: "GET",
-                headers: {
-                    "ngrok-skip-browser-warning": "true"
-                }
             })
             .then(response => response.json())
             .then(data => {
@@ -76,9 +73,6 @@ class Events extends Component {
 		// Make the GET API call when the component is mounted
 		fetch(`${process.env.REACT_APP_API_URL}/events.php`, {
 			method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
 		})
 		.then(response => response.json())
 		.then(data => {
@@ -108,9 +102,6 @@ class Events extends Component {
 	
 		fetch(`${process.env.REACT_APP_API_URL}/project_todo.php?action=view&employee_id=${employeeId}`, {
 			method: "GET",
-			headers: {
-				"ngrok-skip-browser-warning": "true"
-			}
 		})
 		.then((res) => res.json())
 		.then((data) => {
@@ -224,9 +215,6 @@ class Events extends Component {
 			// API call to add employee leave
 			fetch(`${process.env.REACT_APP_API_URL}/events.php?action=add`, {
 				method: "POST",
-				headers: {
-					"ngrok-skip-browser-warning": "true"
-				},
 				body: addEventData,
 			})
 			.then((response) => response.json())

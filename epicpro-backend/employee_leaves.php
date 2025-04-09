@@ -1,9 +1,8 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow React app
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");   // Allow HTTP methods
-header("Access-Control-Allow-Headers: Content-Type");         // Allow headers like JSON content
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
 
 // Include the database connection
 include 'db_connection.php';
@@ -21,9 +20,6 @@ function sendJsonResponse($status, $data = null, $message = null) {
     }
     exit;
 }
-
-// SQL query to get all dapartments
-$sql = "SELECT * FROM employee_leaves";
 
 $action = !empty($_GET['action']) ? $_GET['action'] : 'view';
 
@@ -61,7 +57,6 @@ if (isset($action)) {
                     sendJsonResponse('error', null, "Failed to execute query: $stmt->error");
                 }
             } else {
-                // $result = $conn->query("SELECT * FROM employee_leaves");
                 $result = $conn->query("SELECT 
                         employee_leaves.id,
                         employee_leaves.employee_id, 

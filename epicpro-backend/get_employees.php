@@ -1,9 +1,8 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow React app
-header("Access-Control-Allow-Methods: GET, POST, DELETE, PUT, OPTIONS");   // Allow HTTP methods
-header("Access-Control-Allow-Headers: Content-Type");         // Allow headers like JSON content
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, DELETE, PUT, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
 
 // Include the database connection
 include 'db_connection.php';
@@ -63,8 +62,8 @@ function uploadFile($file, $targetDir, $allowedTypes = [], $maxSize = 2 * 1024 *
 
         // Ensure the target directory exists and set permissions
         if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0777, true); // Create directory with full permissions
-            chmod($targetDir, 0777); // Ensure permissions are set
+            mkdir($targetDir, 0777, true);
+            chmod($targetDir, 0777);
         }
 
         // Move the file to the target directory
@@ -106,7 +105,6 @@ if (isset($action)) {
                 $roleFilter = isset($_GET['role']) ? $_GET['role'] : 'all';
                 if ($roleFilter == 'employee') {
                     // If 'employee' role filter is passed, show only employees with role 'employee'
-                    // $stmt = $conn->prepare("SELECT * FROM employees WHERE role = 'employee' AND deleted_at IS NULL");
                     $stmt = $conn->prepare("
                         SELECT e.*, 
                             d.department_name, 
@@ -154,8 +152,8 @@ if (isset($action)) {
 
         case 'add':
             // Capture and sanitize POST data
-            $logged_in_user_id = $_POST['logged_in_employee_id'] ?? ""; // Get logged-in user ID
-            $logged_in_user_role = $_POST['logged_in_employee_role'] ?? ""; // Get logged-in user role
+            $logged_in_user_id = $_POST['logged_in_employee_id'] ?? "";
+            $logged_in_user_role = $_POST['logged_in_employee_role'] ?? "";
 
             // Capture and sanitize POST data
             $data = [
@@ -349,7 +347,7 @@ if (isset($action)) {
 
                         // Skip the insertion if any of the required fields are empty or invalid
                         if (empty($source) || $amount === '' || $from_date === '' || $to_date === '') {
-                            continue; // Skip this salary detail if data is invalid
+                            continue;
                         }
 
                         // Bind the parameters for each salary entry
@@ -429,8 +427,8 @@ if (isset($action)) {
                     exit;
                 }
 
-                $logged_in_user_id = $_POST['logged_in_employee_id']; // Logged-in user's ID
-                $logged_in_role = $_POST['logged_in_employee_role']; // Logged-in user's role
+                $logged_in_user_id = $_POST['logged_in_employee_id'];
+                $logged_in_role = $_POST['logged_in_employee_role'];
 
                 // Initialize data array
                 $data = [];
@@ -595,12 +593,11 @@ if (isset($action)) {
                 // Prepare SQL UPDATE statement
                 $updateColumns = [];
                 $updateValues = [];
-                $types = ''; // Prepare bind_param types dynamically
+                $types = '';
 
                 // Dynamically create column assignments and bind parameters
                 foreach ($data as $column => $value) {
                     $updateColumns[] = "$column = ?";
-                    // $updateValues[] = $value;
                     $updateValues[] = ($value === null || $value === '') ? '' : $value;
                     // Determine the data type
                     if (in_array($column, ['department_id'])) {
@@ -612,7 +609,7 @@ if (isset($action)) {
                 // SQL query
                 $sql = "UPDATE employees SET " . implode(', ', $updateColumns) . " WHERE id = ?";
                 $updateValues[] = $id;
-                $types .= 'i'; // For integer id
+                $types .= 'i';
 
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param($types, ...$updateValues);
@@ -651,7 +648,7 @@ if (isset($action)) {
     
                             // Skip the update if any of the required fields are empty or invalid
                             if (empty($source) || $amount === null || $from_date === null || $to_date === null) {
-                                continue; // Skip this salary detail if data is invalid
+                                continue;
                             }
     
                             // Bind the parameters for each salary entry
@@ -663,14 +660,14 @@ if (isset($action)) {
                                 $detail['to_date'],
                                 $updated_at,
                                 $id,
-                                $detail['id'] // Auto-increment ID
+                                $detail['id']
                             );
 
                             // Execute the insert for each salary detail
                             if (!$salary_stmt->execute()) {
                                 $salary_error = $salary_stmt->error;
                                 sendJsonResponse('error', null, "Failed to add salary detail: $salary_error");
-                                exit; // Exit if any insert fails
+                                exit;
                             }
                         }
                     }
@@ -730,7 +727,7 @@ if (isset($action)) {
                     // Check if logged-in user ID and role are provided
                     if (isset($data['logged_in_employee_id']) && isset($data['logged_in_employee_role'])) {
                         $logged_in_user_id = $data['logged_in_employee_id'];
-                        $logged_in_user_role = strtolower($data['logged_in_employee_role']); // Convert to lowercase for consistency
+                        $logged_in_user_role = strtolower($data['logged_in_employee_role']);
             
                         // Allow only admin and super admin to set deleted_by
                         if ($logged_in_user_role === 'admin' || $logged_in_user_role === 'super_admin') {

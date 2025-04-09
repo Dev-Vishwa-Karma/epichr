@@ -26,9 +26,6 @@ class departments extends Component {
     componentDidMount() {
         fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=view`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
 		.then(response => response.json())
 		.then(data => {
@@ -109,8 +106,7 @@ class departments extends Component {
         fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=edit&id=${selectedDepartment.id}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                "ngrok-skip-browser-warning": "true"
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 department_name: selectedDepartment.department_name,
@@ -199,9 +195,6 @@ class departments extends Component {
           headers: {
             'Content-Type': 'application/json',
             method: "POST",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
           },
         })
         .then((response) => response.json())
@@ -298,9 +291,6 @@ class departments extends Component {
         fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=add`, {
             method: "POST",
             body: addDepartmentFormData,
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then((response) => response.json())
         .then((data) => {

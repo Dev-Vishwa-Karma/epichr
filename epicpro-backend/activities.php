@@ -1,12 +1,10 @@
 <?php
-header("Access-Control-Allow-Origin: *");  // Temporarily allow all origins for development
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");  // Allow HTTP methods
-header("Access-Control-Allow-Headers: Content-Type, X-Requested-With"); // Allow specific headers
-header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, X-Requested-With");
 
 // Handle preflight (OPTIONS) requests
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    // Respond with 200 status code for OPTIONS requests
     header("HTTP/1.1 200 OK");
     exit();
 }
@@ -39,7 +37,6 @@ if (isset($action)) {
     switch ($action) {
         case 'view':
             if (isset($_GET['user_id']) && is_numeric($_GET['user_id']) && $_GET['user_id'] > 0) {
-                //get by user id
                 $stmt_activities = $conn->prepare("
             SELECT 
                 e.id AS employee_id,

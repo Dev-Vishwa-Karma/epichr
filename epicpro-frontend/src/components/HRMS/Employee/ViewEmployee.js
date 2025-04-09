@@ -83,9 +83,6 @@ class ViewEmployee extends Component {
     fetchEmployeeDetails = (employeeId) => {
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&user_id=${employeeId}`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
             .then((response) => response.json())
             .then((data) => {
@@ -125,9 +122,6 @@ class ViewEmployee extends Component {
     
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employeeId}`, {
           method: "POST",
-          headers: {
-              "ngrok-skip-browser-warning": "true"
-          },
           body: formData,
         })
         .then((response) => response.json())
@@ -219,9 +213,6 @@ class ViewEmployee extends Component {
     
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employee.id}`, {
             method: "POST",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            },
             body: updatedProfileData,
         })
         .then(response => response.json())

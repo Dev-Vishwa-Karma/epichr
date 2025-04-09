@@ -22,9 +22,6 @@ class Dashboard extends Component {
 		// Make the GET API call when the component is mounted
 		fetch(`${process.env.REACT_APP_API_URL}/dashboard.php`, {
 			method: "GET",
-			headers: {
-				"ngrok-skip-browser-warning": "true"
-			}
 		})
 		.then(response => response.json())
 		.then(data => {
@@ -44,7 +41,7 @@ class Dashboard extends Component {
 					{ totalUsers: totalUsers, totalEmployees: totalEmployees, totalHolidays: totalHolidays, totalEvents: totalEvents}
 				);
 			} else {
-			  	this.setState({ message: data.message }); // Update messages in state
+			  	this.setState({ message: data.message });
 			}
 		})
 		.catch(err => {
@@ -55,9 +52,6 @@ class Dashboard extends Component {
 		// Get projects data
         fetch(`${process.env.REACT_APP_API_URL}/projects.php?action=view&logged_in_employee_id=${window.user.id}&role=${window.user.role}`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then(response => response.json())
         .then(data => {

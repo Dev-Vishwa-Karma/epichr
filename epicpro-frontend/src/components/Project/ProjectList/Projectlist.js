@@ -58,9 +58,6 @@ class ProjectList extends Component {
         // Fetch employees data
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then(response => response.json())
         .then(data => {
@@ -82,9 +79,6 @@ class ProjectList extends Component {
         // Get projects data
         fetch(`${process.env.REACT_APP_API_URL}/projects.php?action=view&logged_in_employee_id=${window.user.id}&role=${window.user.role}`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then(response => response.json())
         .then(data => {
@@ -242,9 +236,6 @@ class ProjectList extends Component {
         // API call to add project
         fetch(`${process.env.REACT_APP_API_URL}/projects.php?action=add`, {
             method: "POST",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            },
             body: addProjectFormData,
         })
         .then((response) => response.json())
