@@ -87,10 +87,7 @@ class Dashboard extends Component {
 							<div className="row clearfix">
 								<div className="col-lg-12">
 									<div className={`section-body ${fixNavbar ? "mb-4 mt-3" : "mb-4"}`}>
-										<h6 className="text-muted font-weight-normal mb-1">Welcome</h6>
-										<h3 className="text-primary mb-0">
-											{`${window.user.first_name} ${window.user.last_name}`}
-										</h3>
+										<h4>Welcome {`${window.user.first_name} ${window.user.last_name}`}!</h4>
 										{/* <small>
 											Measure How Fast You’re Growing Monthly Recurring Revenue.{' '}
 											<a href="fake_url">Learn More</a>
