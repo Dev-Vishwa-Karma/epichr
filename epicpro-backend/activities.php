@@ -351,7 +351,7 @@ if (isset($action)) {
             if ($activity_type == 'Break' && $status == 'active') {
 
                 // Check if the employee has clocked in today
-                $stmt = $conn->prepare("SELECT * FROM activities WHERE employee_id = ? AND activity_type = 'Punch' AND DATE(in_time) = CURDATE() AND deleted_at IS NULL LIMIT 1");
+                /* $stmt = $conn->prepare("SELECT * FROM activities WHERE employee_id = ? AND activity_type = 'Punch' AND DATE(in_time) = CURDATE() AND deleted_at IS NULL LIMIT 1");
                 $stmt->bind_param('i', $employee_id);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -362,7 +362,7 @@ if (isset($action)) {
                     if ($row['status'] == 'completed') {
                         sendJsonResponse('error', null, 'The employee has already punch out for today.');
                     }
-                }
+                } */
 
                 $in_time = date('Y-m-d H:i:s');
 
@@ -385,7 +385,7 @@ if (isset($action)) {
             } elseif ($activity_type == 'Break' && $status == 'completed') {
 
                 // Check if the employee has clocked in today
-                $stmt = $conn->prepare("SELECT * FROM activities WHERE employee_id = ? AND activity_type = 'Punch' AND DATE(in_time) = CURDATE() AND deleted_at IS NULL LIMIT 1");
+                /* $stmt = $conn->prepare("SELECT * FROM activities WHERE employee_id = ? AND activity_type = 'Punch' AND DATE(in_time) = CURDATE() AND deleted_at IS NULL LIMIT 1");
                 $stmt->bind_param('i', $employee_id);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -396,7 +396,7 @@ if (isset($action)) {
                     if ($row['status'] == 'completed') {
                         sendJsonResponse('error', null, 'The employee has already punch out for today.');
                     }
-                }
+                } */
 
                 $out_time = date('Y-m-d H:i:s');
 
