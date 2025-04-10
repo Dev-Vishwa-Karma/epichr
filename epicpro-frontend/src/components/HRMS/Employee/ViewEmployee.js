@@ -479,12 +479,12 @@ class ViewEmployee extends Component {
                                     <li className="nav-item">
                                         <a className="nav-link" id="pills-profile-tab" data-toggle="pill" href="#pills-profile" role="tab" aria-controls="pills-profile" aria-selected="false">Profile</a>
                                     </li>
-                                    <li className="nav-item">
+                                    {/* <li className="nav-item">
                                         <a className="nav-link" id="pills-blog-tab" data-toggle="pill" href="#pills-blog" role="tab" aria-controls="pills-blog" aria-selected="true">Blog</a>
-                                    </li>
+                                    </li> */}
                                 </ul>
                             </div>
-                            <div className="col-lg-8 col-md-12">
+                            <div className="col-lg-12 col-md-12">
                                 <div className="tab-content" id="pills-tabContent">
                                     <div className="tab-pane fade show active" id="pills-calendar" role="tabpanel" aria-labelledby="pills-calendar-tab">
                                         <div className="card">
@@ -760,7 +760,7 @@ class ViewEmployee extends Component {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="tab-pane fade" id="pills-blog" role="tabpanel" aria-labelledby="pills-blog-tab">
+                                    {/* <div className="tab-pane fade" id="pills-blog" role="tabpanel" aria-labelledby="pills-blog-tab">
                                         <div className="card">
                                             <div className="card-body">
                                                 <div className="new_post">
@@ -806,7 +806,7 @@ class ViewEmployee extends Component {
                                                                 Aenean lacinia bibendum nulla sed consectetur. Vestibulum id ligula porta felis euismod semper. Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras
                                                                 justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Cum sociis natoque penatibus et magnis dis parturient montes,
                                                                 nascetur ridiculus mus.
-                        </div>
+                                                        </div>
                                                             <ul className="media-list">
                                                                 <li className="media mt-4">
                                                                     <img className="media-object avatar mr-4" src="../assets/images/xs/avatar1.jpg" alt="fake_url" />
@@ -814,7 +814,7 @@ class ViewEmployee extends Component {
                                                                         <strong>Debra Beck: </strong>
                                                                         Donec id elit non mi porta gravida at eget metus. Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor. Donec ullamcorper nulla non metus
                                                                         auctor fringilla. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Sed posuere consectetur est at lobortis.
-                            </div>
+                                                                    </div>
                                                                 </li>
                                                             </ul>
                                                         </div>
@@ -852,7 +852,7 @@ class ViewEmployee extends Component {
                                                             <div>
                                                                 Donec id elit non mi porta gravida at eget metus. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Cum sociis natoque penatibus et magnis dis
                                                                 parturient montes, nascetur ridiculus mus. Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </li>
@@ -867,7 +867,7 @@ class ViewEmployee extends Component {
                                                             <div>
                                                                 Donec ullamcorper nulla non metus auctor fringilla. Vestibulum id ligula porta felis euismod semper. Aenean eu leo quam. Pellentesque ornare sem lacinia quam
                                                                 venenatis vestibulum. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui.
-                        </div>
+                                                            </div>
                                                             <ul className="media-list">
                                                                 <li className="media mt-4">
                                                                     <img className="media-object avatar mr-4" src="../assets/images/xs/avatar5.jpg" alt="fake_url" />
@@ -883,10 +883,10 @@ class ViewEmployee extends Component {
                                                 </li>
                                             </ul>
                                         </div>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
-                            <div className="col-lg-4 col-md-12">
+                            {/* <div className="col-lg-4 col-md-12">
                                 <div className="card">
                                     <div className="card-body">
                                         <div className="widgets1">
@@ -1024,7 +1024,7 @@ class ViewEmployee extends Component {
                                         </ul>
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
                         </div>
                     </div>
                 </div>

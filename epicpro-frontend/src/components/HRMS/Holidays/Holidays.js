@@ -9,6 +9,7 @@ class Holidays extends Component {
 			message: null,
 			showAddHolidayModal: false,
 			employee_id: null,
+			logged_in_user_role: null,
 			event_name: "",
 			event_date: "",
 			errors: {
@@ -28,9 +29,11 @@ class Holidays extends Component {
 	}
 
 	componentDidMount(prevProps, prevState) {
+		const {role, id} = window.user;
 		// Get the logged in user id
 		this.setState({
-			employee_id: window.user.id,
+			employee_id: id,
+			logged_in_user_role: role
 		});
 
 		// Make the GET API call when the component is mounted
@@ -51,7 +54,7 @@ class Holidays extends Component {
 					{ holidays: upcomingHolidays, loading: false}
 				);
 			} else {
-				this.setState({ message: data.message, loading: false }); // Update messages in state
+				this.setState({ message: data.message, loading: false });
 			}
 		})
 		.catch(err => {
@@ -111,7 +114,7 @@ class Holidays extends Component {
 	validateForm = (e) => {
 		e.preventDefault();
 		
-		let errors = { ...this.state.errors }; // Copy errors to avoid direct mutation
+		let errors = { ...this.state.errors };
     	let isValid = true;
 
 		// Check if we're editing or adding an event
@@ -203,7 +206,7 @@ class Holidays extends Component {
 						this.setState({
 							errorMessage: '',
 							showError: false
-						});
+						}); 
 					}, 3000);
 				}
 			})
@@ -238,7 +241,7 @@ class Holidays extends Component {
 
 		// Validate the form before proceeding
 		if (!this.validateForm(e)) {
-			return; // If validation fails, don't submit the form
+			return;
 		}
 
         const { selectedHoliday } = this.state;
@@ -376,8 +379,7 @@ class Holidays extends Component {
 
 	render() {
 		const { fixNavbar } = this.props;
-		const { holidays, message, showAddHolidayModal, selectedHoliday, currentPage, dataPerPage, loading } = this.state;
-
+		const { holidays, message, showAddHolidayModal, selectedHoliday, currentPage, dataPerPage, loading, logged_in_user_role} = this.state;
 		// Pagination Logic
         const indexOfLastHoliday = currentPage * dataPerPage;
         const indexOfFirstHoliday = indexOfLastHoliday - dataPerPage;
@@ -437,16 +439,17 @@ class Holidays extends Component {
 					<div className={`section-body ${fixNavbar ? "marginTop" : ""}`}>
 						<div className="container-fluid">
 							<div className="d-flex justify-content-end align-items-center mb-3 mt-3">
-								{/* Render the Add buttons and icons */}
-								<div className="header-action">
-									<button
-										onClick={() => this.openAddHolidayModel()}
-										type="button"
-										className="btn btn-primary"
-									>
-										<i className="fe fe-plus mr-2" />Add Holiday
-									</button>
-								</div>
+								{(logged_in_user_role === 'admin' || logged_in_user_role === 'super_admin') && (
+									<div className="header-action">
+										<button
+											onClick={() => this.openAddHolidayModel()}
+											type="button"
+											className="btn btn-primary"
+										>
+											<i className="fe fe-plus mr-2" />Add Holiday
+										</button>
+									</div>
+								)}
 							</div>
 							<div className="row">
 								<div className="col-12">
@@ -469,7 +472,9 @@ class Holidays extends Component {
 																<th>DAY</th>
 																<th>DATE</th>
 																<th>HOLIDAY</th>
-																<th>Action</th>
+																{(logged_in_user_role === 'admin' || logged_in_user_role === 'super_admin') && (
+																	<th>Action</th>
+																)}
 															</tr>
 														</thead>
 														<tbody>
@@ -495,29 +500,31 @@ class Holidays extends Component {
 																		<td>
 																			<span>{holiday.event_name}</span>
 																		</td>
-																		<td>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="Edit"
-																				data-toggle="modal"
-																				data-target="#editHolidayModal"
-																				onClick={() => this.handleEditClickForHoliday(holiday)}
-																			>
-																				<i className="fa fa-edit" />
-																			</button>
-																			<button
-																				type="button"
-																				className="btn btn-icon btn-sm js-sweetalert"
-																				title="Delete"
-																				data-type="confirm"
-																				data-toggle="modal"
-																				data-target="#deleteHolidayModal"
-																				onClick={() => this.openDeleteHolidayModal(holiday.id)}
-																			>
-																				<i className="fa fa-trash-o text-danger" />
-																			</button>
-																		</td>
+																		{(logged_in_user_role === 'admin' || logged_in_user_role === 'super_admin') && (
+																			<td>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="Edit"
+																					data-toggle="modal"
+																					data-target="#editHolidayModal"
+																					onClick={() => this.handleEditClickForHoliday(holiday)}
+																				>
+																					<i className="fa fa-edit" />
+																				</button>
+																				<button
+																					type="button"
+																					className="btn btn-icon btn-sm js-sweetalert"
+																					title="Delete"
+																					data-type="confirm"
+																					data-toggle="modal"
+																					data-target="#deleteHolidayModal"
+																					onClick={() => this.openDeleteHolidayModal(holiday.id)}
+																				>
+																					<i className="fa fa-trash-o text-danger" />
+																				</button>
+																			</td>
+																		)}
 																	</tr>
 																))
 															): (

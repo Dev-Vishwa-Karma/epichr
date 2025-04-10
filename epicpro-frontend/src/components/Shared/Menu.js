@@ -205,11 +205,11 @@ class Menu extends Component {
 						"label": "Department",
 						"to": "/hr-department"
 					}, */
-					{
+					/* {
 						"id": 6,
 						"label": "Employee",
 						"to": "/hr-employee"
-					},
+					}, */
 					{
 						"id": 7,
 						"label": "Activities",
@@ -225,16 +225,16 @@ class Menu extends Component {
 						"label": "Events",
 						"to": "/hr-events"
 					},
-					{
+					/* {
 						"id": 10,
 						"label": "Payroll",
 						"to": "/hr-payroll"
-					},
-					{
+					}, */
+					/* {
 						"id": 11,
 						"label": "Accounts",
 						"to": "/hr-accounts"
-					},
+					}, */
 					{
 						"id": 39,
 						"label": "Gallery",
@@ -242,7 +242,7 @@ class Menu extends Component {
 					},
 				]
 			},
-			{
+			/* {
 				"id": 13,
 				"icon": "icon-cup",
 				"label": "Project",
@@ -263,8 +263,8 @@ class Menu extends Component {
 						"to": "/project-todo"
 					}
 				]
-			},
-			{
+			}, */
+			/* {
 				"id": 21,
 				"icon": "icon-briefcase",
 				"label": "Job Portal",
@@ -295,8 +295,8 @@ class Menu extends Component {
 						"to": "/jobportal-settings"
 					}
 				]
-			},
-			{
+			}, */
+			/* {
 				"id": 27,
 				"icon": "icon-lock",
 				"label": "Authentication",
@@ -322,7 +322,7 @@ class Menu extends Component {
 						"to": "/internalserver"
 					}
 				]
-			},
+			}, */
 		];
 
 		// Only super admin or admin can see report
@@ -353,7 +353,7 @@ class Menu extends Component {
 						hrmsSection.content.splice(dashboardIndex + 1, 0, usersItem);
 					}
 
-					// Add the "Users" item to the HRMS section after the dashboard item
+					// Add the "Department" item to the HRMS section after the users item
 					const departmentItem = {
 						"id": 5,
 						"label": "Department",
@@ -374,6 +374,156 @@ class Menu extends Component {
 							"id": 12,
 							"label": "Reports",
 							"to": "/hr-report"
+						}
+					);
+
+					// Add the "Employee" item to the HRMS section after the department item
+					const activities = {
+						"id": 6,
+						"label": "Employee",
+						"to": "/hr-employee"
+					};
+
+					// Find the index of "Department" (id: 5)
+					const activitiesIndex = hrmsSection.content.findIndex(item => item.id === 5);
+
+					if (activitiesIndex !== -1) {
+						// Insert "Employee" before "Activities"
+						hrmsSection.content.splice(activitiesIndex + 1, 0, activities);
+					}
+
+
+					// Add the "Payroll" for admin/super_admin item to the HRMS section after the Events item
+					const payroll = {
+						"id": 10,
+						"label": "Payroll",
+						"to": "/hr-payroll"
+					};
+
+					// Find the index of "Events" (id: 5)
+					const eventsIndex = hrmsSection.content.findIndex(item => item.id === 9);
+
+					if (eventsIndex !== -1) {
+						// Insert "Employee" before "Activities"
+						hrmsSection.content.splice(eventsIndex + 1, 0, payroll);
+					}
+
+					// Add the "Accounts" for admin/super_admin item to the HRMS section after the Payroll item
+					const accounts = {
+						"id": 11,
+						"label": "Accounts",
+						"to": "/hr-accounts"
+					};
+
+					// Find the index of "Payroll" (id: 10)
+					const payrollIndex = hrmsSection.content.findIndex(item => item.id === 10);
+
+					if (payrollIndex !== -1) {
+						// Insert "Employee" before "Activities"
+						hrmsSection.content.splice(payrollIndex + 1, 0, accounts);
+					}
+				}
+
+				// Find the index of "Projects section"
+				const projectSection = content.find(item => item.id === 13)
+
+				if (!projectSection) {
+					content.push(
+						{
+							"id": 13,
+							"icon": "icon-cup",
+							"label": "Project",
+							content: [
+								{
+									"id": 15,
+									"label": "Project List",
+									"to": "/project-list"
+								},
+								{
+									"id": 19,
+									"label": "Clients",
+									"to": "/project-clients"
+								},
+								{
+									"id": 20,
+									"label": "Todo List",
+									"to": "/project-todo"
+								}
+							]
+						},
+					);
+				}
+
+				// Find the index of "Job Portal"
+				const jobPortalSection = content.find(item => item.id === 21);
+				
+				if (!jobPortalSection) {
+					// Add the "Job Portal" section if it's missing for admin/super_admin roles
+					content.push({
+						"id": 21,
+						"icon": "icon-briefcase",
+						"label": "Job Portal",
+						"content": [
+							{
+								"id": 22,
+								"label": "Job Dashboard",
+								"to": "/jobportal-dashboard"
+							},
+							{
+								"id": 23,
+								"label": "Positions",
+								"to": "/jobportal-positions"
+							},
+							{
+								"id": 24,
+								"label": "Applicant",
+								"to": "/jobportal-applicants"
+							},
+							{
+								"id": 25,
+								"label": "Resumes",
+								"to": "/jobportal-resumes"
+							},
+							{
+								"id": 26,
+								"label": "Settings",
+								"to": "/jobportal-settings"
+							}
+						]
+					});
+				}
+
+				// Find the index of "authentication section"
+				const authenticationSection = content.find(item => item.id === 27);
+
+				if (!authenticationSection) {
+					content.push(
+						{
+							"id": 27,
+							"icon": "icon-lock",
+							"label": "Authentication",
+							content: [
+								{
+									"id": 28,
+									"label": "Login",
+									"to": "/login"
+								},
+								{
+									"id": 30,
+									"label": "Forgot Password",
+									"to": "/forgotpassword"
+								},
+								{
+									"id": 31,
+									"label": "404 error",
+									"to": "/notfound"
+								},
+								{
+									"id": 32,
+									"label": "500 Error",
+									"to": "/internalserver"
+								}
+							]
 						}
 					);
 				}
@@ -399,15 +549,15 @@ class Menu extends Component {
 										<i className="fe fe-command brand-logo" />
 									</NavLink>
 									<div className="dropdown">
-										<NavLink to="/page-search" className="nav-link icon">
+										{/* <NavLink to="/page-search" className="nav-link icon">
 											<i className="fa fa-search" />
-										</NavLink>
-										<NavLink to="/app-calendar" className="nav-link icon app_inbox">
+										</NavLink> */}
+										<NavLink to="/hr-events" className="nav-link icon app_inbox">
 											<i className="fa fa-calendar" />
 										</NavLink>
-										<NavLink to="/app-contact" className="nav-link icon xs-hide">
+										{/* <NavLink to="/app-contact" className="nav-link icon xs-hide">
 											<i className="fa fa-id-card-o" />
-										</NavLink>
+										</NavLink> */}
 									</div>
 								</div>
 								<div className="hright">
@@ -420,24 +570,29 @@ class Menu extends Component {
 											title="Themes"
 										></i>
 									</a> */}
-										<span className="nav-link icon settingbar" onClick={this.toggleRightSidebar}>
-											<i
-												className="fa fa-gear fa-spin"
-												data-toggle="tooltip"
-												data-placement="right"
-												title="Settings"
-											/>
-										</span>
-										<p className="nav-link user_btn" onClick={this.toggleUserMenu}>
-											<img
-												className="avatar"
-												src="/assets/images/user.png"
-												alt="fake_alr"
-												data-toggle="tooltip"
-												data-placement="right"
-												title="User Menu"
-											/>
-										</p>
+
+										{(window.user.role === 'admin' || window.user.role === 'super_admin') && (
+											<div>
+												<span className="nav-link icon settingbar" onClick={this.toggleRightSidebar}>
+													<i
+														className="fa fa-gear fa-spin"
+														data-toggle="tooltip"
+														data-placement="right"
+														title="Settings"
+													/>
+												</span>
+												<p className="nav-link user_btn" onClick={this.toggleUserMenu}>
+													<img
+														className="avatar"
+														src="/assets/images/user.png"
+														alt="fake_alr"
+														data-toggle="tooltip"
+														data-placement="right"
+														title="User Menu"
+													/>
+												</p>
+											</div>
+										)}
 										<p className="nav-link icon menu_toggle" onClick={() => this.toggleLeftMenu(!istoggleLeftMenu)}>
 											<i className="fa  fa-align-left" />
 										</p>

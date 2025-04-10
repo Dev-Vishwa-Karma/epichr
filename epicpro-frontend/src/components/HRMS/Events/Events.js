@@ -275,7 +275,7 @@ class Events extends Component {
 
     render() {
         const { fixNavbar} = this.props;
-		const {events, selectedYear, showAddEventModal, loading, employees, logged_in_employee_id, logged_in_employee_role, selectedEmployeeId, todos } = this.state;
+		const {events, selectedYear, showAddEventModal, loading, employees, logged_in_employee_role, selectedEmployeeId, todos } = this.state;
 
 		// Dynamic generation of years (last 50 years to next 10 years)
 		const currentDate = new Date();
@@ -395,16 +395,17 @@ class Events extends Component {
 									<div className="card">
 										<div className="card-header bline d-flex justify-content-between align-items-center">
 											<h3 className="card-title">Events List</h3>
-											{/* Render the Add buttons and icons */}
-											<div className="header-action">
-												<button
-													onClick={() => this.openAddEventModel()}
-													type="button"
-													className="btn btn-primary"
-												>
-													<i className="fe fe-plus mr-2" />Add Event
-												</button>
-											</div>
+											{(logged_in_employee_role === 'admin' || logged_in_employee_role === 'super_admin') && (
+												<div className="header-action">
+													<button
+														onClick={() => this.openAddEventModel()}
+														type="button"
+														className="btn btn-primary"
+													>
+														<i className="fe fe-plus mr-2" />Add Event
+													</button>
+												</div>
+											)}
 										</div>
 										<div className="card-body">
 											{loading ? (

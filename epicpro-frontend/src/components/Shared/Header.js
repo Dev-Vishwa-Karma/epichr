@@ -160,7 +160,7 @@ class Header extends Component {
 
 	render() {
 		const { fixNavbar, darkHeader } = this.props;
-		const { isPunchedIn, showModal, report, punchError, punchSuccess, punchErrorModel, userId, user } = this.state;
+		const { isPunchedIn, report, punchError, punchSuccess, punchErrorModel, userId, user } = this.state;
 		return (
 			<div>
 				<div
@@ -188,15 +188,15 @@ class Header extends Component {
 								</div> */}
 							</div>
 							<div className="right">
-								<button
+								{/* <button
 									className="btn btn-primary"
 									onClick={isPunchedIn ? this.handlePunchOut : this.handlePunchIn}
 									data-toggle={isPunchedIn ? "modal" : ""} 
 									data-target={isPunchedIn ? "#punchOutReportModal" : ""}
 								>
 									{isPunchedIn ? 'Punch Out' : 'Punch In'}
-								</button>
-								<ul className="nav nav-pills">
+								</button> */}
+								{/* <ul className="nav nav-pills">
 									<li className="nav-item dropdown">
 										<a
 											className="nav-link dropdown-toggle"
@@ -253,9 +253,9 @@ class Header extends Component {
 											</a>
 										</div>
 									</li>
-								</ul>
+								</ul> */}
 								<div className="notification d-flex">
-									<div className="dropdown d-flex">
+									{/* <div className="dropdown d-flex">
 										<a
 											href="/#"
 											className="nav-link icon d-none d-md-flex btn btn-default btn-icon ml-1"
@@ -339,8 +339,8 @@ class Header extends Component {
 												Mark all as read
 											</a>
 										</div>
-									</div>
-									<div className="dropdown d-flex">
+									</div> */}
+									{/* <div className="dropdown d-flex">
 										<a
 											href="/#"
 											className="nav-link icon d-none d-md-flex btn btn-default btn-icon ml-1"
@@ -420,7 +420,7 @@ class Header extends Component {
 												Mark all as read
 											</a>
 										</div>
-									</div>
+									</div> */}
 									<div className="dropdown d-flex">
 										<a
 											href="/#"
@@ -433,7 +433,13 @@ class Header extends Component {
 											<NavLink to={{ pathname: "/view-employee", state: { employee: user, employeeId: userId } }} className="dropdown-item">
 												<i className="dropdown-icon fe fe-user" /> Profile
 											</NavLink>
-											<a className="dropdown-item" >
+											<NavLink to={{ pathname: "/view-employee", state: { employee: user, employeeId: userId } }} className="dropdown-item">
+												<i className="dropdown-icon fe fe-calendar" /> Calendar
+											</NavLink>
+											<NavLink to={{ pathname: "/view-employee", state: { employee: user, employeeId: userId } }} className="dropdown-item">
+												<i className="dropdown-icon fe fe-activity" /> Timeline
+											</NavLink>
+											{/* <a className="dropdown-item" >
 												<i className="dropdown-icon fe fe-settings" /> Settings
 											</a>
 											<a className="dropdown-item">
@@ -444,7 +450,7 @@ class Header extends Component {
 											</a>
 											<a className="dropdown-item" >
 												<i className="dropdown-icon fe fe-send" /> Message
-											</a>
+											</a> */}
 											<div className="dropdown-divider" />
 											<a className="dropdown-item" >
 												<i className="dropdown-icon fe fe-help-circle" /> Need help?
