@@ -58,6 +58,7 @@ if (isset($action)) {
             $event_name = $_POST['event_name'];
             $event_date = $_POST['event_date'];
             $event_type = $_POST['event_type'];
+            $created_by = isset($_POST['created_by']) ? $_POST['created_by'] : null;
 
             // Validate the data (you can add additional validation as needed)
             if (empty($employee_id) || empty($event_name) || empty($event_date) || empty($event_type)) {
@@ -66,10 +67,10 @@ if (isset($action)) {
             }
 
             // Prepare the insert query
-            $stmt = $conn->prepare("INSERT INTO events (employee_id, event_name, event_date, event_type) VALUES (?, ?, ?, ?)");
+            $stmt = $conn->prepare("INSERT INTO events (employee_id, event_name, event_date, event_type, created_by) VALUES (?, ?, ?, ?, ?)");
             
             // Bind the parameters
-            $stmt->bind_param("isss", $employee_id, $event_name, $event_date, $event_type);
+            $stmt->bind_param("isssi", $employee_id, $event_name, $event_date, $event_type, $created_by);
 
             // Execute the query
             if ($stmt->execute()) {
@@ -80,7 +81,8 @@ if (isset($action)) {
                     'employee_id' => $employee_id,
                     'event_name' => $event_name,
                     'event_date' => $event_date,  
-                    'event_type' => $event_type
+                    'event_type' => $event_type,
+                    'created_by' => $created_by
                 ];
                 // If successful, send success response
                 sendJsonResponse('success', $addEventData, "Event added successfully");

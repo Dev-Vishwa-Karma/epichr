@@ -397,6 +397,17 @@ if (isset($action)) {
                     }
                 }
 
+                if (!empty($data['dob'])) {
+                    $event_name = "Birthday of " . $data['first_name'] . " " . $data['last_name'];
+                    $event_date = $data['dob'];
+                    $event_type = 'event';
+                    $created_at = date('Y-m-d H:i:s');
+
+                    $event_stmt = $conn->prepare("INSERT INTO events (employee_id, event_type, event_date, event_name, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)");
+                    $event_stmt->bind_param("issssi", $employee_id, $event_type, $event_date, $event_name, $created_at, $created_by);
+                    $event_stmt->execute();
+                }
+
                 sendJsonResponse('success', [
                     'id' => $employee_id,
                     'department_id' => $data['department_id'],
@@ -684,6 +695,34 @@ if (isset($action)) {
                         $department_name = $department['department_name'] ?? null;
                         $department_head = $department['department_head'] ?? null;
                     }
+
+                    if (isset($data['dob']) && !empty($data['dob'])) {
+                        $event_name = "Birthday of " . $data['first_name'] . " " . $data['last_name'];
+                        $event_type = 'event';
+                        $event_date = $data['dob'];
+                        $updated_at = date('Y-m-d H:i:s');
+                    
+                        // First check if an event already exists for this employee
+                        $check_event_stmt = $conn->prepare("SELECT id FROM events WHERE employee_id = ?");
+                        $check_event_stmt->bind_param("i", $logged_in_user_id);
+                        $check_event_stmt->execute();
+                        $check_event_result = $check_event_stmt->get_result();
+                        if ($check_event_result->num_rows > 0) {
+                            // Event exists, so update it
+                            $event_row = $check_event_result->fetch_assoc();
+                            $event_id = $event_row['id'];
+                    
+                            $update_event_stmt = $conn->prepare("UPDATE events SET event_name = ?, event_date = ?, event_type = ?, updated_at = ?, updated_by = ? WHERE employee_id = ?");
+                            $update_event_stmt->bind_param("ssssii", $event_name, $event_date, $event_type, $updated_at, $data['updated_by'], $logged_in_user_id);
+                            $update_event_stmt->execute();
+                        } else {
+                            // No event exists, insert new one
+                            $created_at = date('Y-m-d H:i:s');
+                            $insert_event_stmt = $conn->prepare("INSERT INTO events (employee_id, event_type, event_date, event_name, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)");
+                            $insert_event_stmt->bind_param("issssi", $logged_in_user_id, $event_type, $event_date, $event_name, $created_at, $data['updated_by']);
+                            $insert_event_stmt->execute();
+                        }
+                    }            
 
                     $updatedData = [
                         'id' => $id,

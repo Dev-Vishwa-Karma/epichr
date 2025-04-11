@@ -23,7 +23,8 @@ class Events extends Component {
 			loading: true,
 			employees: [],
 			todos: [],
-			selectedEmployeeId: '',
+			selectedEmployeeIdForTodo: '',
+			selectedEmployeeIdForModal: '',
 			logged_in_employee_id: '',
 			logged_in_employee_role: '',
 		}
@@ -41,8 +42,10 @@ class Events extends Component {
 			},
 			() => {
 				if (role === 'employee') {
-					// Fetch for employees only
-					this.fetchTodos(this.state.logged_in_employee_id); // Fetch for employees only
+					this.setState(
+						{ selectedEmployeeIdForTodo: id },
+						() => this.fetchTodos(id)
+					);
 				}
 			}
 		);
@@ -134,16 +137,18 @@ class Events extends Component {
     openAddEventModel = () => {
 		this.setState({
 			selectedEvent: null,
+			selectedEmployeeIdForModal: '',
 			event_name: '',
 			event_date: '',
 			errors: {},
-			showAddEventModal: true
+			showAddEventModal: true,
 		});
     };
 
 	closeAddEventModal = () => {
         this.setState({
 			showAddEventModal: false,
+			selectedEmployeeIdForModal: '',
 			event_name: '',
 			event_date: '',
 			errors: {},
@@ -168,7 +173,15 @@ class Events extends Component {
 
 		// Check if we're editing or adding an event
 		const eventData = this.state.selectedEvent || this.state;
-		const { event_name, event_date } = eventData;
+		const { event_name, event_date, selectedEmployeeIdForModal, logged_in_employee_id } = eventData;
+
+
+        // Validate employee selection only if admin or super_admin
+		const userRole = window.user?.role;
+		if ((userRole === "admin" || userRole === "super_admin") && !selectedEmployeeIdForModal) {
+			errors.selectedEmployeeIdForModal = "Please select an employee.";
+			isValid = false;
+		}
 
 		// Validate event name (only letters and spaces)
 		const namePattern = /^[a-zA-Z\s]+$/;
@@ -206,12 +219,23 @@ class Events extends Component {
 		}
 
 		if (this.validateForm(e)) {
-			const { employee_id, event_name, event_date} = this.state;
+			const { event_name, event_date, selectedEmployeeIdForModal, logged_in_employee_id } = this.state;
+			const userRole = window.user?.role;
+
+			let employeeIdToSend = "";
+			if (userRole === "admin" || userRole === "super_admin") {
+				employeeIdToSend = selectedEmployeeIdForModal;
+			} else if (userRole === "employee") {
+				employeeIdToSend = logged_in_employee_id;
+			}
+
 			const addEventData = new FormData();
-			addEventData.append('employee_id', employee_id);
+			addEventData.append('employee_id', employeeIdToSend);
 			addEventData.append('event_name', event_name);
 			addEventData.append('event_date', event_date);
 			addEventData.append('event_type', 'event');
+			addEventData.append('created_by', logged_in_employee_id);
+
 			// API call to add employee leave
 			fetch(`${process.env.REACT_APP_API_URL}/events.php?action=add`, {
 				method: "POST",
@@ -263,19 +287,28 @@ class Events extends Component {
 		}
     };
 
-	handleEmployeeSelection = (e) => {
-        const selectedEmployeeId = e.target.value;
-
-        this.setState({ selectedEmployeeId, todos: [] }, () => {
-			if (selectedEmployeeId) {
-				this.fetchTodos(selectedEmployeeId);
-			}
-		});
+	handleEmployeeSelection = (e, context = 'todo') => {
+        const selectedId = e.target.value;
+		if (context === 'todo') {
+			this.setState({
+				selectedEmployeeIdForTodo: selectedId,
+				todos: [],
+			}, () => {
+				if (selectedId) {
+					this.fetchTodos(selectedId);
+				}
+			});
+		} else if (context === 'modal') {
+			this.setState({
+				selectedEmployeeIdForModal: selectedId,
+				errors: { ...this.state.errors, selectedEmployeeIdForModal: '' },
+			});
+		}
     };
 
     render() {
         const { fixNavbar} = this.props;
-		const {events, selectedYear, showAddEventModal, loading, employees, logged_in_employee_role, selectedEmployeeId, todos } = this.state;
+		const {events, selectedYear, showAddEventModal, loading, employees, logged_in_employee_role, selectedEmployeeIdForModal, selectedEmployeeIdForTodo, todos } = this.state;
 
 		// Dynamic generation of years (last 50 years to next 10 years)
 		const currentDate = new Date();
@@ -467,11 +500,11 @@ class Events extends Component {
 													<div className="form-group mt-3">
 														<label htmlFor="employeeSelect" className="form-label font-weight-bold">Select Employee</label>
 														<select
-															name="selectEmployee"
-															id="selectEmployee"
+															name="selectedEmployeeIdForTodo"
+															id="selectedEmployeeIdForTodo"
 															className="form-control custom-select"
-															value={selectedEmployeeId}
-															onChange={this.handleEmployeeSelection}
+															value={selectedEmployeeIdForTodo}
+															onChange={(e) => this.handleEmployeeSelection(e, 'todo')}
 														>
 															<option value="">Select an Employee</option>
 															{employees.map((employee) => (
@@ -487,7 +520,7 @@ class Events extends Component {
 												{Array.isArray(todos) && (					
 													<div className="todo-container mt-3" style={{ maxHeight: "250px", overflowY: "auto" }}>
 														<ul className="list-unstyled mb-0">
-															{selectedEmployeeId === "" ? (
+															{selectedEmployeeIdForTodo === "" ? (
 																<li className="text-center w-100 small" /* style={{color: "#dc3545"}} */>Select an employee to view the To-Do list</li>
 															) : Array.isArray(todos) && todos.length > 0 ? (
 																todos.map((todo) => (
@@ -562,14 +595,28 @@ class Events extends Component {
 							<form onSubmit={this.addEvent}>
 								<div className="modal-body">
 									<div className="row clearfix">
-										<input
-											type="hidden"
-											className="form-control"
-											placeholder="employeeId"
-											name='employeeId'
-											value={this.state.employee_id}
-											onChange={this.handleInputChangeForAddEvent}
-										/>
+										{/* Employee Selection Section */}
+										{(logged_in_employee_role === "admin" || logged_in_employee_role === "super_admin") && (
+											<div className="col-md-12 form-group mt-3">
+												<label htmlFor="selectedEmployeeIdForModal" className="form-label">Select Employee</label>
+												<select
+													id="selectedEmployeeIdForModal"
+													className={`form-control ${this.state.errors.selectedEmployeeIdForModal ? "is-invalid" : ""}`}
+													value={selectedEmployeeIdForModal}
+													onChange={(e) => this.handleEmployeeSelection(e, 'modal')}
+												>
+													<option value="">Select an Employee</option>
+													{employees.map((employee) => (
+														<option key={employee.id} value={employee.id}>
+															{employee.first_name} {employee.last_name}
+														</option>
+													))}
+												</select>
+												{this.state.errors.selectedEmployeeIdForModal && (
+													<small className={`invalid-feedback ${this.state.errors.selectedEmployeeIdForModal ? 'd-block' : ''}`}>{this.state.errors.selectedEmployeeIdForModal}</small>
+												)}
+											</div>
+										)}
 										<div className="col-md-12">
 											<div className="form-group">
 												<label className="form-label" htmlFor="event_name">Event Name</label>

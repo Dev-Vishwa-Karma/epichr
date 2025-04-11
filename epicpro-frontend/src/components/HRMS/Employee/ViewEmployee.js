@@ -24,6 +24,7 @@ class ViewEmployee extends Component {
             showSuccess: false,
             errorMessage: "",
             showError: false,
+            activeTab: "",
         };
     }
 
@@ -38,7 +39,7 @@ class ViewEmployee extends Component {
     };
 
     componentDidMount() {
-        const { employee, employeeId } = this.props.location.state || {};
+        const { employee, employeeId, tab } = this.props.location.state || {};
 
         // Get the logged-in user from localStorage
         const storedUser = JSON.parse(localStorage.getItem("user")) || null;
@@ -48,7 +49,8 @@ class ViewEmployee extends Component {
             this.setState({
                 employee: { ...this.state.employee, ...employee },
                 employeeId,
-                previewImage: `${process.env.REACT_APP_API_URL}/${employee.profile}`
+                previewImage: `${process.env.REACT_APP_API_URL}/${employee.profile}`,
+                activeTab: tab,
             });
         }
 
@@ -67,7 +69,7 @@ class ViewEmployee extends Component {
     }
 
     componentDidUpdate(prevProps) {
-        const { employee, employeeId } = this.props.location.state || {};
+        const { employee, employeeId, tab } = this.props.location.state || {};
         if (employee && employee !== prevProps.location.state?.employee) {
             this.setState({
                 employee: { ...this.state.employee, ...employee },
@@ -77,6 +79,11 @@ class ViewEmployee extends Component {
     
         if (employeeId && employeeId !== prevProps.location.state?.employeeId) {
             this.fetchEmployeeDetails(employeeId);
+        }
+
+         // Watch for tab change even if pathname is same
+        if (tab && tab !== prevProps.location.state?.tab) {
+            this.setState({ activeTab: tab });
         }
     }
 
@@ -321,7 +328,7 @@ class ViewEmployee extends Component {
             </>
         );
     };
-    
+
     render() {
         const { fixNavbar} = this.props;
         const {employee} = this.state;
@@ -471,13 +478,46 @@ class ViewEmployee extends Component {
                             <div className="col-12">
                                 <ul className="nav nav-tabs mb-3" id="pills-tab" role="tablist">
                                     <li className="nav-item">
-                                        <a className="nav-link active" id="pills-calendar-tab" data-toggle="pill" href="#pills-calendar" role="tab" aria-controls="pills-calendar" aria-selected="false">Calendar</a>
+                                        <a
+                                            className={`nav-link ${this.state.activeTab === "calendar" ? "active" : ""}`}
+                                            id="pills-calendar-tab"
+                                            data-toggle="pill"
+                                            href="#pills-calendar"
+                                            role="tab"
+                                            aria-controls="pills-calendar"
+                                            aria-selected={this.state.activeTab === "calendar"}
+                                            onClick={() => this.setState({ activeTab: "calendar" })}
+                                        >
+                                            Calendar
+                                        </a>
                                     </li>
                                     <li className="nav-item">
-                                        <a className="nav-link" id="pills-timeline-tab" data-toggle="pill" href="#pills-timeline" role="tab" aria-controls="pills-timeline" aria-selected="true">Timeline</a>
+                                        <a
+                                            className={`nav-link ${this.state.activeTab === "timeline" ? "active" : ""}`}
+                                            id="pills-timeline-tab"
+                                            data-toggle="pill"
+                                            href="#pills-timeline"
+                                            role="tab"
+                                            aria-controls="pills-timeline"
+                                            aria-selected={this.state.activeTab === "timeline"}
+                                            onClick={() => this.setState({ activeTab: "timeline" })}
+                                        >
+                                            Timeline
+                                        </a>
                                     </li>
                                     <li className="nav-item">
-                                        <a className="nav-link" id="pills-profile-tab" data-toggle="pill" href="#pills-profile" role="tab" aria-controls="pills-profile" aria-selected="false">Profile</a>
+                                        <a
+                                            className={`nav-link ${this.state.activeTab === "profile" ? "active" : ""}`}
+                                            id="pills-profile-tab"
+                                            data-toggle="pill"
+                                            href="#pills-profile"
+                                            role="tab"
+                                            aria-controls="pills-profile"
+                                            aria-selected={this.state.activeTab === "profile"}
+                                            onClick={() => this.setState({ activeTab: "profile" })}
+                                        >
+                                            Profile
+                                        </a>
                                     </li>
                                     {/* <li className="nav-item">
                                         <a className="nav-link" id="pills-blog-tab" data-toggle="pill" href="#pills-blog" role="tab" aria-controls="pills-blog" aria-selected="true">Blog</a>
@@ -486,7 +526,7 @@ class ViewEmployee extends Component {
                             </div>
                             <div className="col-lg-12 col-md-12">
                                 <div className="tab-content" id="pills-tabContent">
-                                    <div className="tab-pane fade show active" id="pills-calendar" role="tabpanel" aria-labelledby="pills-calendar-tab">
+                                    <div className={`tab-pane fade ${this.state.activeTab === "calendar" ? "show active" : ""}`} id="pills-calendar" role="tabpanel" aria-labelledby="pills-calendar-tab">
                                         <div className="card">
                                             <div className="card-header bline">
                                                 <h3 className="card-title">Calendar</h3>
@@ -512,7 +552,7 @@ class ViewEmployee extends Component {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="tab-pane fade" id="pills-timeline" role="tabpanel" aria-labelledby="pills-timeline-tab">
+                                    <div className={`tab-pane fade ${this.state.activeTab === "timeline" ? "show active" : ""}`} id="pills-timeline" role="tabpanel" aria-labelledby="pills-timeline-tab">
                                         <div className="card">
                                             <div className="card-header">
                                                 <h3 className="card-title">Activity</h3>
@@ -632,7 +672,7 @@ class ViewEmployee extends Component {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab">
+                                    <div className={`tab-pane fade ${this.state.activeTab === "profile" ? "show active" : ""}`} id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab">
                                         <div className="card">
                                             <div className="card-header">
                                                 <h3 className="card-title">Edit Profile</h3>
