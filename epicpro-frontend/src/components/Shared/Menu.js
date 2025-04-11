@@ -166,9 +166,9 @@ class Menu extends Component {
 			const subClass = e.items.map((menuItem, i) => {
 				if (menuItem.to === this.props.location.pathname) {
 					menucClass = "in";
-				} else {
+				} /* else {
 					menucClass = "collapse";
-				}
+				} */
 				return menucClass
 			})
 			return subClass

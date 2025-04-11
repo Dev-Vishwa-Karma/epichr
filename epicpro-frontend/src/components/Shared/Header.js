@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { NavLink } from 'react-router-dom';
+import { withRouter, NavLink } from 'react-router-dom';
 import authService from '../Authentication/authService';
 
 class Header extends Component {
@@ -91,10 +91,10 @@ class Header extends Component {
 			});
 	};
 
-	handlePunchOut = () => {
+	/* handlePunchOut = () => {
 		// Show modal when punching out
 		//this.setState({ showModal: true });
-	};
+	}; */
 
 	handleReportChange = (e) => {
 		this.setState({ report: e.target.value });
@@ -160,7 +160,8 @@ class Header extends Component {
 
 	render() {
 		const { fixNavbar, darkHeader } = this.props;
-		const { isPunchedIn, report, punchError, punchSuccess, punchErrorModel, userId, user } = this.state;
+		const { /* isPunchedIn, */ report, punchError, punchSuccess, punchErrorModel, userId, user } = this.state;
+		const currentTab = this.props.location?.state?.tab;
 		return (
 			<div>
 				<div
@@ -430,13 +431,36 @@ class Header extends Component {
 											<i className="fa fa-user" />
 										</a>
 										<div className="dropdown-menu dropdown-menu-right dropdown-menu-arrow">
-											<NavLink to={{ pathname: "/view-employee", state: { employee: user, employeeId: userId } }} className="dropdown-item">
+											<NavLink 
+												to={{
+													pathname: "/view-employee",
+													state: { employee: user, employeeId: userId, tab: "profile" }
+												}}
+												className={`dropdown-item ${currentTab === "profile" ? "active" : ""}`}
+												isActive={(match, location) => location?.state?.tab === "profile"}
+											>
 												<i className="dropdown-icon fe fe-user" /> Profile
 											</NavLink>
-											<NavLink to={{ pathname: "/view-employee", state: { employee: user, employeeId: userId } }} className="dropdown-item">
+
+											<NavLink 
+												to={{ 
+													pathname: "/view-employee",
+													state: { employee: user, employeeId: userId, tab: "calendar" }
+												}}
+												className={`dropdown-item ${currentTab === "calendar" ? "active" : ""}`}
+												isActive={(match, location) => location?.state?.tab === "calendar"}
+											>
 												<i className="dropdown-icon fe fe-calendar" /> Calendar
 											</NavLink>
-											<NavLink to={{ pathname: "/view-employee", state: { employee: user, employeeId: userId } }} className="dropdown-item">
+
+											<NavLink
+												to={{
+													pathname: "/view-employee",
+													state: { employee: user, employeeId: userId, tab: "timeline" }
+												}}
+												className={`dropdown-item ${currentTab === "timeline" ? "active" : ""}`}
+												isActive={(match, location) => location?.state?.tab === "timeline"}
+											>
 												<i className="dropdown-icon fe fe-activity" /> Timeline
 											</NavLink>
 											{/* <a className="dropdown-item" >
@@ -510,4 +534,6 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = dispatch => ({})
-export default connect(mapStateToProps, mapDispatchToProps)(Header);
+// export default connect(mapStateToProps, mapDispatchToProps)(Header);
+export default withRouter(connect(mapStateToProps, mapDispatchToProps)(Header));
+
