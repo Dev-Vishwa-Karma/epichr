@@ -449,7 +449,7 @@ class Gallery extends Component {
                         </div>
                         {/* Images listing */}
                         <div className="row row-cards">
-                            {loading && ( // ✅ Show Loader while fetching images
+                            {loading && ( // Show Loader while fetching images
                                 <div className="col-12">
                                     <div className="card p-3 d-flex align-items-center justify-content-center" style={{ height: '300px' }}>
                                         <div className="dimmer active">
