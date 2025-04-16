@@ -23,10 +23,10 @@ class Activities extends Component {
 		let apiUrl = '';
 
 		if (window.user.role === 'super_admin' || window.user.role === 'admin') {
-		apiUrl = `${process.env.REACT_APP_API_URL}/activities.php`;
+			apiUrl = `${process.env.REACT_APP_API_URL}/activities.php`;
 		}
 		else {
-		apiUrl = `${process.env.REACT_APP_API_URL}/activities.php?user_id=${window.user.id}`;
+			apiUrl = `${process.env.REACT_APP_API_URL}/activities.php?user_id=${window.user.id}`;
 		}
 
 		fetch(apiUrl, {
@@ -298,21 +298,21 @@ class Activities extends Component {
 										{breakOutError && (
 											<div className="alert alert-danger mb-0">{breakOutError}</div>
 										)}
-										<div className="card-header">
+										<div className="card-header bline d-flex justify-content-between align-items-center">
 											<h3 className="card-title">Timeline Activity</h3>
+											{window.user && window.user.role !== 'employee' && (
+												<div>
+													<button style={{ float: "right" }} type="button" className="btn btn-primary" data-toggle="modal" data-target="#addBreakModal"><i className="fe fe-plus mr-2" />Add</button>
+												</div>
+											)}
+											{window.user && window.user.role === 'employee' && (
+												<div>
+													<button style={{ float: "right" }} className="btn btn-primary" onClick={isBreakedIn ? this.handleBreakOut : this.handleBreakIn} data-toggle={isBreakedIn ? "" : "modal"} data-target={isBreakedIn ? "" : "#addBreakReasonModal"}>
+														{isBreakedIn ? 'Break Out' : 'Break In'}
+													</button>
+												</div>
+											)}
 										</div>
-										{window.user && window.user.role !== 'employee' && (
-											<div>
-												<button style={{ float: "right" }} type="button" className="btn btn-primary" data-toggle="modal" data-target="#addBreakModal"><i className="fe fe-plus mr-2" />Add</button>
-											</div>
-										)}
-										{window.user && window.user.role === 'employee' && (
-											<div>
-												<button style={{ float: "right" }} className="btn btn-primary" onClick={isBreakedIn ? this.handleBreakOut : this.handleBreakIn} data-toggle={isBreakedIn ? "" : "modal"} data-target={isBreakedIn ? "" : "#addBreakReasonModal"}>
-													{isBreakedIn ? 'Break Out' : 'Break In'}
-												</button>
-											</div>
-										)}
 										<div className="card-body">
 											<div className="summernote">
 											</div>
@@ -357,7 +357,7 @@ class Activities extends Component {
 																		alt="fake_url"
 																	/>
 																	<span>
-																		<a href="#">{activity.first_name} {activity.last_name}</a> {activity.location}
+																		<a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
 																		<small className="float-right text-right">
 																			{activity.out_time}
 																		</small>
@@ -383,7 +383,7 @@ class Activities extends Component {
 																	alt="fake_url"
 																/>
 																<span>
-																	<a href="#">{activity.first_name} {activity.last_name}</a> {activity.location}
+																	<a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
 																	<small className="float-right text-right">
 																		{activity.in_time}
 																	</small>
@@ -412,7 +412,7 @@ class Activities extends Component {
 																		alt="fake_url"
 																	/>
 																	<span>
-																		<a href="#">{activity.first_name} {activity.last_name}</a> {activity.location}
+																		<a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
 																		<small className="float-right text-right">
 																			{activity.out_time}
 																		</small>

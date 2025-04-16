@@ -25,6 +25,7 @@ class ViewEmployee extends Component {
             errorMessage: "",
             showError: false,
             activeTab: "",
+            activities: [],
         };
     }
 
@@ -66,6 +67,32 @@ class ViewEmployee extends Component {
         if (employeeId) {
             this.fetchEmployeeDetails(employeeId);
         }
+
+        // Get activities
+        let apiUrl = '';
+
+		if (window.user.role === 'super_admin' || window.user.role === 'admin') {
+		apiUrl = `${process.env.REACT_APP_API_URL}/activities.php`;
+		}
+		else {
+		apiUrl = `${process.env.REACT_APP_API_URL}/activities.php?user_id=${window.user.id}`;
+		}
+
+		fetch(apiUrl, {
+			method: "GET",
+		})
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                this.setState({ activities: data.data });
+            } else {
+                this.setState({ errorMessage: data.message });
+            }
+        })
+        .catch(err => {
+            this.setState({ error: 'Failed to fetch data' });
+            console.error(err);
+        });
     }
 
     componentDidUpdate(prevProps) {
@@ -331,7 +358,7 @@ class ViewEmployee extends Component {
 
     render() {
         const { fixNavbar} = this.props;
-        const {employee} = this.state;
+        const {employee, activities, errorMessage} = this.state;
         // Handle case where employee data is not available
         if (!employee) {
             return <p>Loading employee details...</p>;
@@ -576,99 +603,123 @@ class ViewEmployee extends Component {
                                                 </div>
                                             </div>
                                             <div className="card-body">
-                                                <div className="timeline_item ">
-                                                    <img className="tl_avatar" src="../assets/images/xs/avatar1.jpg" alt="fake_url" />
-                                                    <span><a href="fake_url;">Elisse Joson</a> San Francisco, CA <small className="float-right text-right">20-April-2019 - Today</small></span>
-                                                    <h6 className="font600">Hello, 'Im a single div responsive timeline without media Queries!</h6>
-                                                    <div className="msg">
-                                                        <p>I'm speaking with myself, number one, because I have a very good brain and I've said a lot of things. I write the best placeholder text, and I'm the biggest developer on the web card she has is the Lorem card.</p>
-                                                        <a href="fake_url;" className="mr-20 text-muted"><i className="fa fa-heart text-pink" /> 12 Love</a>
-                                                        <a className="text-muted" role="button" data-toggle="collapse" href="#collapseExample" aria-expanded="false" aria-controls="collapseExample"><i className="fa fa-comments" /> 1 Comment</a>
-                                                        <div className="collapse p-4 section-gray" id="collapseExample">
-                                                            <form className="well">
-                                                                <div className="form-group">
-                                                                    <textarea rows={2} className="form-control no-resize" placeholder="Enter here for tweet..." defaultValue={""} />
+                                                {activities.length > 0 ? (
+                                                    activities.map((activity, index) => (
+                                                        <>
+                                                            {/* In Time Entry */}
+                                                            {activity.activity_type === 'Break' && (
+                                                                <div className="timeline_item ">
+                                                                    <img
+                                                                        className="tl_avatar"
+                                                                        src="../assets/images/xs/avatar1.jpg"
+                                                                        alt="fake_url"
+                                                                    />
+                                                                    <span>
+                                                                        <a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+                                                                        <small className="float-right text-right">
+                                                                            {activity.in_time}
+                                                                        </small>
+                                                                    </span>
+                                                                    <h6 className="font600">
+                                                                        (Break In) {activity.description}
+                                                                    </h6>
+
+                                                                    <div className="msg">
+                                                                        {activity.created_by && (
+                                                                            <a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Created by System Admin</a>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                                <button className="btn btn-primary">Submit</button>
-                                                            </form>
-                                                            <ul className="recent_comments list-unstyled mt-4 mb-0">
-                                                                <li>
-                                                                    <div className="avatar_img">
-                                                                        <img className="rounded img-fluid" src="../assets/images/xs/avatar4.jpg" alt="fake_url" />
+                                                            )}
+                                                            {/* Out Time Entry */}
+                                                            {activity.activity_type === 'Break' && activity.out_time && (
+                                                                <>
+                                                                    <div className="duration text-center">
+                                                                        ------ {activity.duration} ------
                                                                     </div>
-                                                                    <div className="comment_body">
-                                                                        <h6>Donald Gardner <small className="float-right font-14">Just now</small></h6>
-                                                                        <p>Lorem ipsum Veniam aliquip culpa laboris minim tempor</p>
-                                                                    </div>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="timeline_item ">
-                                                    <img className="tl_avatar" src="../assets/images/xs/avatar4.jpg" alt="fake_url" />
-                                                    <span><a href="fake_url;" >Dessie Parks</a> Oakland, CA <small className="float-right text-right">19-April-2019 - Yesterday</small></span>
-                                                    <h6 className="font600">Oeehhh, that's awesome.. Me too!</h6>
-                                                    <div className="msg">
-                                                        <p>I'm speaking with myself, number one, because I have a very good brain and I've said a lot of things. on the web by far... While that's mock-ups and this is politics, are they really so different? I think the only card she has is the Lorem card.</p>
-                                                        <div className="timeline_img mb-20">
-                                                            <img className="width100" src="../assets/images/gallery/1.jpg" alt="Awesome" />
-                                                            <img className="width100" src="../assets/images/gallery/2.jpg" alt="Awesome" />
-                                                        </div>
-                                                        <a href="fake_url;" className="mr-20 text-muted"><i className="fa fa-heart text-pink" /> 23 Love</a>
-                                                        <a className="text-muted" role="button" data-toggle="collapse" href="#collapseExample1" aria-expanded="false" aria-controls="collapseExample1"><i className="fa fa-comments" /> 2 Comment</a>
-                                                        <div className="collapse p-4 section-gray" id="collapseExample1">
-                                                            <form className="well">
-                                                                <div className="form-group">
-                                                                    <textarea rows={2} className="form-control no-resize" placeholder="Enter here for tweet..." defaultValue={""} />
-                                                                </div>
-                                                                <button className="btn btn-primary">Submit</button>
-                                                            </form>
-                                                            <ul className="recent_comments list-unstyled mt-4 mb-0">
-                                                                <li>
-                                                                    <div className="avatar_img">
-                                                                        <img className="rounded img-fluid" src="../assets/images/xs/avatar4.jpg" alt="fake_url" />
-                                                                    </div>
-                                                                    <div className="comment_body">
-                                                                        <h6>Donald Gardner <small className="float-right font-14">Just now</small></h6>
-                                                                        <p>Lorem ipsum Veniam aliquip culpa laboris minim tempor</p>
-                                                                        <div className="timeline_img mb-20">
-                                                                            <img className="width150" src="../assets/images/gallery/7.jpg" alt="Awesome" />
-                                                                            <img className="width150" src="../assets/images/gallery/8.jpg" alt="Awesome" />
+                                                                    <div className="timeline_item ">
+                                                                        <img
+                                                                            className="tl_avatar"
+                                                                            src="../assets/images/xs/avatar1.jpg"
+                                                                            alt="fake_url"
+                                                                        />
+                                                                        <span>
+                                                                            <a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+                                                                            <small className="float-right text-right">
+                                                                                {activity.out_time}
+                                                                            </small>
+                                                                        </span>
+                                                                        <h6 className="font600">
+                                                                            Break out
+                                                                        </h6>
+                                                                        <div className="msg">
+                                                                            {activity.updated_by && (
+                                                                                <a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Edited by System Admin</a>
+                                                                            )}
                                                                         </div>
                                                                     </div>
-                                                                </li>
-                                                                <li>
-                                                                    <div className="avatar_img">
-                                                                        <img className="rounded img-fluid" src="../assets/images/xs/avatar3.jpg" alt="fake_url" />
+                                                                </>
+                                                            )}
+
+                                                            {/* In Time Entry Punch */}
+                                                            {activity.activity_type === 'Punch' && (
+                                                                <div className="timeline_item ">
+                                                                    <img
+                                                                        className="tl_avatar"
+                                                                        src="../assets/images/xs/avatar1.jpg"
+                                                                        alt="fake_url"
+                                                                    />
+                                                                    <span>
+                                                                        <a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+                                                                        <small className="float-right text-right">
+                                                                            {activity.in_time}
+                                                                        </small>
+                                                                    </span>
+                                                                    <h6 className="font600">
+                                                                        has started his day
+                                                                    </h6>
+
+                                                                    <div className="msg">
+                                                                        {activity.created_by && (
+                                                                            <a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Created by System Admin</a>
+                                                                        )}
                                                                     </div>
-                                                                    <div className="comment_body">
-                                                                        <h6>Dessie Parks <small className="float-right font-14">1min ago</small></h6>
-                                                                        <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking</p>
-                                                                    </div>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="timeline_item ">
-                                                    <img className="tl_avatar" src="../assets/images/xs/avatar7.jpg" alt="fake_url" />
-                                                    <span><a href="fake_url;" >Rochelle Barton</a> San Francisco, CA <small className="float-right text-right">12-April-2019</small></span>
-                                                    <h6 className="font600">An Engineer Explains Why You Should Always Order the Larger Pizza</h6>
-                                                    <div className="msg">
-                                                        <p>I'm speaking with myself, number one, because I have a very good brain and I've said a lot of things. I write the best placeholder text, and I'm the biggest developer on the web by far... While that's mock-ups and this is politics, is the Lorem card.</p>
-                                                        <a href="fake_url;" className="mr-20 text-muted"><i className="fa fa-heart text-pink" /> 7 Love</a>
-                                                        <a className="text-muted" role="button" data-toggle="collapse" href="#collapseExample2" aria-expanded="false" aria-controls="collapseExample2"><i className="fa fa-comments" /> 1 Comment</a>
-                                                        <div className="collapse p-4 section-gray" id="collapseExample2">
-                                                            <form className="well">
-                                                                <div className="form-group">
-                                                                    <textarea rows={2} className="form-control no-resize" placeholder="Enter here for tweet..." defaultValue={""} />
                                                                 </div>
-                                                                <button className="btn btn-primary">Submit</button>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                            )}
+                                                            {/* Out Time Entry */}
+                                                            {activity.activity_type === 'Punch' && activity.out_time && (
+                                                                <>
+                                                                    <div className="duration text-center">
+                                                                        ------ {activity.duration} ------
+                                                                    </div>
+                                                                    <div className="timeline_item ">
+                                                                        <img
+                                                                            className="tl_avatar"
+                                                                            src="../assets/images/xs/avatar1.jpg"
+                                                                            alt="fake_url"
+                                                                        />
+                                                                        <span>
+                                                                            <a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+                                                                            <small className="float-right text-right">
+                                                                                {activity.out_time}
+                                                                            </small>
+                                                                        </span>
+                                                                        <h6 className="font600">
+                                                                            has ended his day
+                                                                        </h6>
+                                                                        <div className="msg">
+                                                                            {activity.updated_by && (
+                                                                                <a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Edited by System Admin</a>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    ))
+                                                ) : (
+                                                    errorMessage && <p>{errorMessage}</p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

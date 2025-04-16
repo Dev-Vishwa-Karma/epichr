@@ -486,7 +486,7 @@ class Events extends Component {
 												</div>
 											)}
 
-											{(logged_in_employee_role === "admin" || logged_in_employee_role === "super_admin" || (Array.isArray(todos) && todos.length > 0)) && (
+											{(logged_in_employee_role === "admin" || logged_in_employee_role === "super_admin") && (
 											<div className="todo_list mt-4">
 
 												{(logged_in_employee_role === "admin" || logged_in_employee_role === "super_admin" || (Array.isArray(todos) && todos.length > 0)) && (
