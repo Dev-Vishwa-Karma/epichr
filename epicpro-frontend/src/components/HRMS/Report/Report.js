@@ -35,6 +35,8 @@ class Report extends Component {
 			todays_working_hours: '',
 			break_duration_in_minutes: 0,
 			todays_total_hours: '',
+			currentPageReports: 1,
+            dataPerPage: 10,
 			error: {
                 report: '',
 				start_time: '',
@@ -734,11 +736,31 @@ class Report extends Component {
             inputDate.getMonth() === today.getMonth() &&
             inputDate.getDate() === today.getDate()
         );
-    };    
+    };
+
+    // Handle Pagination of employee listing and employee leaves listing
+	handlePageChange = (newPage, listType) => {
+		if (listType === 'reports') {
+			const totalPages = Math.ceil(this.state.reports.length / this.state.dataPerPage);
+			if (newPage >= 1 && newPage <= totalPages) {
+				this.setState({ currentPageReports: newPage });
+			}
+		}
+	};
 
     render() {
         const { fixNavbar } = this.props;
-        const { reports, error, employeeData, selectedStatus, selectedEmployee, punchOutReport, reportError, reportSuccess, addReportByAdminError, existingFullName, existingActivityType, existingActivityDescription, existingActivityInTime, existingActivityOutTime, existingActivitySatus, editReportByAdminError, selectedReport, loading, report, start_time, todays_total_hours, break_duration_in_minutes, todays_working_hours, end_time, punchError, punchSuccess } = this.state;
+        const { reports, error, employeeData, selectedStatus, selectedEmployee, punchOutReport, reportError, reportSuccess, addReportByAdminError, existingFullName, existingActivityType, existingActivityDescription, existingActivityInTime, existingActivityOutTime, existingActivitySatus, editReportByAdminError, selectedReport, loading, report, start_time, todays_total_hours, break_duration_in_minutes, todays_working_hours, end_time, punchError, punchSuccess, currentPageReports, dataPerPage } = this.state;
+
+        // Handle empty employee data safely
+		const reportList = (reports || []).length > 0 ? reports : [];
+
+		// Pagination Logic for Reports
+		const indexOfLastReport = currentPageReports * dataPerPage;
+		const indexOfFirstReport = indexOfLastReport - dataPerPage;
+		const currentReports = reportList.slice(indexOfFirstReport, indexOfLastReport);
+		const totalPagesReports = Math.ceil(reportList.length / dataPerPage);
+
         return (
             <>
                 <div>
@@ -797,8 +819,8 @@ class Report extends Component {
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            {reports.length > 0 ? (
-                                                                reports.map((report, index) => (
+                                                            {currentReports.length > 0 ? (
+                                                                currentReports.map((report, index) => (
                                                                     <tr key={index}>
                                                                         {window.user && window.user.role !== 'employee' && (
                                                                             <td>{report.full_name}</td>
@@ -916,6 +938,31 @@ class Report extends Component {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Only show pagination if there are reports */}
+                                    {totalPagesReports > 1 && (
+                                        <nav aria-label="Page navigation">
+                                            <ul className="pagination mb-0 justify-content-end">
+                                                <li className={`page-item ${currentPageReports === 1 ? 'disabled' : ''}`}>
+                                                    <button className="page-link" onClick={() => this.handlePageChange(currentPageReports - 1, 'reports')}>
+                                                        Previous
+                                                    </button>
+                                                </li>
+                                                {[...Array(totalPagesReports)].map((_, i) => (
+                                                    <li key={i} className={`page-item ${currentPageReports === i + 1 ? 'active' : ''}`}>
+                                                        <button className="page-link" onClick={() => this.handlePageChange(i + 1, 'reports')}>
+                                                            {i + 1}
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                                <li className={`page-item ${currentPageReports === totalPagesReports ? 'disabled' : ''}`}>
+                                                    <button className="page-link" onClick={() => this.handlePageChange(currentPageReports + 1, 'reports')}>
+                                                        Next
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    )}
                                 </div>
                             </div>
                         </div>
