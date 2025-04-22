@@ -1,9 +1,8 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow React app
-header("Access-Control-Allow-Methods: GET, POST, DELETE, PUT, OPTIONS");   // Allow HTTP methods
-header("Access-Control-Allow-Headers: Content-Type");         // Allow headers like JSON content
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, DELETE, PUT, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
 
 // Include the database connection
 include 'db_connection.php';
@@ -59,12 +58,12 @@ function uploadFile($file, $targetDir, $allowedTypes = [], $maxSize = 2 * 1024 *
         // Generate a unique file name
         $uniqueFileName = uniqid() . '-' . basename($file['name']);
 
-
         $targetPath = $targetDir . DIRECTORY_SEPARATOR . $uniqueFileName;
 
-        // Ensure the target directory exists
+        // Ensure the target directory exists and set permissions
         if (!is_dir($targetDir)) {
             mkdir($targetDir, 0777, true);
+            chmod($targetDir, 0777);
         }
 
         // Move the file to the target directory
@@ -84,8 +83,6 @@ if (isset($action)) {
         case 'view':
             if (isset($_GET['user_id']) && validateId($_GET['user_id'])) {
                 // Prepare SELECT statement with WHERE clause using a placeholder to prevent SQL injection
-                // $stmt = $conn->prepare("SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL");
-                // Get specific employee with department info
                 $stmt = $conn->prepare("
                     SELECT e.*, 
                         d.department_name, 
@@ -108,7 +105,6 @@ if (isset($action)) {
                 $roleFilter = isset($_GET['role']) ? $_GET['role'] : 'all';
                 if ($roleFilter == 'employee') {
                     // If 'employee' role filter is passed, show only employees with role 'employee'
-                    // $stmt = $conn->prepare("SELECT * FROM employees WHERE role = 'employee' AND deleted_at IS NULL");
                     $stmt = $conn->prepare("
                         SELECT e.*, 
                             d.department_name, 
@@ -156,8 +152,8 @@ if (isset($action)) {
 
         case 'add':
             // Capture and sanitize POST data
-            $logged_in_user_id = $_POST['logged_in_employee_id'] ?? ""; // Get logged-in user ID
-            $logged_in_user_role = $_POST['logged_in_employee_role'] ?? ""; // Get logged-in user role
+            $logged_in_user_id = $_POST['logged_in_employee_id'] ?? "";
+            $logged_in_user_role = $_POST['logged_in_employee_role'] ?? "";
 
             // Capture and sanitize POST data
             $data = [
@@ -206,7 +202,7 @@ if (isset($action)) {
             if ($profileImage) {
                 try {
                     // Upload to profile folder
-                    $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png']);
+                    $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png', 'image/webp']);
                     
                     if ($profilePath) {
                         $data['profile'] = $profilePath;
@@ -228,25 +224,25 @@ if (isset($action)) {
             // Upload Aadhaar card
             $aadharCardFile = $_FILES['aadhar_card_file'] ?? "";
             if ($aadharCardFile) {
-                $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
             }
 
             // Upload PAN card
             $panCardFile = $_FILES['pan_card_file'] ?? "";
             if ($panCardFile) {
-                $data['pan_card_file'] = uploadFile($panCardFile, 'uploads/documents/pan', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                $data['pan_card_file'] = uploadFile($panCardFile, 'uploads/documents/pan', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
             }
 
             // Upload driving license
             $drivingLicenseFile = $_FILES['driving_license_file'] ?? "";
             if ($drivingLicenseFile) {
-                $data['driving_license_file'] = uploadFile($drivingLicenseFile, 'uploads/documents/driving_license', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                $data['driving_license_file'] = uploadFile($drivingLicenseFile, 'uploads/documents/driving_license', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
             }
 
             // Upload resume
             $resumeFile = $_FILES['resume'] ?? "";
             if ($resumeFile) {
-                $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
+                $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/webp']);
             }
 
             if (in_array(strtolower($logged_in_user_role), ['admin', 'super_admin'])) {
@@ -351,7 +347,7 @@ if (isset($action)) {
 
                         // Skip the insertion if any of the required fields are empty or invalid
                         if (empty($source) || $amount === '' || $from_date === '' || $to_date === '') {
-                            continue; // Skip this salary detail if data is invalid
+                            continue;
                         }
 
                         // Bind the parameters for each salary entry
@@ -401,6 +397,17 @@ if (isset($action)) {
                     }
                 }
 
+                if (!empty($data['dob'])) {
+                    $event_name = "Birthday of " . $data['first_name'] . " " . $data['last_name'];
+                    $event_date = $data['dob'];
+                    $event_type = 'event';
+                    $created_at = date('Y-m-d H:i:s');
+
+                    $event_stmt = $conn->prepare("INSERT INTO events (employee_id, event_type, event_date, event_name, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)");
+                    $event_stmt->bind_param("issssi", $employee_id, $event_type, $event_date, $event_name, $created_at, $created_by);
+                    $event_stmt->execute();
+                }
+
                 sendJsonResponse('success', [
                     'id' => $employee_id,
                     'department_id' => $data['department_id'],
@@ -431,8 +438,8 @@ if (isset($action)) {
                     exit;
                 }
 
-                $logged_in_user_id = $_POST['logged_in_employee_id']; // Logged-in user's ID
-                $logged_in_role = $_POST['logged_in_employee_role']; // Logged-in user's role
+                $logged_in_user_id = $_POST['logged_in_employee_id'];
+                $logged_in_role = $_POST['logged_in_employee_role'];
 
                 // Initialize data array
                 $data = [];
@@ -544,7 +551,7 @@ if (isset($action)) {
                 if ($profileImage) {
                     try {
                         // Upload to profile folder
-                        $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png']);
+                        $profilePath = uploadFile($profileImage, 'uploads/profiles', ['image/jpeg', 'image/png', 'image/webp']);
                         
                         if ($profilePath) {
                             $data['profile'] = $profilePath;
@@ -566,25 +573,25 @@ if (isset($action)) {
                 // Upload Aadhaar card
                 $aadharCardFile = $_FILES['aadhar_card_file'];
                 if ($aadharCardFile) {
-                    $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/octet-stream']);
+                    $data['aadhar_card_file'] = uploadFile($aadharCardFile, 'uploads/documents/aadhar', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/octet-stream']);
                 }
 
                 // Upload PAN card
                 $panCardFile = $_FILES['pan_card_file'];
                 if ($panCardFile) {
-                    $data['pan_card_file'] = uploadFile($panCardFile, 'uploads/documents/pan', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                    $data['pan_card_file'] = uploadFile($panCardFile, 'uploads/documents/pan', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
                 }
 
                 // Upload driving license
                 $drivingLicenseFile = $_FILES['driving_license_file'];
                 if ($drivingLicenseFile) {
-                    $data['driving_license_file'] = uploadFile($drivingLicenseFile, 'uploads/documents/driving_license', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png']);
+                    $data['driving_license_file'] = uploadFile($drivingLicenseFile, 'uploads/documents/driving_license', ['application/pdf', 'application/msword', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']);
                 }
 
                 // Upload resume
                 $resumeFile = $_FILES['resume'];
                 if ($resumeFile) {
-                    $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/octet-stream']);
+                    $data['resume'] = uploadFile($resumeFile, 'uploads/documents/resumes', ['application/pdf', 'application/msword', 'text/plain', 'application/octet-stream', 'image/jpeg', 'image/png', 'image/webp']);
                 }
 
                 // Check if admin or super_admin is updating another user's profile
@@ -597,12 +604,11 @@ if (isset($action)) {
                 // Prepare SQL UPDATE statement
                 $updateColumns = [];
                 $updateValues = [];
-                $types = ''; // Prepare bind_param types dynamically
+                $types = '';
 
                 // Dynamically create column assignments and bind parameters
                 foreach ($data as $column => $value) {
                     $updateColumns[] = "$column = ?";
-                    // $updateValues[] = $value;
                     $updateValues[] = ($value === null || $value === '') ? '' : $value;
                     // Determine the data type
                     if (in_array($column, ['department_id'])) {
@@ -614,7 +620,7 @@ if (isset($action)) {
                 // SQL query
                 $sql = "UPDATE employees SET " . implode(', ', $updateColumns) . " WHERE id = ?";
                 $updateValues[] = $id;
-                $types .= 'i'; // For integer id
+                $types .= 'i';
 
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param($types, ...$updateValues);
@@ -653,7 +659,7 @@ if (isset($action)) {
     
                             // Skip the update if any of the required fields are empty or invalid
                             if (empty($source) || $amount === null || $from_date === null || $to_date === null) {
-                                continue; // Skip this salary detail if data is invalid
+                                continue;
                             }
     
                             // Bind the parameters for each salary entry
@@ -665,14 +671,14 @@ if (isset($action)) {
                                 $detail['to_date'],
                                 $updated_at,
                                 $id,
-                                $detail['id'] // Auto-increment ID
+                                $detail['id']
                             );
 
                             // Execute the insert for each salary detail
                             if (!$salary_stmt->execute()) {
                                 $salary_error = $salary_stmt->error;
                                 sendJsonResponse('error', null, "Failed to add salary detail: $salary_error");
-                                exit; // Exit if any insert fails
+                                exit;
                             }
                         }
                     }
@@ -689,6 +695,34 @@ if (isset($action)) {
                         $department_name = $department['department_name'] ?? null;
                         $department_head = $department['department_head'] ?? null;
                     }
+
+                    if (isset($data['dob']) && !empty($data['dob'])) {
+                        $event_name = "Birthday of " . $data['first_name'] . " " . $data['last_name'];
+                        $event_type = 'event';
+                        $event_date = $data['dob'];
+                        $updated_at = date('Y-m-d H:i:s');
+                    
+                        // First check if an event already exists for this employee
+                        $check_event_stmt = $conn->prepare("SELECT id FROM events WHERE employee_id = ?");
+                        $check_event_stmt->bind_param("i", $logged_in_user_id);
+                        $check_event_stmt->execute();
+                        $check_event_result = $check_event_stmt->get_result();
+                        if ($check_event_result->num_rows > 0) {
+                            // Event exists, so update it
+                            $event_row = $check_event_result->fetch_assoc();
+                            $event_id = $event_row['id'];
+                    
+                            $update_event_stmt = $conn->prepare("UPDATE events SET event_name = ?, event_date = ?, event_type = ?, updated_at = ?, updated_by = ? WHERE employee_id = ?");
+                            $update_event_stmt->bind_param("ssssii", $event_name, $event_date, $event_type, $updated_at, $data['updated_by'], $logged_in_user_id);
+                            $update_event_stmt->execute();
+                        } else {
+                            // No event exists, insert new one
+                            $created_at = date('Y-m-d H:i:s');
+                            $insert_event_stmt = $conn->prepare("INSERT INTO events (employee_id, event_type, event_date, event_name, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)");
+                            $insert_event_stmt->bind_param("issssi", $logged_in_user_id, $event_type, $event_date, $event_name, $created_at, $data['updated_by']);
+                            $insert_event_stmt->execute();
+                        }
+                    }            
 
                     $updatedData = [
                         'id' => $id,
@@ -732,7 +766,7 @@ if (isset($action)) {
                     // Check if logged-in user ID and role are provided
                     if (isset($data['logged_in_employee_id']) && isset($data['logged_in_employee_role'])) {
                         $logged_in_user_id = $data['logged_in_employee_id'];
-                        $logged_in_user_role = strtolower($data['logged_in_employee_role']); // Convert to lowercase for consistency
+                        $logged_in_user_role = strtolower($data['logged_in_employee_role']);
             
                         // Allow only admin and super admin to set deleted_by
                         if ($logged_in_user_role === 'admin' || $logged_in_user_role === 'super_admin') {

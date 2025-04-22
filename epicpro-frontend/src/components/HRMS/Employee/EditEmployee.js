@@ -78,9 +78,6 @@ class EditEmployee extends Component {
         // Fetch latest employee data from API
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&user_id=${employeeId}`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then(response => response.json())
         .then(data => {
@@ -141,10 +138,7 @@ class EditEmployee extends Component {
 
         // Get department data from departments table
 		fetch(`${process.env.REACT_APP_API_URL}/departments.php`, {
-            method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
+            method: "GET"
         })
         .then(response => response.json())
         .then(data => {
@@ -334,9 +328,6 @@ class EditEmployee extends Component {
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employeeId}`, {
             method: "POST",
             body: updateEmployeeData,
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then((response) => {
             if (!response.ok) {
@@ -447,6 +438,8 @@ class EditEmployee extends Component {
         // Frontend and Backend Skill Options
         const frontendSkills = ["HTML", "CSS", "JavaScript", "React", "Angular", "Vue"];
         const backendSkills = ["PHP", "Laravel", "Python", "Node.js", "Symfony", "Django", "Ruby on Rails"];
+        console.log('aadhar file === ', aadharCardFile);
+        console.log('aadhar file url =====', aadharCardFileUrl);
         return (
             <>
                 {/* Show success and error Messages */}
@@ -597,14 +590,14 @@ class EditEmployee extends Component {
                                                             <div className="d-inline-block">
                                                                 <a
                                                                     href={
-                                                                        photoUrl ? photoUrl : `${process.env.REACT_APP_API_URL}/${photo}`
+                                                                        photoUrl ? photoUrl : `${process.env.REACT_APP_API_URL}/${photo.name || photo}`
                                                                     }
                                                                     className="text-primary small"
                                                                     style={{ fontWeight: "500", display: "inline-block" }}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                 >
-                                                                    View Profile
+                                                                    {photo instanceof File ? this.state.photo.name : this.state.photo.split('/').pop().replace(/^\w+-/, '')}
                                                                 </a>
                                                             </div>
                                                         ) : (
@@ -922,22 +915,22 @@ class EditEmployee extends Component {
                                                             />
 
                                                             {/* File Preview Link */}
-                                                            {aadharCardFile ? (
+                                                            {aadharCardFile && aadharCardFile !== "" ? (
                                                                 <div className="d-inline-block" style={{ display: "inline-block" }}>
                                                                     <a
                                                                         href={
-                                                                            aadharCardFileUrl ? aadharCardFileUrl : `${process.env.REACT_APP_API_URL}/${aadharCardFile}`
+                                                                            aadharCardFileUrl ? aadharCardFileUrl : `${process.env.REACT_APP_API_URL}/${aadharCardFile.name || aadharCardFile}`
                                                                         }
-                                                                        className="text-primary small d-block mt-1"
-                                                                        style={{ fontWeight: "500" }}
+                                                                        className="text-primary small"
+                                                                        style={{ fontWeight: "500", display: "inline-block" }}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                     >
-                                                                        View Uploaded Aadhaar Card
+                                                                        {aadharCardFile instanceof File ? aadharCardFile.name : aadharCardFile.split('/').pop().replace(/^\w+-/, '')}
                                                                     </a>
                                                                 </div>
                                                             ) : (
-                                                                <small>Aadhaar card not uploaded</small>
+                                                                <small className="text-primary small" style={{ fontWeight: "500" }}>Aadhaar card not uploaded</small>
                                                             )}
                                                         </div>
                                                     </div>
@@ -963,22 +956,20 @@ class EditEmployee extends Component {
                                                             {/* File Preview Link */}
                                                             {drivingLicenseFile ? (
                                                                 <div className="d-inline-block">
-                                                                    <a 
+                                                                    <a
                                                                         href={
-                                                                            drivingLicenseFileUrl
-                                                                                ? drivingLicenseFileUrl
-                                                                                : `${process.env.REACT_APP_API_URL}/${drivingLicenseFile}`
+                                                                            drivingLicenseFileUrl ? drivingLicenseFileUrl : `${process.env.REACT_APP_API_URL}/${drivingLicenseFile.name || drivingLicenseFile}`
                                                                         }
-                                                                        className="text-primary small d-block mt-1"
-                                                                        style={{fontWeight: "500"}}
+                                                                        className="text-primary small"
+                                                                        style={{ fontWeight: "500", display: "inline-block" }}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                     >
-                                                                        View Uploaded Driving License
+                                                                        {drivingLicenseFile instanceof File ? drivingLicenseFile.name : drivingLicenseFile.split('/').pop().replace(/^\w+-/, '')}
                                                                     </a>
                                                                 </div>
                                                             ) : (
-                                                                <small>Driving license not uploaded</small>
+                                                                <small className="text-primary small" style={{ fontWeight: "500" }}>Driving license not uploaded</small>
                                                             )}
                                                         </div>
                                                     </div>
@@ -1005,22 +996,20 @@ class EditEmployee extends Component {
                                                             {/* File Preview Link */}
                                                             {panCardFile ? (
                                                                 <div className="d-inline-block">
-                                                                    <a 
+                                                                    <a
                                                                         href={
-                                                                            panCardFileUrl
-                                                                                ? panCardFileUrl
-                                                                                : `${process.env.REACT_APP_API_URL}/${panCardFile}`
+                                                                            panCardFileUrl ? panCardFileUrl : `${process.env.REACT_APP_API_URL}/${panCardFile.name || panCardFile}`
                                                                         }
-                                                                        className="text-primary small d-block mt-1"
-                                                                        style={{fontWeight: "500"}}
+                                                                        className="text-primary small"
+                                                                        style={{ fontWeight: "500", display: "inline-block" }}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                     >
-                                                                        View Uploaded Pan Card
+                                                                        {panCardFile instanceof File ? panCardFile.name : panCardFile.split('/').pop().replace(/^\w+-/, '')}
                                                                     </a>
                                                                 </div>
                                                             ) : (
-                                                                <small>Pan card not uploaded</small>
+                                                                <small className="text-primary small" style={{ fontWeight: "500" }}>Pan card not uploaded</small>
                                                             )}
                                                         </div>
                                                     </div>
@@ -1112,22 +1101,20 @@ class EditEmployee extends Component {
                                                         {/* Resume Preview Link */}
                                                         {resume ? (
                                                             <div className="d-inline-block">
-                                                                <a 
+                                                                <a
                                                                     href={
-                                                                        resumeUrl
-                                                                            ? resumeUrl
-                                                                            : `${process.env.REACT_APP_API_URL}/${resume}`
+                                                                        resumeUrl ? resumeUrl : `${process.env.REACT_APP_API_URL}/${resume.name || resume}`
                                                                     }
-                                                                    className="text-primary small d-block mt-1"
-                                                                    style={{fontWeight: "500"}}
+                                                                    className="text-primary small"
+                                                                    style={{ fontWeight: "500", display: "inline-block" }}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                 >
-                                                                    View Resume
+                                                                    {resume instanceof File ? resume.name : resume.split('/').pop().replace(/^\w+-/, '')}
                                                                 </a>
                                                             </div>
                                                         ) : (
-                                                            <small>Resume not uploaded</small>
+                                                            <small className="text-primary small" style={{ fontWeight: "500" }}>Resume not uploaded</small>
                                                         )}
                                                     </div>
                                                 </div>

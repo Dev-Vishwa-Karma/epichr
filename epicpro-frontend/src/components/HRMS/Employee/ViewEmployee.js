@@ -24,6 +24,8 @@ class ViewEmployee extends Component {
             showSuccess: false,
             errorMessage: "",
             showError: false,
+            activeTab: "",
+            activities: [],
         };
     }
 
@@ -38,7 +40,7 @@ class ViewEmployee extends Component {
     };
 
     componentDidMount() {
-        const { employee, employeeId } = this.props.location.state || {};
+        const { employee, employeeId, tab } = this.props.location.state || {};
 
         // Get the logged-in user from localStorage
         const storedUser = JSON.parse(localStorage.getItem("user")) || null;
@@ -48,7 +50,8 @@ class ViewEmployee extends Component {
             this.setState({
                 employee: { ...this.state.employee, ...employee },
                 employeeId,
-                previewImage: `${process.env.REACT_APP_API_URL}/${employee.profile}`
+                previewImage: `${process.env.REACT_APP_API_URL}/${employee.profile}`,
+                activeTab: tab,
             });
         }
 
@@ -64,10 +67,36 @@ class ViewEmployee extends Component {
         if (employeeId) {
             this.fetchEmployeeDetails(employeeId);
         }
+
+        // Get activities
+        let apiUrl = '';
+
+		if (window.user.role === 'super_admin' || window.user.role === 'admin') {
+		apiUrl = `${process.env.REACT_APP_API_URL}/activities.php`;
+		}
+		else {
+		apiUrl = `${process.env.REACT_APP_API_URL}/activities.php?user_id=${window.user.id}`;
+		}
+
+		fetch(apiUrl, {
+			method: "GET",
+		})
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                this.setState({ activities: data.data });
+            } else {
+                this.setState({ errorMessage: data.message });
+            }
+        })
+        .catch(err => {
+            this.setState({ error: 'Failed to fetch data' });
+            console.error(err);
+        });
     }
 
     componentDidUpdate(prevProps) {
-        const { employee, employeeId } = this.props.location.state || {};
+        const { employee, employeeId, tab } = this.props.location.state || {};
         if (employee && employee !== prevProps.location.state?.employee) {
             this.setState({
                 employee: { ...this.state.employee, ...employee },
@@ -78,14 +107,16 @@ class ViewEmployee extends Component {
         if (employeeId && employeeId !== prevProps.location.state?.employeeId) {
             this.fetchEmployeeDetails(employeeId);
         }
+
+         // Watch for tab change even if pathname is same
+        if (tab && tab !== prevProps.location.state?.tab) {
+            this.setState({ activeTab: tab });
+        }
     }
 
     fetchEmployeeDetails = (employeeId) => {
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&user_id=${employeeId}`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
             .then((response) => response.json())
             .then((data) => {
@@ -125,9 +156,6 @@ class ViewEmployee extends Component {
     
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employeeId}`, {
           method: "POST",
-          headers: {
-              "ngrok-skip-browser-warning": "true"
-          },
           body: formData,
         })
         .then((response) => response.json())
@@ -219,9 +247,6 @@ class ViewEmployee extends Component {
     
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employee.id}`, {
             method: "POST",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            },
             body: updatedProfileData,
         })
         .then(response => response.json())
@@ -330,10 +355,10 @@ class ViewEmployee extends Component {
             </>
         );
     };
-    
+
     render() {
         const { fixNavbar} = this.props;
-        const {employee} = this.state;
+        const {employee, activities, errorMessage} = this.state;
         // Handle case where employee data is not available
         if (!employee) {
             return <p>Loading employee details...</p>;
@@ -480,22 +505,55 @@ class ViewEmployee extends Component {
                             <div className="col-12">
                                 <ul className="nav nav-tabs mb-3" id="pills-tab" role="tablist">
                                     <li className="nav-item">
-                                        <a className="nav-link active" id="pills-calendar-tab" data-toggle="pill" href="#pills-calendar" role="tab" aria-controls="pills-calendar" aria-selected="false">Calendar</a>
+                                        <a
+                                            className={`nav-link ${this.state.activeTab === "calendar" ? "active" : ""}`}
+                                            id="pills-calendar-tab"
+                                            data-toggle="pill"
+                                            href="#pills-calendar"
+                                            role="tab"
+                                            aria-controls="pills-calendar"
+                                            aria-selected={this.state.activeTab === "calendar"}
+                                            onClick={() => this.setState({ activeTab: "calendar" })}
+                                        >
+                                            Calendar
+                                        </a>
                                     </li>
                                     <li className="nav-item">
-                                        <a className="nav-link" id="pills-timeline-tab" data-toggle="pill" href="#pills-timeline" role="tab" aria-controls="pills-timeline" aria-selected="true">Timeline</a>
+                                        <a
+                                            className={`nav-link ${this.state.activeTab === "timeline" ? "active" : ""}`}
+                                            id="pills-timeline-tab"
+                                            data-toggle="pill"
+                                            href="#pills-timeline"
+                                            role="tab"
+                                            aria-controls="pills-timeline"
+                                            aria-selected={this.state.activeTab === "timeline"}
+                                            onClick={() => this.setState({ activeTab: "timeline" })}
+                                        >
+                                            Timeline
+                                        </a>
                                     </li>
                                     <li className="nav-item">
-                                        <a className="nav-link" id="pills-profile-tab" data-toggle="pill" href="#pills-profile" role="tab" aria-controls="pills-profile" aria-selected="false">Profile</a>
+                                        <a
+                                            className={`nav-link ${this.state.activeTab === "profile" ? "active" : ""}`}
+                                            id="pills-profile-tab"
+                                            data-toggle="pill"
+                                            href="#pills-profile"
+                                            role="tab"
+                                            aria-controls="pills-profile"
+                                            aria-selected={this.state.activeTab === "profile"}
+                                            onClick={() => this.setState({ activeTab: "profile" })}
+                                        >
+                                            Profile
+                                        </a>
                                     </li>
-                                    <li className="nav-item">
+                                    {/* <li className="nav-item">
                                         <a className="nav-link" id="pills-blog-tab" data-toggle="pill" href="#pills-blog" role="tab" aria-controls="pills-blog" aria-selected="true">Blog</a>
-                                    </li>
+                                    </li> */}
                                 </ul>
                             </div>
-                            <div className="col-lg-8 col-md-12">
+                            <div className="col-lg-12 col-md-12">
                                 <div className="tab-content" id="pills-tabContent">
-                                    <div className="tab-pane fade show active" id="pills-calendar" role="tabpanel" aria-labelledby="pills-calendar-tab">
+                                    <div className={`tab-pane fade ${this.state.activeTab === "calendar" ? "show active" : ""}`} id="pills-calendar" role="tabpanel" aria-labelledby="pills-calendar-tab">
                                         <div className="card">
                                             <div className="card-header bline">
                                                 <h3 className="card-title">Calendar</h3>
@@ -521,7 +579,7 @@ class ViewEmployee extends Component {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="tab-pane fade" id="pills-timeline" role="tabpanel" aria-labelledby="pills-timeline-tab">
+                                    <div className={`tab-pane fade ${this.state.activeTab === "timeline" ? "show active" : ""}`} id="pills-timeline" role="tabpanel" aria-labelledby="pills-timeline-tab">
                                         <div className="card">
                                             <div className="card-header">
                                                 <h3 className="card-title">Activity</h3>
@@ -545,103 +603,127 @@ class ViewEmployee extends Component {
                                                 </div>
                                             </div>
                                             <div className="card-body">
-                                                <div className="timeline_item ">
-                                                    <img className="tl_avatar" src="../assets/images/xs/avatar1.jpg" alt="fake_url" />
-                                                    <span><a href="fake_url;">Elisse Joson</a> San Francisco, CA <small className="float-right text-right">20-April-2019 - Today</small></span>
-                                                    <h6 className="font600">Hello, 'Im a single div responsive timeline without media Queries!</h6>
-                                                    <div className="msg">
-                                                        <p>I'm speaking with myself, number one, because I have a very good brain and I've said a lot of things. I write the best placeholder text, and I'm the biggest developer on the web card she has is the Lorem card.</p>
-                                                        <a href="fake_url;" className="mr-20 text-muted"><i className="fa fa-heart text-pink" /> 12 Love</a>
-                                                        <a className="text-muted" role="button" data-toggle="collapse" href="#collapseExample" aria-expanded="false" aria-controls="collapseExample"><i className="fa fa-comments" /> 1 Comment</a>
-                                                        <div className="collapse p-4 section-gray" id="collapseExample">
-                                                            <form className="well">
-                                                                <div className="form-group">
-                                                                    <textarea rows={2} className="form-control no-resize" placeholder="Enter here for tweet..." defaultValue={""} />
+                                                {activities.length > 0 ? (
+                                                    activities.map((activity, index) => (
+                                                        <>
+                                                            {/* In Time Entry */}
+                                                            {activity.activity_type === 'Break' && (
+                                                                <div className="timeline_item ">
+                                                                    <img
+                                                                        className="tl_avatar"
+                                                                        src="../assets/images/xs/avatar1.jpg"
+                                                                        alt="fake_url"
+                                                                    />
+                                                                    <span>
+                                                                        <a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+                                                                        <small className="float-right text-right">
+                                                                            {activity.in_time}
+                                                                        </small>
+                                                                    </span>
+                                                                    <h6 className="font600">
+                                                                        (Break In) {activity.description}
+                                                                    </h6>
+
+                                                                    <div className="msg">
+                                                                        {activity.created_by && (
+                                                                            <a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Created by System Admin</a>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                                <button className="btn btn-primary">Submit</button>
-                                                            </form>
-                                                            <ul className="recent_comments list-unstyled mt-4 mb-0">
-                                                                <li>
-                                                                    <div className="avatar_img">
-                                                                        <img className="rounded img-fluid" src="../assets/images/xs/avatar4.jpg" alt="fake_url" />
+                                                            )}
+                                                            {/* Out Time Entry */}
+                                                            {activity.activity_type === 'Break' && activity.out_time && (
+                                                                <>
+                                                                    <div className="duration text-center">
+                                                                        ------ {activity.duration} ------
                                                                     </div>
-                                                                    <div className="comment_body">
-                                                                        <h6>Donald Gardner <small className="float-right font-14">Just now</small></h6>
-                                                                        <p>Lorem ipsum Veniam aliquip culpa laboris minim tempor</p>
-                                                                    </div>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="timeline_item ">
-                                                    <img className="tl_avatar" src="../assets/images/xs/avatar4.jpg" alt="fake_url" />
-                                                    <span><a href="fake_url;" >Dessie Parks</a> Oakland, CA <small className="float-right text-right">19-April-2019 - Yesterday</small></span>
-                                                    <h6 className="font600">Oeehhh, that's awesome.. Me too!</h6>
-                                                    <div className="msg">
-                                                        <p>I'm speaking with myself, number one, because I have a very good brain and I've said a lot of things. on the web by far... While that's mock-ups and this is politics, are they really so different? I think the only card she has is the Lorem card.</p>
-                                                        <div className="timeline_img mb-20">
-                                                            <img className="width100" src="../assets/images/gallery/1.jpg" alt="Awesome" />
-                                                            <img className="width100" src="../assets/images/gallery/2.jpg" alt="Awesome" />
-                                                        </div>
-                                                        <a href="fake_url;" className="mr-20 text-muted"><i className="fa fa-heart text-pink" /> 23 Love</a>
-                                                        <a className="text-muted" role="button" data-toggle="collapse" href="#collapseExample1" aria-expanded="false" aria-controls="collapseExample1"><i className="fa fa-comments" /> 2 Comment</a>
-                                                        <div className="collapse p-4 section-gray" id="collapseExample1">
-                                                            <form className="well">
-                                                                <div className="form-group">
-                                                                    <textarea rows={2} className="form-control no-resize" placeholder="Enter here for tweet..." defaultValue={""} />
-                                                                </div>
-                                                                <button className="btn btn-primary">Submit</button>
-                                                            </form>
-                                                            <ul className="recent_comments list-unstyled mt-4 mb-0">
-                                                                <li>
-                                                                    <div className="avatar_img">
-                                                                        <img className="rounded img-fluid" src="../assets/images/xs/avatar4.jpg" alt="fake_url" />
-                                                                    </div>
-                                                                    <div className="comment_body">
-                                                                        <h6>Donald Gardner <small className="float-right font-14">Just now</small></h6>
-                                                                        <p>Lorem ipsum Veniam aliquip culpa laboris minim tempor</p>
-                                                                        <div className="timeline_img mb-20">
-                                                                            <img className="width150" src="../assets/images/gallery/7.jpg" alt="Awesome" />
-                                                                            <img className="width150" src="../assets/images/gallery/8.jpg" alt="Awesome" />
+                                                                    <div className="timeline_item ">
+                                                                        <img
+                                                                            className="tl_avatar"
+                                                                            src="../assets/images/xs/avatar1.jpg"
+                                                                            alt="fake_url"
+                                                                        />
+                                                                        <span>
+                                                                            <a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+                                                                            <small className="float-right text-right">
+                                                                                {activity.out_time}
+                                                                            </small>
+                                                                        </span>
+                                                                        <h6 className="font600">
+                                                                            Break out
+                                                                        </h6>
+                                                                        <div className="msg">
+                                                                            {activity.updated_by && (
+                                                                                <a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Edited by System Admin</a>
+                                                                            )}
                                                                         </div>
                                                                     </div>
-                                                                </li>
-                                                                <li>
-                                                                    <div className="avatar_img">
-                                                                        <img className="rounded img-fluid" src="../assets/images/xs/avatar3.jpg" alt="fake_url" />
+                                                                </>
+                                                            )}
+
+                                                            {/* In Time Entry Punch */}
+                                                            {activity.activity_type === 'Punch' && (
+                                                                <div className="timeline_item ">
+                                                                    <img
+                                                                        className="tl_avatar"
+                                                                        src="../assets/images/xs/avatar1.jpg"
+                                                                        alt="fake_url"
+                                                                    />
+                                                                    <span>
+                                                                        <a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+                                                                        <small className="float-right text-right">
+                                                                            {activity.in_time}
+                                                                        </small>
+                                                                    </span>
+                                                                    <h6 className="font600">
+                                                                        has started his day
+                                                                    </h6>
+
+                                                                    <div className="msg">
+                                                                        {activity.created_by && (
+                                                                            <a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Created by System Admin</a>
+                                                                        )}
                                                                     </div>
-                                                                    <div className="comment_body">
-                                                                        <h6>Dessie Parks <small className="float-right font-14">1min ago</small></h6>
-                                                                        <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking</p>
-                                                                    </div>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="timeline_item ">
-                                                    <img className="tl_avatar" src="../assets/images/xs/avatar7.jpg" alt="fake_url" />
-                                                    <span><a href="fake_url;" >Rochelle Barton</a> San Francisco, CA <small className="float-right text-right">12-April-2019</small></span>
-                                                    <h6 className="font600">An Engineer Explains Why You Should Always Order the Larger Pizza</h6>
-                                                    <div className="msg">
-                                                        <p>I'm speaking with myself, number one, because I have a very good brain and I've said a lot of things. I write the best placeholder text, and I'm the biggest developer on the web by far... While that's mock-ups and this is politics, is the Lorem card.</p>
-                                                        <a href="fake_url;" className="mr-20 text-muted"><i className="fa fa-heart text-pink" /> 7 Love</a>
-                                                        <a className="text-muted" role="button" data-toggle="collapse" href="#collapseExample2" aria-expanded="false" aria-controls="collapseExample2"><i className="fa fa-comments" /> 1 Comment</a>
-                                                        <div className="collapse p-4 section-gray" id="collapseExample2">
-                                                            <form className="well">
-                                                                <div className="form-group">
-                                                                    <textarea rows={2} className="form-control no-resize" placeholder="Enter here for tweet..." defaultValue={""} />
                                                                 </div>
-                                                                <button className="btn btn-primary">Submit</button>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                            )}
+                                                            {/* Out Time Entry */}
+                                                            {activity.activity_type === 'Punch' && activity.out_time && (
+                                                                <>
+                                                                    <div className="duration text-center">
+                                                                        ------ {activity.duration} ------
+                                                                    </div>
+                                                                    <div className="timeline_item ">
+                                                                        <img
+                                                                            className="tl_avatar"
+                                                                            src="../assets/images/xs/avatar1.jpg"
+                                                                            alt="fake_url"
+                                                                        />
+                                                                        <span>
+                                                                            <a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+                                                                            <small className="float-right text-right">
+                                                                                {activity.out_time}
+                                                                            </small>
+                                                                        </span>
+                                                                        <h6 className="font600">
+                                                                            has ended his day
+                                                                        </h6>
+                                                                        <div className="msg">
+                                                                            {activity.updated_by && (
+                                                                                <a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Edited by System Admin</a>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    ))
+                                                ) : (
+                                                    errorMessage && <p>{errorMessage}</p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab">
+                                    <div className={`tab-pane fade ${this.state.activeTab === "profile" ? "show active" : ""}`} id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab">
                                         <div className="card">
                                             <div className="card-header">
                                                 <h3 className="card-title">Edit Profile</h3>
@@ -769,7 +851,7 @@ class ViewEmployee extends Component {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="tab-pane fade" id="pills-blog" role="tabpanel" aria-labelledby="pills-blog-tab">
+                                    {/* <div className="tab-pane fade" id="pills-blog" role="tabpanel" aria-labelledby="pills-blog-tab">
                                         <div className="card">
                                             <div className="card-body">
                                                 <div className="new_post">
@@ -815,7 +897,7 @@ class ViewEmployee extends Component {
                                                                 Aenean lacinia bibendum nulla sed consectetur. Vestibulum id ligula porta felis euismod semper. Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras
                                                                 justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Cum sociis natoque penatibus et magnis dis parturient montes,
                                                                 nascetur ridiculus mus.
-                        </div>
+                                                        </div>
                                                             <ul className="media-list">
                                                                 <li className="media mt-4">
                                                                     <img className="media-object avatar mr-4" src="../assets/images/xs/avatar1.jpg" alt="fake_url" />
@@ -823,7 +905,7 @@ class ViewEmployee extends Component {
                                                                         <strong>Debra Beck: </strong>
                                                                         Donec id elit non mi porta gravida at eget metus. Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor. Donec ullamcorper nulla non metus
                                                                         auctor fringilla. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Sed posuere consectetur est at lobortis.
-                            </div>
+                                                                    </div>
                                                                 </li>
                                                             </ul>
                                                         </div>
@@ -861,7 +943,7 @@ class ViewEmployee extends Component {
                                                             <div>
                                                                 Donec id elit non mi porta gravida at eget metus. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Cum sociis natoque penatibus et magnis dis
                                                                 parturient montes, nascetur ridiculus mus. Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </li>
@@ -876,7 +958,7 @@ class ViewEmployee extends Component {
                                                             <div>
                                                                 Donec ullamcorper nulla non metus auctor fringilla. Vestibulum id ligula porta felis euismod semper. Aenean eu leo quam. Pellentesque ornare sem lacinia quam
                                                                 venenatis vestibulum. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui.
-                        </div>
+                                                            </div>
                                                             <ul className="media-list">
                                                                 <li className="media mt-4">
                                                                     <img className="media-object avatar mr-4" src="../assets/images/xs/avatar5.jpg" alt="fake_url" />
@@ -892,10 +974,10 @@ class ViewEmployee extends Component {
                                                 </li>
                                             </ul>
                                         </div>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
-                            <div className="col-lg-4 col-md-12">
+                            {/* <div className="col-lg-4 col-md-12">
                                 <div className="card">
                                     <div className="card-body">
                                         <div className="widgets1">
@@ -1033,7 +1115,7 @@ class ViewEmployee extends Component {
                                         </ul>
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
                         </div>
                     </div>
                 </div>

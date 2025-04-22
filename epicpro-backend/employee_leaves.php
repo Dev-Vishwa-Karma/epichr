@@ -1,9 +1,8 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow React app
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");   // Allow HTTP methods
-header("Access-Control-Allow-Headers: Content-Type");         // Allow headers like JSON content
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning");
 
 // Include the database connection
 include 'db_connection.php';
@@ -21,9 +20,6 @@ function sendJsonResponse($status, $data = null, $message = null) {
     }
     exit;
 }
-
-// SQL query to get all dapartments
-$sql = "SELECT * FROM employee_leaves";
 
 $action = !empty($_GET['action']) ? $_GET['action'] : 'view';
 
@@ -61,7 +57,6 @@ if (isset($action)) {
                     sendJsonResponse('error', null, "Failed to execute query: $stmt->error");
                 }
             } else {
-                // $result = $conn->query("SELECT * FROM employee_leaves");
                 $result = $conn->query("SELECT 
                         employee_leaves.id,
                         employee_leaves.employee_id, 
@@ -136,9 +131,9 @@ if (isset($action)) {
                     'status' => $status,
                 ];
                 // If successful, send success response
-                sendJsonResponse('success', $addEmployeeLeaveData, "Leave request added successfully");
+                sendJsonResponse('success', $addEmployeeLeaveData, "Leave added successfully");
             } else {
-                sendJsonResponse('error', null, "Failed to add leave request $stmt->error");
+                sendJsonResponse('error', null, "Failed to add leave $stmt->error");
             }
             break;
 
@@ -186,7 +181,7 @@ if (isset($action)) {
                         'status' => $status,
                         'updated_at' => $updated_at
                     ];
-                    sendJsonResponse('success', $updatedEmployeeLeaveData, 'Employee Leave updated successfully');
+                    sendJsonResponse('success', $updatedEmployeeLeaveData, 'Leave updated successfully');
                 } else {
                     sendJsonResponse('error', null, 'Failed to update employee leave');
                 }
@@ -204,10 +199,10 @@ if (isset($action)) {
                 $stmt = $conn->prepare("DELETE FROM employee_leaves WHERE id = ?");
                 $stmt->bind_param('i', $_GET['id']);
                 if ($stmt->execute()) {
-                    sendJsonResponse('success', null, 'Record deleted successfully');
+                    sendJsonResponse('success', null, 'Leave deleted successfully');
                 } else {
                     http_response_code(500);
-                    sendJsonResponse('error', null, 'Failed to delete record');
+                    sendJsonResponse('error', null, 'Failed to delete leave');
                 }
                 exit;
             } else {

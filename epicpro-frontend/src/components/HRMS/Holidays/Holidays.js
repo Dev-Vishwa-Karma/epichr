@@ -9,15 +9,14 @@ class Holidays extends Component {
 			message: null,
 			showAddHolidayModal: false,
 			employee_id: null,
+			logged_in_user_role: null,
 			event_name: "",
 			event_date: "",
-			event_type: "",
 			errors: {
 				event_name: '',
         		event_date: '',
-				event_type: '',
 			},
-			selectedEvent: '',
+			selectedHoliday: '',
 			deleteHoliday: null,
 			successMessage: "",
       		errorMessage: "",
@@ -27,22 +26,19 @@ class Holidays extends Component {
 			dataPerPage: 10,
 			loading: true
 		};
-		// Create a ref to scroll to the message container
-		this.messageRef = React.createRef();
 	}
 
 	componentDidMount(prevProps, prevState) {
+		const {role, id} = window.user;
 		// Get the logged in user id
 		this.setState({
-			employee_id: window.user.id,
+			employee_id: id,
+			logged_in_user_role: role
 		});
 
 		// Make the GET API call when the component is mounted
 		fetch(`${process.env.REACT_APP_API_URL}/events.php`, {
 			method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
 		})
 		.then(response => response.json())
 		.then(data => {
@@ -51,14 +47,14 @@ class Holidays extends Component {
 				const today = new Date(); // Get today's date
 
 				// Filter only holidays and exclude past holidays
-            	const upcomingHolidays = holidaysData.filter(event => event.event_type === 'holiday' && new Date(event.event_date) >= today) 
+            	const upcomingHolidays = holidaysData.filter(holiday => holiday.event_type === 'holiday' && new Date(holiday.event_date) >= today) 
                 .sort((a, b) => new Date(a.event_date) - new Date(b.event_date)); // Sort by ASC order
 
 				this.setState(
 					{ holidays: upcomingHolidays, loading: false}
 				);
 			} else {
-				this.setState({ message: data.message, loading: false }); // Update messages in state
+				this.setState({ message: data.message, loading: false });
 			}
 		})
 		.catch(err => {
@@ -88,10 +84,9 @@ class Holidays extends Component {
 	// Function for "Add" button based on active tab
     openAddHolidayModel = () => {
 		this.setState({
-			selectedEvent: null,
+			selectedHoliday: null,
 			event_name: '',
 			event_date: '',
-			event_type: '',
 			errors: {},
 			showAddHolidayModal: true
 		});
@@ -102,17 +97,16 @@ class Holidays extends Component {
 			showAddHolidayModal: false,
 			event_name: '',
 			event_date: '',
-			event_type: '',
 			errors: {},
 		});
     };
 
 	// Handle input changes for add event/holiday
-	handleInputChangeForAddEvent = (event) => {
+	handleInputChangeForAddHoliday = (event) => {
         const { name, value } = event.target;
         this.setState({
 			[name]: value,
-			errors: { ...this.state.errors, [name]: "" } // Clear error for this field
+			errors: { ...this.state.errors, [name]: "" }
 		});
     };
 
@@ -120,88 +114,75 @@ class Holidays extends Component {
 	validateForm = (e) => {
 		e.preventDefault();
 		
-		let errors = { ...this.state.errors }; // Copy errors to avoid direct mutation
+		let errors = { ...this.state.errors };
     	let isValid = true;
 
 		// Check if we're editing or adding an event
-		const eventData = this.state.selectedEvent || this.state;
-		const { event_name, event_date, event_type } = eventData;
+		const eventData = this.state.selectedHoliday || this.state;
+		const { event_name, event_date } = eventData;
 
 		// Validate event name (only letters and spaces)
 		const namePattern = /^[a-zA-Z\s]+$/;
 		if (!event_name) {
-			errors.event_name = "Event name is required.";
+			errors.event_name = "Holiday name is required.";
 			isValid = false;
 		} else if (!namePattern.test(event_name)) {
-		  errors.event_name = 'Event name must only contain letters and spaces.';
-		  isValid = false;
+			errors.event_name = 'Holiday name must only contain letters and spaces.';
+		  	isValid = false;
 		} else {
-		  errors.event_name = '';
+		  	errors.event_name = '';
 		}
 
 		// Validate event date
 		if (!event_date) {
-			errors.event_date = "Event date is required.";
+			errors.event_date = "Holiday date is required.";
 			isValid = false;
 		} else {
-		  errors.event_date = '';
-		}
-
-		// Validate event type (required field)
-		if (!event_type) {
-			errors.event_type = "Please select an event type.";
-			isValid = false;
-		} else {
-			errors.event_type = '';
+		  	errors.event_date = '';
 		}
 
 		this.setState({ errors });
 		return isValid;
 	};
 
-	addEvent = (e) => {
+	addHoliday = (e) => {
 		// Prevent default form submission behavior
 		e.preventDefault();
 
-		// Reset selectedEvent before adding a new event
-		if (this.state.selectedEvent) {
+		// Reset selectedHoliday before adding a new event
+		if (this.state.selectedHoliday) {
 			this.setState({
-				selectedEvent: null,
+				selectedHoliday: null,
 			});
 		}
 
 		if (this.validateForm(e)) {
-			const { employee_id, event_name, event_date, event_type} = this.state;
-			const addEventData = new FormData();
-			addEventData.append('employee_id', employee_id);
-			addEventData.append('event_name', event_name);
-			addEventData.append('event_date', event_date);
-			addEventData.append('event_type', event_type);
-			console.log('addEventData = ', addEventData);
+			const { employee_id, event_name, event_date} = this.state;
+			const addHolidayData = new FormData();
+			addHolidayData.append('employee_id', employee_id);
+			addHolidayData.append('event_name', event_name);
+			addHolidayData.append('event_date', event_date);
+			addHolidayData.append('event_type', 'holiday');
 			// API call to add employee leave
 			fetch(`${process.env.REACT_APP_API_URL}/events.php?action=add`, {
 				method: "POST",
-				headers: {
-					"ngrok-skip-browser-warning": "true"
-				},
-				body: addEventData,
+				body: addHolidayData,
 			})
 			.then((response) => response.json())
 			.then((data) => {
 				if (data.status === "success") {
 					this.setState((prevState) => {
-						const updatedEventData = [...(prevState.holidays || []), data.data];
+						const updatedHolidayData = [data.data, ...(prevState.holidays || []) ];
 						
 						// Return the updated state
 						return {
-							holidays: updatedEventData,
+							holidays: updatedHolidayData,
 							
 							// Clear form fields after submission
 							event_name: "",
 							event_date: "",
-							event_type: "",
 							showAddHolidayModal: false,
-							successMessage: data.message,
+							successMessage: 'Holiday added successfully',
 							showSuccess: true,
 							errors: {}, // Clear errors
 						};
@@ -216,7 +197,7 @@ class Holidays extends Component {
 					}, 3000);
 				} else {
 					this.setState({
-						errorMessage: "Failed to add event",
+						errorMessage: "Failed to add holiday",
 						showError: true
 					});
 
@@ -225,7 +206,7 @@ class Holidays extends Component {
 						this.setState({
 							errorMessage: '',
 							showError: false
-						});
+						}); 
 					}, 3000);
 				}
 			})
@@ -233,70 +214,67 @@ class Holidays extends Component {
 		}
     };
 
-	// Handle edit event edit button
-    handleEditClickForEvent = (holiday) => {
-		this.setState({ selectedEvent: holiday });
+	// Handle edit holiday
+    handleEditClickForHoliday = (holiday) => {
+		this.setState({
+			selectedHoliday: holiday,
+			errors: { event_name: "", event_date: "" }, // Reset errors
+			errorMessage: "",
+			showError: false
+		});
     };
 
-	handleInputChangeForEditEvent = (event) => {
+	handleInputChangeForEditHoliday = (event) => {
 		const { name, value } = event.target;
 		this.setState((prevState) => ({
-            selectedEvent: {
-                ...prevState.selectedEvent,
+            selectedHoliday: {
+                ...prevState.selectedHoliday,
                 [name]: value, // Dynamically update the field
+				errors: { ...this.state.errors, [name]: "" }
             },
         }));
 	}
 
-	// Update/Edit Event (API Call)
-	updateEvent = (e) => {
+	// Update/Edit Holiday (API Call)
+	updateHoliday = (e) => {
 		e.preventDefault();
 
 		// Validate the form before proceeding
 		if (!this.validateForm(e)) {
-			return; // If validation fails, don't submit the form
+			return;
 		}
 
-        const { selectedEvent } = this.state;
-        if (!selectedEvent) return;
+        const { selectedHoliday } = this.state;
+        if (!selectedHoliday) return;
 
-		const updateEventData = new FormData();
-        updateEventData.append('employee_id', selectedEvent.employee_id);
-		updateEventData.append('event_name', selectedEvent.event_name);
-		updateEventData.append('event_date', selectedEvent.event_date);
-		updateEventData.append('event_type', selectedEvent.event_type);
+		const updateHolidayData = new FormData();
+        updateHolidayData.append('employee_id', selectedHoliday.employee_id);
+		updateHolidayData.append('event_name', selectedHoliday.event_name);
+		updateHolidayData.append('event_date', selectedHoliday.event_date);
+		updateHolidayData.append('event_type', 'holiday');
 
         // Example API call
-        fetch(`${process.env.REACT_APP_API_URL}/events.php?action=edit&event_id=${selectedEvent.id}`, {
+        fetch(`${process.env.REACT_APP_API_URL}/events.php?action=edit&event_id=${selectedHoliday.id}`, {
             method: 'POST',
-			headers: {
-                "ngrok-skip-browser-warning": "true"
-            },
-            body: updateEventData,
+            body: updateHolidayData,
         })
         .then((response) => response.json())
         .then((data) => {
             if (data.status === "success") {
                 this.setState((prevState) => {
                     // Update the existing department in the array
-                    const updatedEventData = prevState.holidays.map((event) =>
-                        event.id === selectedEvent.id ? { ...event, ...data.data } : event
+                    const updatedHolidayData = prevState.holidays.map((holiday) =>
+                        holiday.id === selectedHoliday.id ? { ...holiday, ...data.data } : holiday
                     );
                 
                     return {
-                        holidays: updatedEventData,
+                        holidays: updatedHolidayData,
 						successMessage: 'Holiday updated successfully',
 						showSuccess: true
                     };
                 });
 
-                document.querySelector("#editEventModal .close").click();
-
-				// Scroll to the message section
-				this.messageRef.current.scrollIntoView({
-					behavior: 'smooth',
-					block: 'start',
-				});
+                document.querySelector("#editHolidayModal .close").click();
 
 				// Auto-hide success message after 3 seconds
 				setTimeout(() => {
@@ -306,17 +284,11 @@ class Holidays extends Component {
 					});
 				}, 3000);
             } else {
-				document.querySelector("#editEventModal .close").click();
+				document.querySelector("#editHolidayModal .close").click();
 
 				this.setState({ 
-					errorMessage: "Failed to update event",
+					errorMessage: "Failed to update holiday",
 					showError: true
-				});
-
-				// Scroll to the message section
-				this.messageRef.current.scrollIntoView({
-					behavior: 'smooth',
-					block: 'start',
 				});
 
 				// ✅ Auto-hide error message after 3 seconds
@@ -328,11 +300,11 @@ class Holidays extends Component {
 				}, 3000);
             }
         })
-        .catch((error) => console.error('Error updating event:', error));
+        .catch((error) => console.error('Error updating holiday:', error));
     };
 
 	// Code for delete holidays
-	openDeleteEventModal = (holidayId) => {
+	openDeleteHolidayModal = (holidayId) => {
         this.setState({
             deleteHoliday: holidayId,
         });
@@ -345,9 +317,6 @@ class Holidays extends Component {
 
 		fetch(`${process.env.REACT_APP_API_URL}/events.php?action=delete&event_id=${deleteHoliday}`, {
           	method: 'DELETE',
-			headers: {
-				"ngrok-skip-browser-warning": "true"
-			}
         })
         .then((response) => response.json())
         .then((data) => {
@@ -374,16 +343,13 @@ class Holidays extends Component {
 					deleteHoliday: null,  // Clear the deleteHoliday state
 				});
 
-				document.querySelector("#deleteEventModal .close").click();
-
-				// Scroll to the message section
-				this.messageRef.current.scrollIntoView({
-					behavior: 'smooth',
-					block: 'start',
-				});
+				document.querySelector("#deleteHolidayModal .close").click();
 
 				setTimeout(() => {
-					this.setState({ successMessage: null });
+					this.setState({
+						showSuccess: false,
+						successMessage: ''
+					});
 				}, 3000);
 			} else {
 				this.setState({
@@ -391,14 +357,11 @@ class Holidays extends Component {
 					showError: true
 				});
 
-				// Scroll to the message section
-				this.messageRef.current.scrollIntoView({
-					behavior: 'smooth',
-					block: 'start',
-				});
-
 				setTimeout(() => {
-					this.setState({ errorMessage: null });
+					this.setState({
+						showError: false,
+						errorMessage: ''
+					});
 				}, 3000);
 			}
         })
@@ -416,8 +379,7 @@ class Holidays extends Component {
 
 	render() {
 		const { fixNavbar } = this.props;
-		const { holidays, message, showAddHolidayModal, selectedEvent, currentPage, dataPerPage, loading } = this.state;
-
+		const { holidays, message, showAddHolidayModal, selectedHoliday, currentPage, dataPerPage, loading, logged_in_user_role} = this.state;
 		// Pagination Logic
         const indexOfLastHoliday = currentPage * dataPerPage;
         const indexOfFirstHoliday = indexOfLastHoliday - dataPerPage;
@@ -427,46 +389,67 @@ class Holidays extends Component {
 			<>
 				<div>
 					{/* Show success and error messages */}
-					<div ref={this.messageRef}>
-						{this.state.showSuccess && this.state.successMessage && (
-							<div className="alert alert-success alert-dismissible fade show" role="alert">
-								{this.state.successMessage}
-								<button
-								type="button"
-								className="close"
-								aria-label="Close"
-								onClick={() => this.handleClose('success')}
-								>
-								</button>
-							</div>
-						)}
+					{/* Add the alert for success messages */}
+					<div 
+						className={`alert alert-success alert-dismissible fade show ${this.state.showSuccess ? "d-block" : "d-none"}`} 
+						role="alert" 
+						style={{ 
+							position: "fixed", 
+							top: "20px", 
+							right: "20px", 
+							zIndex: 1050, 
+							minWidth: "250px", 
+							boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+						}}
+					>
+						<i className="fa-solid fa-circle-check me-2"></i>
+						{this.state.successMessage}
+						<button
+							type="button"
+							className="close"
+							aria-label="Close"
+							onClick={() => this.setState({ showSuccess: false })}
+						>
+						</button>
+					</div>
 
-						{this.state.showError && this.state.errorMessage && (
-							<div className="alert alert-danger alert-dismissible fade show" role="alert">
-								{this.state.errorMessage}
-								<button
-								type="button"
-								className="close"
-								aria-label="Close"
-								onClick={() => this.handleClose('error')}
-								>
-								</button>
-							</div>
-						)}
+					{/* Add the alert for error messages */}
+					<div 
+						className={`alert alert-danger alert-dismissible fade show ${this.state.showError ? "d-block" : "d-none"}`} 
+						role="alert" 
+						style={{ 
+							position: "fixed", 
+							top: "20px", 
+							right: "20px", 
+							zIndex: 1050, 
+							minWidth: "250px", 
+							boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+						}}
+					>
+						<i className="fa-solid fa-triangle-exclamation me-2"></i>
+						{this.state.errorMessage}
+						<button
+							type="button"
+							className="close"
+							aria-label="Close"
+							onClick={() => this.setState({ showError: false })}
+						>
+						</button>
 					</div>
 					<div className={`section-body ${fixNavbar ? "marginTop" : ""}`}>
 						<div className="container-fluid">
 							<div className="d-flex justify-content-end align-items-center mb-3 mt-3">
-								{/* Render the Add buttons and icons */}
-								<div className="header-action">
-									<button
-										onClick={() => this.openAddHolidayModel()}
-										type="button"
-										className="btn btn-primary"
-									>
-										<i className="fe fe-plus mr-2" />Add Event
-									</button>
-								</div>
+								{(logged_in_user_role === 'admin' || logged_in_user_role === 'super_admin') && (
+									<div className="header-action">
+										<button
+											onClick={() => this.openAddHolidayModel()}
+											type="button"
+											className="btn btn-primary"
+										>
+											<i className="fe fe-plus mr-2" />Add Holiday
+										</button>
+									</div>
+								)}
 							</div>
 							<div className="row">
 								<div className="col-12">
@@ -489,7 +472,9 @@ class Holidays extends Component {
 																<th>DAY</th>
 																<th>DATE</th>
 																<th>HOLIDAY</th>
-																<th>Action</th>
+																{(logged_in_user_role === 'admin' || logged_in_user_role === 'super_admin') && (
+																	<th>Action</th>
+																)}
 															</tr>
 														</thead>
 														<tbody>
@@ -515,29 +500,31 @@ class Holidays extends Component {
 																		<td>
 																			<span>{holiday.event_name}</span>
 																		</td>
-																		<td>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="Edit"
-																				data-toggle="modal"
-																				data-target="#editEventModal"
-																				onClick={() => this.handleEditClickForEvent(holiday)}
-																			>
-																				<i className="fa fa-edit" />
-																			</button>
-																			<button
-																				type="button"
-																				className="btn btn-icon btn-sm js-sweetalert"
-																				title="Delete"
-																				data-type="confirm"
-																				data-toggle="modal"
-																				data-target="#deleteEventModal"
-																				onClick={() => this.openDeleteEventModal(holiday.id)}
-																			>
-																				<i className="fa fa-trash-o text-danger" />
-																			</button>
-																		</td>
+																		{(logged_in_user_role === 'admin' || logged_in_user_role === 'super_admin') && (
+																			<td>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="Edit"
+																					data-toggle="modal"
+																					data-target="#editHolidayModal"
+																					onClick={() => this.handleEditClickForHoliday(holiday)}
+																				>
+																					<i className="fa fa-edit" />
+																				</button>
+																				<button
+																					type="button"
+																					className="btn btn-icon btn-sm js-sweetalert"
+																					title="Delete"
+																					data-type="confirm"
+																					data-toggle="modal"
+																					data-target="#deleteHolidayModal"
+																					onClick={() => this.openDeleteHolidayModal(holiday.id)}
+																				>
+																					<i className="fa fa-trash-o text-danger" />
+																				</button>
+																			</td>
+																		)}
 																	</tr>
 																))
 															): (
@@ -579,108 +566,89 @@ class Holidays extends Component {
 					</div>
 				</div>
 
-				{/* Modal for Add Event */}
+				{/* Modal for Add Holiday */}
 				{showAddHolidayModal && (
 				<div className="modal fade show d-block" id="addHolidayModal" tabIndex="-1" role="dialog" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
 					<div className="modal-dialog" role="document">
 						<div className="modal-content">
 							<div className="modal-header">
-								<h5 className="modal-title">Add Event</h5>
+								<h5 className="modal-title">Add Holiday</h5>
 								<button type="button" className="close" onClick={this.closeAddHolidayModal}>
 									<span>&times;</span>
 								</button>
 							</div>
-							<form onSubmit={this.addEvent}>
-							<div className="modal-body">
-								<div className="row clearfix">
-									<input
-										type="hidden"
-										className="form-control"
-										placeholder="employeeId"
-										name='employeeId'
-										value={this.state.employee_id}
-										onChange={this.handleInputChangeForAddEvent}
-									/>
-									<div className="col-md-12">
-										<div className="form-group">
-											<label className="form-label" htmlFor="event_name">Event Name</label>
-											<input
-												type="text"
-												className={`form-control ${this.state.errors.event_name ? "is-invalid" : ""}`}
-												name='event_name'
-												id='event_name'
-												value={this.state.event_name}
-												onChange={this.handleInputChangeForAddEvent}
-											/>
-											{this.state.errors.event_name && (
-												<div className="invalid-feedback">{this.state.errors.event_name}</div>
-											)}
+							<form onSubmit={this.addHoliday}>
+								<div className="modal-body">
+									<div className="row clearfix">
+										<input
+											type="hidden"
+											className="form-control"
+											placeholder="employeeId"
+											name='employeeId'
+											value={this.state.employee_id}
+											onChange={this.handleInputChangeForAddHoliday}
+										/>
+										<div className="col-md-12">
+											<div className="form-group">
+												<label className="form-label" htmlFor="event_name">Holiday Name</label>
+												<input
+													type="text"
+													className={`form-control ${this.state.errors.event_name ? "is-invalid" : ""}`}
+													name='event_name'
+													id='event_name'
+													value={this.state.event_name}
+													onChange={this.handleInputChangeForAddHoliday}
+												/>
+												{this.state.errors.event_name && (
+													<div className="invalid-feedback">{this.state.errors.event_name}</div>
+												)}
+											</div>
 										</div>
-									</div>
-									<div className="col-md-6">
-										<div className="form-group">
-											<label className="form-label" htmlFor="event_date">Event Date</label>
-											<input
-												type="date"
-												className={`form-control ${this.state.errors.event_date ? "is-invalid" : ""}`}
-												name='event_date'
-												id='event_date'
-												value={this.state.event_date}
-												onChange={this.handleInputChangeForAddEvent}
-											/>
-											{this.state.errors.event_date && (
-												<div className="invalid-feedback">{this.state.errors.event_date}</div>
-											)}
-										</div>
-									</div>
-									<div className="col-sm-6 col-md-6">
-										<div className="form-group">
-											<label className="form-label" htmlFor="event_type">Event type</label>
-											<select 
-												name="event_type"
-												className={`form-control ${this.state.errors.event_type ? "is-invalid" : ""}`}
-												id='event_type'
-												onChange={this.handleInputChangeForAddEvent}
-												value={this.state.event_type}
-											>
-												<option value="">Select Event</option>
-												<option value="holiday" >Holiday</option>
-												<option value="event" >Event</option>
-											</select>
-											{this.state.errors.event_type && (
-												<div className="invalid-feedback">{this.state.errors.event_type}</div>
-											)}
+										<div className="col-md-12">
+											<div className="form-group">
+												<label className="form-label" htmlFor="event_date">Holiday Date</label>
+												<input
+													type="date"
+													className={`form-control ${this.state.errors.event_date ? "is-invalid" : ""}`}
+													name='event_date'
+													id='event_date'
+													value={this.state.event_date}
+													onChange={this.handleInputChangeForAddHoliday}
+												/>
+												{this.state.errors.event_date && (
+													<div className="invalid-feedback">{this.state.errors.event_date}</div>
+												)}
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-							<div className="modal-footer">
-								<button type="button" className="btn btn-secondary" onClick={this.closeAddHolidayModal}>
-									Close
-								</button>
-								<button
-									type="submit"
-									className="btn btn-primary"
-								>
-									Add Event
-								</button>
-							</div>
+								<div className="modal-footer">
+									<button type="button" className="btn btn-secondary" onClick={this.closeAddHolidayModal}>
+										Close
+									</button>
+									<button
+										type="submit"
+										className="btn btn-primary"
+									>
+										Add Holiday
+									</button>
+								</div>
 							</form>
 						</div>
 					</div>
 				</div>
 				)}
 
-				{/* Modal for Update/Edit Event/Holiday */}
-				<div className="modal fade" id="editEventModal" tabIndex={-1} role="dialog" aria-labelledby="editEventModalLabel">
+				{/* Modal for Update/Edit Holiday */}
+				<div className="modal fade" id="editHolidayModal" tabIndex={-1} role="dialog" aria-labelledby="editHolidayModalLabel">
 					<div className="modal-dialog" role="document">
 						<div className="modal-content">
 							<div className="modal-header">
-								<h5 className="modal-title">Update Event</h5>
-								<button type="button" className="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+								<h5 className="modal-title">Update Holiday</h5>
+								<button type="button" className="close" data-dismiss="modal" aria-label="Close" ><span aria-hidden="true">×</span></button>
 							</div>
-							{selectedEvent && (
-							<form onSubmit={this.updateEvent}>
+							{selectedHoliday && (
+							<form onSubmit={this.updateHoliday}>
 								<div className="modal-body">
 									<div className="row clearfix">
 										<input
@@ -688,57 +656,38 @@ class Holidays extends Component {
 											className="form-control"
 											placeholder="employeeId"
 											name='employee_id'
-											value={selectedEvent?.employee_id || ""}
-											onChange={this.handleInputChangeForEditEvent}
+											value={selectedHoliday?.employee_id || ""}
+											onChange={this.handleInputChangeForEditHoliday}
 										/>
 										<div className="col-md-12">
 											<div className="form-group">
-												<label className="form-label" htmlFor="event_name">Event Name</label>
+												<label className="form-label" htmlFor="event_name">Holiday Name</label>
 												<input
 													type="text"
 													className={`form-control ${this.state.errors.event_name ? "is-invalid" : ""}`}
 													name='event_name'
 													id='event_name'
-													value={selectedEvent?.event_name || ""}
-													onChange={this.handleInputChangeForEditEvent}
+													value={selectedHoliday?.event_name || ""}
+													onChange={this.handleInputChangeForEditHoliday}
 												/>
 												{this.state.errors.event_name && (
 													<div className="invalid-feedback">{this.state.errors.event_name}</div>
 												)}
 											</div>
 										</div>
-										<div className="col-md-6">
+										<div className="col-md-12">
 											<div className="form-group">
-												<label className="form-label" htmlFor="event_date">Event Date</label>
+												<label className="form-label" htmlFor="event_date">Holiday Date</label>
 												<input
 													type="date"
 													className={`form-control ${this.state.errors.event_date ? "is-invalid" : ""}`}
 													name='event_date'
 													id='event_date'
-													value={selectedEvent?.event_date || ""}
-													onChange={this.handleInputChangeForEditEvent}
+													value={selectedHoliday?.event_date || ""}
+													onChange={this.handleInputChangeForEditHoliday}
 												/>
 												{this.state.errors.event_date && (
 													<div className="invalid-feedback">{this.state.errors.event_date}</div>
-												)}
-											</div>
-										</div>
-										<div className="col-sm-6 col-md-6">
-											<div className="form-group">
-												<label className="form-label" htmlFor="event_type">Event type</label>
-												<select 
-													name="event_type"
-													className={`form-control ${this.state.errors.event_type ? "is-invalid" : ""}`}
-													id='event_type'
-													onChange={this.handleInputChangeForEditEvent}
-													value={selectedEvent?.event_type || ""}
-												>
-													<option value="">Select Event</option>
-													<option value="holiday" >Holiday</option>
-													<option value="event" >Event</option>
-												</select>
-												{this.state.errors.event_type && (
-													<div className="invalid-feedback">{this.state.errors.event_type}</div>
 												)}
 											</div>
 										</div>
@@ -750,7 +699,7 @@ class Holidays extends Component {
 										type="submit"
 										className="btn btn-primary"
 									>
-										Update Event
+										Update Holiday
 									</button>
 								</div>
 							</form>
@@ -760,7 +709,7 @@ class Holidays extends Component {
 				</div>
 
 				{/* Create modal for delete holiday */}
-				<div className="modal fade" id="deleteEventModal" tabIndex={-1} role="dialog" aria-labelledby="deleteEventModalLabel">
+				<div className="modal fade" id="deleteHolidayModal" tabIndex={-1} role="dialog" aria-labelledby="deleteHolidayModalLabel">
 					<div className="modal-dialog" role="document">
 						<div className="modal-content">
 							<div className="modal-header" style={{ display: 'none' }}>

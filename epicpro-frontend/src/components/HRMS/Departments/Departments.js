@@ -26,9 +26,6 @@ class departments extends Component {
     componentDidMount() {
         fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=view`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
 		.then(response => response.json())
 		.then(data => {
@@ -109,8 +106,7 @@ class departments extends Component {
         fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=edit&id=${selectedDepartment.id}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                "ngrok-skip-browser-warning": "true"
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 department_name: selectedDepartment.department_name,
@@ -199,9 +195,6 @@ class departments extends Component {
           headers: {
             'Content-Type': 'application/json',
             method: "POST",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
           },
         })
         .then((response) => response.json())
@@ -298,9 +291,6 @@ class departments extends Component {
         fetch(`${process.env.REACT_APP_API_URL}/departments.php?action=add`, {
             method: "POST",
             body: addDepartmentFormData,
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then((response) => response.json())
         .then((data) => {
@@ -501,21 +491,29 @@ class departments extends Component {
                                                             <div className="card-body text-center">
                                                                 <img className="img-thumbnail rounded-circle avatar-xxl" src="../assets/images/sm/avatar2.jpg" alt="fake_url" />
                                                                 <h6 className="mt-3">{department.department_head}</h6>
-                                                                <div className="text-center text-muted mb-3">{department.department_name}</div>
-                                                                <button type="button" className="btn btn-icon btn-outline-primary"><i className="fa fa-pencil" /></button>
-                                                                <button type="button" className="btn btn-icon btn-outline-danger"><i className="fa fa-trash" /></button>
-                                                            </div>
-                                                            <div className="card-footer text-center">
-                                                                <div className="row clearfix">
-                                                                    <div className="col-6">
-                                                                        <h5 className="mb-0">105</h5>
-                                                                        <div className="text-muted">Employee</div>
-                                                                    </div>
-                                                                    <div className="col-6">
-                                                                        <h5 className="mb-0">$3100</h5>
-                                                                        <div className="text-muted">Earnings</div>
-                                                                    </div>
-                                                                </div>
+                                                                <div className="text-center text-muted mb-2">{department.department_name}</div>
+                                                                <div className="text-center text-muted mb-3">Total Employee : {department.total_employee}</div>
+                                                                <button 
+                                                                    type="button"
+                                                                    className="btn btn-icon btn-outline-primary mr-2"
+                                                                    title="Edit"
+                                                                    data-toggle="modal"
+                                                                    data-target="#editDepartmentModal"
+                                                                    onClick={() => this.handleEditClick(department)}
+                                                                >
+                                                                    <i className="fa fa-pencil" />
+                                                                </button>
+                                                                <button 
+                                                                    type="button"
+                                                                    className="btn btn-icon btn-outline-danger"
+                                                                    title="Delete"
+                                                                    data-type="confirm"
+                                                                    onClick={() => this.openModal(department.id)}
+                                                                    data-toggle="modal"
+                                                                    data-target="#deleteDepartmentModal"
+                                                                >
+                                                                    <i className="fa fa-trash" />
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -576,18 +574,6 @@ class departments extends Component {
                                                 )}
                                             </div>
                                         </div>
-                                        {/* <div className="col-md-12">
-                                            <div className="form-group">
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    placeholder="No of Employee"
-                                                    name="numOfEmployees"
-                                                    value={numOfEmployees}
-                                                    onChange={this.handleInputChangeForAddDepartment}
-                                                />
-                                            </div>
-                                        </div> */}
                                     </div>
                                 </div>
                                 <div className="modal-footer">
@@ -638,26 +624,10 @@ class departments extends Component {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="col-md-12">
-                                                    <div className="form-group">
-                                                        <label className="form-label">Total Employee</label>
-                                                        <input
-                                                            type="number"
-                                                            className={`form-control ${this.state.errors.total_employee ? "is-invalid" : ""}`}
-                                                            value={selectedDepartment.total_employee || 0}
-                                                            onChange={this.handleInputChange}
-                                                            name="total_employee"
-                                                            readOnly
-                                                        />
-                                                        {this.state.errors.total_employee && (
-                                                            <small className="invalid-feedback">{this.state.errors.total_employee}</small>
-                                                        )}
-                                                    </div>
-                                                </div>
                                             </div>
                                         </>
                                     ) : (
-                                        <p>Loading department data...</p>
+                                        <p>Department data not found.</p>
                                     )}
                                 </div>
                                 <div className="modal-footer">

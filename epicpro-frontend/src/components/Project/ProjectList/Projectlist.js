@@ -15,7 +15,6 @@ class ProjectList extends Component {
             teamMembers: [],
             projectStartDate: "",
             projectEndDate: "",
-            projectData: [], // To store the list of projects
             successMessage: "",
             errorMessage: "",
             dropdownOpen: false,
@@ -26,6 +25,7 @@ class ProjectList extends Component {
             projects: [],
             selectedClient: "",
             logged_in_employee_id: null,
+            logged_in_employee_role: null,
             errors: {},
         }
     }
@@ -53,15 +53,13 @@ class ProjectList extends Component {
         if (window.user?.id) {
             this.setState({
                 logged_in_employee_id: window.user.id,
+                logged_in_employee_role: role
             });
         }
 
         // Fetch employees data
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then(response => response.json())
         .then(data => {
@@ -81,17 +79,34 @@ class ProjectList extends Component {
 
 
         // Get projects data
-        fetch(`${process.env.REACT_APP_API_URL}/projects.php?action=view`, {
+        fetch(`${process.env.REACT_APP_API_URL}/projects.php?action=view&logged_in_employee_id=${window.user.id}&role=${window.user.role}`, {
             method: "GET",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            }
         })
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
                 this.setState({
                     projects: data.status === 'success' ? data.data : [],
+                    loading: false
+                });
+            } else {
+                this.setState({ error: data.message, loading: false });
+            }
+        })
+        .catch(err => {
+            this.setState({ error: 'Failed to fetch employees data' });
+            console.error(err);
+        });
+
+        // Get clients data
+        fetch(`${process.env.REACT_APP_API_URL}/clients.php?action=view`, {
+            method: "GET",
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                this.setState({
+                    clients: data.status === 'success' ? data.data : [],
                     loading: false
                 });
             } else {
@@ -118,8 +133,6 @@ class ProjectList extends Component {
         let value = multiple
             ? Array.from(event.target.selectedOptions, (option) => option.value) // Store as an array
             : event.target.value;
-    
-        console.log("Selected Team Members:", value); // Debugging output
     
         this.setState((prevState) => ({
             [name]: value,
@@ -243,9 +256,6 @@ class ProjectList extends Component {
         // API call to add project
         fetch(`${process.env.REACT_APP_API_URL}/projects.php?action=add`, {
             method: "POST",
-            headers: {
-                "ngrok-skip-browser-warning": "true"
-            },
             body: addProjectFormData,
         })
         .then((response) => response.json())
@@ -253,7 +263,7 @@ class ProjectList extends Component {
             if (data.success) {
                 // Update the project list
                 this.setState((prevState) => ({
-                    projectData: [...(prevState.projectData || []), data.newProject], // Assuming the backend returns the new project
+                    projects: [data.newProject, ...(prevState.projects || [])], // Add project at the start
                     projectName: "",
                     projectDescription: "",
                     projectTechnology: "",
@@ -381,7 +391,7 @@ class ProjectList extends Component {
 
     render() {
         const { fixNavbar, boxOpen, box2Open, box3Open, box4Open, box5Open, box6Open } = this.props;
-        const { projectName, projectDescription, projectTechnology, projectStartDate, projectEndDate, clients, selectedClient, teamMembers, employees, projects, projectData, message} = this.state;
+        const { projectName, projectDescription, projectTechnology, projectStartDate, projectEndDate, clients, selectedClient, teamMembers, employees, projects, message, logged_in_employee_role} = this.state;
 
         return (
             <>
@@ -391,13 +401,15 @@ class ProjectList extends Component {
                         <div className="d-flex justify-content-between align-items-center">
                             <ul className="nav nav-tabs page-header-tab">
                                 <li className="nav-item"><a className="nav-link active" id="Project-tab" data-toggle="tab" href="#Project-OnGoing">OnGoing</a></li>
-                                <li className="nav-item"><a className="nav-link" id="Project-tab" data-toggle="tab" href="#Project-UpComing">UpComing</a></li>
+                                {/* <li className="nav-item"><a className="nav-link" id="Project-tab" data-toggle="tab" href="#Project-UpComing">UpComing</a></li> */}
                             </ul>
                             <div className="header-action d-md-flex">
                                 <div className="input-group mr-2">
                                     <input type="text" className="form-control" placeholder="Search..." />
                                 </div>
-                                <button type="button" className="btn btn-primary" data-toggle="modal" data-target="#addProjectModal"><i className="fe fe-plus mr-2" />Add</button>
+                                {(logged_in_employee_role === 'admin' || logged_in_employee_role === 'super_admin') && (
+                                    <button type="button" className="btn btn-primary" data-toggle="modal" data-target="#addProjectModal"><i className="fe fe-plus mr-2" />Add</button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -444,23 +456,10 @@ class ProjectList extends Component {
                                                                 <div className="avatar-list avatar-list-stacked">
                                                                     {project.team_members.map((member) => (
                                                                         <span
-																			className="avatar avatar-blue"
+																			className="avatar avatar-blue add-space"
 																			data-toggle="tooltip"
 																			data-placement="top"
                                                                             title={`${member.first_name} ${member.last_name}`}
-                                                                            style={{
-                                                                                marginRight: "5px", // Spacing between avatars
-                                                                                width: "32px", // Adjust size
-                                                                                height: "32px",
-                                                                                display: "inline-flex",
-                                                                                alignItems: "center",
-                                                                                justifyContent: "center",
-                                                                                fontSize: "14px", // Make initials more readable
-                                                                                fontWeight: "bold",
-                                                                                backgroundColor: "#E0E7FF", // Soft blue background
-                                                                                borderRadius: "50%", // Make it fully rounded
-                                                                                border: "1px solid #C7D2FE", // Light border for clarity
-                                                                            }}
 																		>
 																			{member.first_name.charAt(0).toUpperCase()}{member.last_name.charAt(0).toUpperCase()}
 																		</span>
@@ -484,255 +483,6 @@ class ProjectList extends Component {
                                 ): (
                                     !message && <tr><td>projects not available.</td></tr>
                                 )}
-                                    
-                                    {/* <div className="col-lg-4 col-md-12">
-                                        <div className={`card ${!box2Open ? 'card-collapsed' : ""}`}>
-                                            <div className="card-header">
-                                                <h3 className="card-title">Job Portal Web App</h3>
-                                                <div className="card-options">
-                                                    <label className="custom-switch m-0">
-                                                        <input type="checkbox" defaultValue={1} className="custom-switch-input" defaultChecked />
-                                                        <span className="custom-switch-indicator" />
-                                                    </label>
-                                                    <span className="card-options-collapse" data-toggle="card-collapse" onClick={() => this.handleBox2(!box2Open)}><i className="fe fe-chevron-up" /></span>
-                                                </div>
-                                            </div>
-                                            <div className="card-body">
-                                                <span className="tag tag-pink mb-3">Angular</span>
-                                                <p>Aperiam deleniti fugit incidunt, iste, itaque minima neque pariatur perferendis temporibus!</p>
-                                                <div className="row">
-                                                    <div className="col-5 py-1"><strong>Created:</strong></div>
-                                                    <div className="col-7 py-1">09 Jun 2019 11:32AM</div>
-                                                    <div className="col-5 py-1"><strong>Creator:</strong></div>
-                                                    <div className="col-7 py-1">Nathan Guerrero</div>
-                                                    <div className="col-5 py-1"><strong>Question:</strong></div>
-                                                    <div className="col-7 py-1"><strong>55</strong></div>
-                                                    <div className="col-5 py-1"><strong>Comments:</strong></div>
-                                                    <div className="col-7 py-1"><strong>43</strong></div>
-                                                    <div className="col-5 py-1"><strong>Bug:</strong></div>
-                                                    <div className="col-7 py-1"><strong>5</strong></div>
-                                                    <div className="col-5 py-1"><strong>Team:</strong></div>
-                                                    <div className="col-7 py-1">
-                                                        <div className="avatar-list avatar-list-stacked">
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar6.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar7.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar8.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar1.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar2.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <span className="avatar avatar-sm">+8</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="card-footer">
-                                                <div className="clearfix">
-                                                    <div className="float-left"><strong>75%</strong></div>
-                                                    <div className="float-right"><small className="text-muted">Progress</small></div>
-                                                </div>
-                                                <div className="progress progress-xs">
-                                                    <div className="progress-bar bg-green" role="progressbar" style={{ width: '75%' }} aria-valuenow={75} aria-valuemin={0} aria-valuemax={100} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="col-lg-4 col-md-12">
-                                        <div className={`card ${!box3Open ? 'card-collapsed' : ""}`}>
-                                            <div className="card-header">
-                                                <h3 className="card-title">App design and Development</h3>
-                                                <div className="card-options">
-                                                    <label className="custom-switch m-0">
-                                                        <input type="checkbox" defaultValue={1} className="custom-switch-input" defaultChecked />
-                                                        <span className="custom-switch-indicator" />
-                                                    </label>
-                                                    <span className="card-options-collapse" data-toggle="card-collapse" onClick={() => this.handleBox3(!box3Open)}><i className="fe fe-chevron-up" /></span>
-                                                </div>
-                                            </div>
-                                            <div className="card-body">
-                                                <span className="tag tag-green mb-3">Android</span>
-                                                <p>Aperiam deleniti fugit incidunt, iste, itaque minima neque pariatur perferendis temporibus!</p>
-                                                <div className="row">
-                                                    <div className="col-5 py-1"><strong>Created:</strong></div>
-                                                    <div className="col-7 py-1">09 Jun 2019 11:32AM</div>
-                                                    <div className="col-5 py-1"><strong>Creator:</strong></div>
-                                                    <div className="col-7 py-1">Nathan Guerrero</div>
-                                                    <div className="col-5 py-1"><strong>Question:</strong></div>
-                                                    <div className="col-7 py-1"><strong>12</strong></div>
-                                                    <div className="col-5 py-1"><strong>Comments:</strong></div>
-                                                    <div className="col-7 py-1"><strong>96</strong></div>
-                                                    <div className="col-5 py-1"><strong>Bug:</strong></div>
-                                                    <div className="col-7 py-1"><strong>7</strong></div>
-                                                    <div className="col-5 py-1"><strong>Team:</strong></div>
-                                                    <div className="col-7 py-1">
-                                                        <div className="avatar-list avatar-list-stacked">
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar1.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar2.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar5.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <span className="avatar avatar-sm">+8</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="card-footer">
-                                                <div className="clearfix">
-                                                    <div className="float-left"><strong>47%</strong></div>
-                                                    <div className="float-right"><small className="text-muted">Progress</small></div>
-                                                </div>
-                                                <div className="progress progress-xs">
-                                                    <div className="progress-bar bg-blue" role="progressbar" style={{ width: '47%' }} aria-valuenow={47} aria-valuemin={0} aria-valuemax={100} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="col-lg-4 col-md-12">
-                                        <div className={`card ${!box4Open ? 'card-collapsed' : ""}`}>
-                                            <div className="card-header">
-                                                <h3 className="card-title">Job Portal Web App</h3>
-                                                <div className="card-options">
-                                                    <label className="custom-switch m-0">
-                                                        <input type="checkbox" defaultValue={1} className="custom-switch-input" defaultChecked />
-                                                        <span className="custom-switch-indicator" />
-                                                    </label>
-                                                    <span className="card-options-collapse" data-toggle="card-collapse" onClick={() => this.handleBox4(!box4Open)}><i className="fe fe-chevron-up" /></span>
-                                                </div>
-                                            </div>
-                                            <div className="card-body">
-                                                <span className="tag tag-pink mb-3">Angular</span>
-                                                <p>Aperiam deleniti fugit incidunt, iste, itaque minima neque pariatur perferendis temporibus!</p>
-                                                <div className="row">
-                                                    <div className="col-5 py-1"><strong>Created:</strong></div>
-                                                    <div className="col-7 py-1">09 Jun 2019 11:32AM</div>
-                                                    <div className="col-5 py-1"><strong>Creator:</strong></div>
-                                                    <div className="col-7 py-1">Nathan Guerrero</div>
-                                                    <div className="col-5 py-1"><strong>Question:</strong></div>
-                                                    <div className="col-7 py-1"><strong>55</strong></div>
-                                                    <div className="col-5 py-1"><strong>Comments:</strong></div>
-                                                    <div className="col-7 py-1"><strong>43</strong></div>
-                                                    <div className="col-5 py-1"><strong>Bug:</strong></div>
-                                                    <div className="col-7 py-1"><strong>5</strong></div>
-                                                    <div className="col-5 py-1"><strong>Team:</strong></div>
-                                                    <div className="col-7 py-1">
-                                                        <div className="avatar-list avatar-list-stacked">
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar6.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar7.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar8.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar1.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar2.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <span className="avatar avatar-sm">+8</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="card-footer">
-                                                <div className="clearfix">
-                                                    <div className="float-left"><strong>75%</strong></div>
-                                                    <div className="float-right"><small className="text-muted">Progress</small></div>
-                                                </div>
-                                                <div className="progress progress-xs">
-                                                    <div className="progress-bar bg-green" role="progressbar" style={{ width: '75%' }} aria-valuenow={75} aria-valuemin={0} aria-valuemax={100} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div> */}
-                                    {/* <div className="col-lg-4 col-md-12">
-                                        <div className={`card ${!box5Open ? 'card-collapsed' : ""}`}>
-                                            <div className="card-header">
-                                                <h3 className="card-title">One Page landing</h3>
-                                                <div className="card-options">
-                                                    <label className="custom-switch m-0">
-                                                        <input type="checkbox" defaultValue={1} className="custom-switch-input" defaultChecked />
-                                                        <span className="custom-switch-indicator" />
-                                                    </label>
-                                                    <span className="card-options-collapse" data-toggle="card-collapse" onClick={() => this.handleBox5(!box5Open)}><i className="fe fe-chevron-up" /></span>
-                                                </div>
-                                            </div>
-                                            <div className="card-body">
-                                                <span className="tag tag-blue mb-3">Wordpress</span>
-                                                <p>Aperiam deleniti fugit incidunt, iste, itaque minima neque pariatur perferendis temporibus!</p>
-                                                <div className="row">
-                                                    <div className="col-5 py-1"><strong>Created:</strong></div>
-                                                    <div className="col-7 py-1">09 Jun 2019 11:32AM</div>
-                                                    <div className="col-5 py-1"><strong>Creator:</strong></div>
-                                                    <div className="col-7 py-1">Nathan Guerrero</div>
-                                                    <div className="col-5 py-1"><strong>Question:</strong></div>
-                                                    <div className="col-7 py-1"><strong>23</strong></div>
-                                                    <div className="col-5 py-1"><strong>Comments:</strong></div>
-                                                    <div className="col-7 py-1"><strong>32</strong></div>
-                                                    <div className="col-5 py-1"><strong>Bug:</strong></div>
-                                                    <div className="col-7 py-1"><strong>5</strong></div>
-                                                    <div className="col-5 py-1"><strong>Team:</strong></div>
-                                                    <div className="col-7 py-1">
-                                                        <div className="avatar-list avatar-list-stacked">
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar1.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar2.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar3.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar4.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar5.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <span className="avatar avatar-sm">+8</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="card-footer">
-                                                <div className="clearfix">
-                                                    <div className="float-left"><strong>17%</strong></div>
-                                                    <div className="float-right"><small className="text-muted">Progress</small></div>
-                                                </div>
-                                                <div className="progress progress-xs">
-                                                    <div className="progress-bar bg-red" role="progressbar" style={{ width: '17%' }} aria-valuenow={36} aria-valuemin={0} aria-valuemax={100} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div> */}
-                                    {/* <div className="col-lg-4 col-md-12">
-                                        <div className={`card ${!box6Open ? 'card-collapsed' : ""}`}>
-                                            <div className="card-header">
-                                                <h3 className="card-title">Job Portal Web App</h3>
-                                                <div className="card-options">
-                                                    <label className="custom-switch m-0">
-                                                        <input type="checkbox" defaultValue={1} className="custom-switch-input" defaultChecked />
-                                                        <span className="custom-switch-indicator" />
-                                                    </label>
-                                                    <span className="card-options-collapse" data-toggle="card-collapse" onClick={() => this.handleBox6(!box6Open)}><i className="fe fe-chevron-up" /></span>
-                                                </div>
-                                            </div>
-                                            <div className="card-body">
-                                                <span className="tag tag-gray mb-3">iOS App</span>
-                                                <p>Aperiam deleniti fugit incidunt, iste, itaque minima neque pariatur perferendis temporibus!</p>
-                                                <div className="row">
-                                                    <div className="col-5 py-1"><strong>Created:</strong></div>
-                                                    <div className="col-7 py-1">09 Jun 2019 11:32AM</div>
-                                                    <div className="col-5 py-1"><strong>Creator:</strong></div>
-                                                    <div className="col-7 py-1">Nathan Guerrero</div>
-                                                    <div className="col-5 py-1"><strong>Question:</strong></div>
-                                                    <div className="col-7 py-1"><strong>55</strong></div>
-                                                    <div className="col-5 py-1"><strong>Comments:</strong></div>
-                                                    <div className="col-7 py-1"><strong>43</strong></div>
-                                                    <div className="col-5 py-1"><strong>Bug:</strong></div>
-                                                    <div className="col-7 py-1"><strong>5</strong></div>
-                                                    <div className="col-5 py-1"><strong>Team:</strong></div>
-                                                    <div className="col-7 py-1">
-                                                        <div className="avatar-list avatar-list-stacked">
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar6.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar7.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar8.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar1.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <img className="avatar avatar-sm" src="../assets/images/xs/avatar2.jpg" data-toggle="tooltip" data-original-title="Avatar Name" alt="fake_url" />
-                                                            <span className="avatar avatar-sm">+8</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="card-footer">
-                                                <div className="clearfix">
-                                                    <div className="float-left"><strong>81%</strong></div>
-                                                    <div className="float-right"><small className="text-muted">Progress</small></div>
-                                                </div>
-                                                <div className="progress progress-xs">
-                                                    <div className="progress-bar bg-green" role="progressbar" style={{ width: '81%' }} aria-valuenow={75} aria-valuemin={0} aria-valuemax={100} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div> */}
                                 </div>
                             </div>
                             <div className="tab-pane fade" id="Project-UpComing" role="tabpanel">
@@ -881,27 +631,27 @@ class ProjectList extends Component {
                                     {/* Client Details */}
                                     <div className="col-md-12">
                                         <div className="form-group">
-                                            <label className="form-label" htmlFor="selectClient">Select Client</label>
-                                                <select
-                                                    name='selectClient'
-                                                    id="selectClient"
-                                                    className={`form-control ${this.state.errors.selectedClient ? "is-invalid" : ""}`}
-                                                    value={selectedClient}
-                                                    onChange={this.handleSelectionChange}
-                                                >
-                                                    {clients.length > 0 ? (
-                                                        <>
-                                                            <option value="">Select a Client</option>
-                                                            {clients.map((client) => (
-                                                                <option key={client.id} value={client.id}>
-                                                                    {client.name}
-                                                                </option>
-                                                            ))}
-                                                        </>
-                                                    ) : (
-                                                        <option value="">No clients available</option>
-                                                    )}
-                                                </select>
+                                            <label className="form-label" htmlFor="selectedClient">Select Client</label>
+                                            <select
+                                                name='selectedClient'
+                                                id="selectedClient"
+                                                className={`form-control ${this.state.errors.selectedClient ? "is-invalid" : ""}`}
+                                                value={selectedClient}
+                                                onChange={this.handleSelectionChange}
+                                            >
+                                                {clients.length > 0 ? (
+                                                    <>
+                                                        <option value="">Select a Client</option>
+                                                        {clients.map((client) => (
+                                                            <option key={client.id} value={client.id}>
+                                                                {client.name}
+                                                            </option>
+                                                        ))}
+                                                    </>
+                                                ) : (
+                                                    <option value="">No clients available</option>
+                                                )}
+                                            </select>
                                             {this.state.errors.selectedClient && (
                                                 <small className="invalid-feedback">{this.state.errors.selectedClient}</small>
                                             )}
