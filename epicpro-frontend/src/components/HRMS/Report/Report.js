@@ -326,7 +326,6 @@ class Report extends Component {
             });
     };
 
-
     // Handle dropdown change for employee
     handleEmployeeChange = (event) => {
         this.setState({ selectedEmployee: event.target.value });
@@ -639,20 +638,20 @@ class Report extends Component {
 		if (start_time && end_time) {
             let start = start_time;
             let end = end_time;
-        
+
             // Convert to Date objects if they are strings (e.g., "18:10:00")
             if (typeof start_time === "string") {
                 const [sh, sm, ss] = start_time.split(":");
                 start = new Date();
                 start.setHours(parseInt(sh), parseInt(sm), parseInt(ss || 0), 0);
             }
-        
+
             if (typeof end_time === "string") {
                 const [eh, em, es] = end_time.split(":");
                 end = new Date();
                 end.setHours(parseInt(eh), parseInt(em), parseInt(es || 0), 0);
             }
-            
+
             if (start.getTime() === end.getTime()) {
                 error.start_time = "Start and end time cannot be the same.";
                 error.end_time = "Start and end time cannot be the same.";
@@ -675,7 +674,7 @@ class Report extends Component {
 				isValid = false;
 			}
 		}
-	
+
 		this.setState({ error });
 		return isValid;
 	};

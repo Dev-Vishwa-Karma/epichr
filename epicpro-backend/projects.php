@@ -157,10 +157,10 @@
                                 ];
                             }
                         }
-                    
+
                         $stmt->close();
                         $conn->close();
-                    
+
                         if (!empty($projects)) {
                             echo json_encode(['status' => 'success', 'data' => array_values($projects)]);
                         } else {
@@ -184,12 +184,12 @@
                 $project_end_date = !empty($_POST['project_end_date']) ? $_POST['project_end_date'] : NULL;
                 $created_at = date('Y-m-d H:i:s');
                 $created_by = $_POST['logged_in_employee_id'] ?? '';
-            
+
                 if ($project_name && $project_technology && $team_members_id && $created_by) {
                     // Prepare the SQL insert statement
                     $stmt = $conn->prepare("INSERT INTO projects (client_id, name, description, technology, start_date, end_date, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     $stmt->bind_param("issssssi", $client_id, $project_name, $project_description, $project_technology, $project_start_date, $project_end_date, $created_at, $created_by);
-            
+
                     // Execute the statement and check for success
                     if ($stmt->execute()) {
                         // Get the last inserted project ID
@@ -198,7 +198,7 @@
                             echo json_encode(['error' => 'Failed to retrieve project ID after insertion']);
                             exit();
                         }
-                        
+
                         // Ensure team members are an array
                         if (!is_array($team_members_id)) {
                             $team_members_id = explode(",", $team_members_id); // Convert comma-separated values to an array
@@ -222,7 +222,7 @@
                             echo json_encode(['error' => 'Invalid team members data']);
                             exit();
                         }
-                        
+
                         // Fetch client details
                         $client_stmt = $conn->prepare("SELECT name, location FROM clients WHERE id = ?");
                         $client_stmt->bind_param("i", $client_id);
@@ -293,7 +293,7 @@
                         // Prepare the SQL update statement
                         $stmt = $conn->prepare("UPDATE departments SET department_name = ?, department_head = ?, updated_at = ? WHERE id = ?");
                         $stmt->bind_param("sssi", $department_name, $department_head, $updated_at, $id);
-            
+
                         // Execute the statement and check for success
                         if ($stmt->execute()) {
                             $updatedDepartmentData = [

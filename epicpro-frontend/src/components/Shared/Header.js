@@ -4,7 +4,6 @@ import { withRouter, NavLink } from 'react-router-dom';
 import authService from '../Authentication/authService';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import $ from 'jquery'
 
 class Header extends Component {
 
@@ -454,16 +453,6 @@ class Header extends Component {
 								</div> */}
 							</div>
 							<div className="right">
-								{/* {(userRole === 'employee') && (
-									<button
-										className="btn btn-primary"
-										data-toggle="modal" 
-										data-target="#addReportModal"
-									>
-										Report
-									</button>
-								)} */}
-
 								{(userRole === 'employee') && (
 									<button
 										className="btn btn-primary"
@@ -949,4 +938,3 @@ const mapStateToProps = state => ({
 const mapDispatchToProps = dispatch => ({})
 // export default connect(mapStateToProps, mapDispatchToProps)(Header);
 export default withRouter(connect(mapStateToProps, mapDispatchToProps)(Header));
-
