@@ -7,12 +7,12 @@ class Activities extends Component {
 			activities: [],
 			error: null,
 			employeeData: [],
-			selectedStatus: "", // State for dropdown selection
+			selectedStatus: "",
 			selectedEmployee: "",
 			breakReason: "",
 			activityError: null,
 			activitySuccess: null,
-			loading: false, // State to manage the loader
+			loading: true,
 			isBreakedIn: false,
 			breakOutError: null
 		};
@@ -35,9 +35,9 @@ class Activities extends Component {
 			.then(response => response.json())
 			.then(data => {
 				if (data.status === 'success') {
-					this.setState({ activities: data.data });
+					this.setState({ activities: data.data, loading: false });
 				} else {
-					this.setState({ error: data.message });
+					this.setState({ error: data.message, loading: false });
 				}
 			})
 			.catch(err => {
@@ -313,43 +313,19 @@ class Activities extends Component {
 												</div>
 											)}
 										</div>
-										<div className="card-body">
-											<div className="summernote">
+										{loading ? (
+											<div className="dimmer active p-5">
+												<div className="loader" />
 											</div>
-											{activities.length > 0 ? (
-												activities.map((activity, index) => (
-													<>
-														{/* In Time Entry */}
-														{activity.activity_type === 'Break' && (
-															<div className="timeline_item ">
-																<img
-																	className="tl_avatar"
-																	src="../assets/images/xs/avatar1.jpg"
-																	alt="fake_url"
-																/>
-																<span>
-																	<a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
-																	<small className="float-right text-right">
-																		{activity.in_time}
-																	</small>
-																</span>
-																<h6 className="font600">
-																	(Break In) {activity.description}
-																</h6>
-
-																<div className="msg">
-																	{activity.created_by && (
-																		<a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Created by System Admin</a>
-																	)}
-																</div>
-															</div>
-														)}
-														{/* Out Time Entry */}
-														{activity.activity_type === 'Break' && activity.out_time && (
-															<>
-																<div className="duration text-center">
-																	------ {activity.duration} ------
-																</div>
+										) : (
+											<div className="card-body">
+												<div className="summernote">
+												</div>
+												{activities.length > 0 ? (
+													activities.map((activity, index) => (
+														<>
+															{/* In Time Entry */}
+															{activity.activity_type === 'Break' && (
 																<div className="timeline_item ">
 																	<img
 																		className="tl_avatar"
@@ -357,54 +333,54 @@ class Activities extends Component {
 																		alt="fake_url"
 																	/>
 																	<span>
-																		<a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+																		<a href={() => false}>{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
 																		<small className="float-right text-right">
-																			{activity.out_time}
+																			{activity.in_time}
 																		</small>
 																	</span>
 																	<h6 className="font600">
-																		Break out
+																		(Break In) {activity.description}
 																	</h6>
+
 																	<div className="msg">
-																		{activity.updated_by && (
-																			<a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Edited by System Admin</a>
+																		{activity.created_by && (
+																			<a href={() => false} class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Created by System Admin</a>
 																		)}
 																	</div>
 																</div>
-															</>
-														)}
+															)}
+															{/* Out Time Entry */}
+															{activity.activity_type === 'Break' && activity.out_time && (
+																<>
+																	<div className="duration text-center">
+																		------ {activity.duration} ------
+																	</div>
+																	<div className="timeline_item ">
+																		<img
+																			className="tl_avatar"
+																			src="../assets/images/xs/avatar1.jpg"
+																			alt="fake_url"
+																		/>
+																		<span>
+																			<a href={() => false}>{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+																			<small className="float-right text-right">
+																				{activity.out_time}
+																			</small>
+																		</span>
+																		<h6 className="font600">
+																			Break out
+																		</h6>
+																		<div className="msg">
+																			{activity.updated_by && (
+																				<a href={() => false} class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Edited by System Admin</a>
+																			)}
+																		</div>
+																	</div>
+																</>
+															)}
 
-														{/* In Time Entry Punch */}
-														{activity.activity_type === 'Punch' && (
-															<div className="timeline_item ">
-																<img
-																	className="tl_avatar"
-																	src="../assets/images/xs/avatar1.jpg"
-																	alt="fake_url"
-																/>
-																<span>
-																	<a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
-																	<small className="float-right text-right">
-																		{activity.in_time}
-																	</small>
-																</span>
-																<h6 className="font600">
-																	has started his day
-																</h6>
-
-																<div className="msg">
-																	{activity.created_by && (
-																		<a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Created by System Admin</a>
-																	)}
-																</div>
-															</div>
-														)}
-														{/* Out Time Entry */}
-														{activity.activity_type === 'Punch' && activity.out_time && (
-															<>
-																<div className="duration text-center">
-																	------ {activity.duration} ------
-																</div>
+															{/* In Time Entry Punch */}
+															{activity.activity_type === 'Punch' && (
 																<div className="timeline_item ">
 																	<img
 																		className="tl_avatar"
@@ -412,28 +388,58 @@ class Activities extends Component {
 																		alt="fake_url"
 																	/>
 																	<span>
-																		<a href="#">{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+																		<a href={() => false}>{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
 																		<small className="float-right text-right">
-																			{activity.out_time}
+																			{activity.in_time}
 																		</small>
 																	</span>
 																	<h6 className="font600">
-																		has ended his day
+																		has started his day
 																	</h6>
+
 																	<div className="msg">
-																		{activity.updated_by && (
-																			<a class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Edited by System Admin</a>
+																		{activity.created_by && (
+																			<a href={() => false} class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Created by System Admin</a>
 																		)}
 																	</div>
 																</div>
-															</>
-														)}
-													</>
-												))
-											) : (
-												error && <p>{error}</p>
-											)}
-										</div>
+															)}
+															{/* Out Time Entry */}
+															{activity.activity_type === 'Punch' && activity.out_time && (
+																<>
+																	<div className="duration text-center">
+																		------ {activity.duration} ------
+																	</div>
+																	<div className="timeline_item ">
+																		<img
+																			className="tl_avatar"
+																			src="../assets/images/xs/avatar1.jpg"
+																			alt="fake_url"
+																		/>
+																		<span>
+																			<a href={() => false}>{activity.first_name} {activity.last_name}</a> {/* {activity.location} */}
+																			<small className="float-right text-right">
+																				{activity.out_time}
+																			</small>
+																		</span>
+																		<h6 className="font600">
+																			has ended his day
+																		</h6>
+																		<div className="msg">
+																			{activity.updated_by && (
+																				<a href={() => false} class="mr-20 text-muted"><i class="fa fa-user text-pink"></i> Edited by System Admin</a>
+																			)}
+																		</div>
+																	</div>
+																</>
+															)}
+														</>
+													))
+												) : (
+													error && <p>{error}</p>
+												)}
+											</div>
+										)}
 									</div>
 								</div>
 							</div>
@@ -442,7 +448,7 @@ class Activities extends Component {
 
 					{/* Add Break Modal */}
 					<div className="modal fade" id="addBreakModal" tabIndex={-1} role="dialog" aria-labelledby="addBreakModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-						<div className="modal-dialog" role="break">
+						<div className="modal-dialog" role="dialog">
 							<div className={`modal-content ${loading ? 'dimmer active' : 'dimmer'}`}>
 								<div className="modal-header">
 									<h5 className="modal-title" id="addBreakModalLabel">Add Activity for Employee</h5>
@@ -505,7 +511,7 @@ class Activities extends Component {
 
 					{/* Add Break reason Modal for loggedin employee */}
 					<div className="modal fade" id="addBreakReasonModal" tabIndex={-1} role="dialog" aria-labelledby="addBreakReasonModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-						<div className="modal-dialog" role="break">
+						<div className="modal-dialog" role="dialog">
 							<div className="modal-content">
 								<div className="modal-header">
 									<h5 className="modal-title" id="addBreakReasonModalLabel">Break Reason</h5>

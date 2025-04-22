@@ -173,7 +173,7 @@ class Events extends Component {
 
 		// Check if we're editing or adding an event
 		const eventData = this.state.selectedEvent || this.state;
-		const { event_name, event_date, selectedEmployeeIdForModal, logged_in_employee_id } = eventData;
+		const { event_name, event_date, selectedEmployeeIdForModal } = eventData;
 
 
         // Validate employee selection only if admin or super_admin
@@ -315,7 +315,7 @@ class Events extends Component {
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth() + 1;
         const defaultDate = `${selectedYear}-${String(currentMonth).padStart(2, '0')}-01`;
-        const startYear = currentYear - 50;
+        const startYear = currentYear - 1;
         const endYear = currentYear + 10;
 
         // Generate an array of years
@@ -373,9 +373,9 @@ class Events extends Component {
 
         return (
             <>
-					<div>
-						{/* Add the alert for success messages */}
-						<div 
+				<div>
+					{/* Add the alert for success messages */}
+					<div 
 						className={`alert alert-success alert-dismissible fade show ${this.state.showSuccess ? "d-block" : "d-none"}`} 
 						role="alert" 
 						style={{ 
@@ -553,7 +553,7 @@ class Events extends Component {
 								<div className="col-lg-8 col-md-12">
 									<div className="card">
 										<div className="card-header bline">
-											<h3 className="card-title">Sara Hopkins</h3>
+											<h3 className="card-title">Event Calendar</h3>
 											<div className="card-options">
 												<label htmlFor="year-selector" className='d-flex card-title mr-3 align-items-center'>Year: </label>
 												<select
@@ -583,89 +583,89 @@ class Events extends Component {
 
 				{/* Modal for Add Event */}
 				{showAddEventModal && (
-				<div className="modal fade show d-block" id="addEventModal" tabIndex="-1" role="dialog" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-					<div className="modal-dialog" role="document">
-						<div className="modal-content">
-							<div className="modal-header">
-								<h5 className="modal-title">Add Event</h5>
-								<button type="button" className="close" onClick={this.closeAddEventModal}>
-									<span>&times;</span>
-								</button>
-							</div>
-							<form onSubmit={this.addEvent}>
-								<div className="modal-body">
-									<div className="row clearfix">
-										{/* Employee Selection Section */}
-										{(logged_in_employee_role === "admin" || logged_in_employee_role === "super_admin") && (
-											<div className="col-md-12 form-group mt-3">
-												<label htmlFor="selectedEmployeeIdForModal" className="form-label">Select Employee</label>
-												<select
-													id="selectedEmployeeIdForModal"
-													className={`form-control ${this.state.errors.selectedEmployeeIdForModal ? "is-invalid" : ""}`}
-													value={selectedEmployeeIdForModal}
-													onChange={(e) => this.handleEmployeeSelection(e, 'modal')}
-												>
-													<option value="">Select an Employee</option>
-													{employees.map((employee) => (
-														<option key={employee.id} value={employee.id}>
-															{employee.first_name} {employee.last_name}
-														</option>
-													))}
-												</select>
-												{this.state.errors.selectedEmployeeIdForModal && (
-													<small className={`invalid-feedback ${this.state.errors.selectedEmployeeIdForModal ? 'd-block' : ''}`}>{this.state.errors.selectedEmployeeIdForModal}</small>
-												)}
+					<div className="modal fade show d-block" id="addEventModal" tabIndex="-1" role="dialog" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+						<div className="modal-dialog" role="document">
+							<div className="modal-content">
+								<div className="modal-header">
+									<h5 className="modal-title">Add Event</h5>
+									<button type="button" className="close" onClick={this.closeAddEventModal}>
+										<span>&times;</span>
+									</button>
+								</div>
+								<form onSubmit={this.addEvent}>
+									<div className="modal-body">
+										<div className="row clearfix">
+											{/* Employee Selection Section */}
+											{(logged_in_employee_role === "admin" || logged_in_employee_role === "super_admin") && (
+												<div className="col-md-12 form-group mt-3">
+													<label htmlFor="selectedEmployeeIdForModal" className="form-label">Select Employee</label>
+													<select
+														id="selectedEmployeeIdForModal"
+														className={`form-control ${this.state.errors.selectedEmployeeIdForModal ? "is-invalid" : ""}`}
+														value={selectedEmployeeIdForModal}
+														onChange={(e) => this.handleEmployeeSelection(e, 'modal')}
+													>
+														<option value="">Select an Employee</option>
+														{employees.map((employee) => (
+															<option key={employee.id} value={employee.id}>
+																{employee.first_name} {employee.last_name}
+															</option>
+														))}
+													</select>
+													{this.state.errors.selectedEmployeeIdForModal && (
+														<small className={`invalid-feedback ${this.state.errors.selectedEmployeeIdForModal ? 'd-block' : ''}`}>{this.state.errors.selectedEmployeeIdForModal}</small>
+													)}
+												</div>
+											)}
+											<div className="col-md-12">
+												<div className="form-group">
+													<label className="form-label" htmlFor="event_name">Event Name</label>
+													<input
+														type="text"
+														className={`form-control ${this.state.errors.event_name ? "is-invalid" : ""}`}
+														name='event_name'
+														id='event_name'
+														value={this.state.event_name}
+														onChange={this.handleInputChangeForAddEvent}
+													/>
+													{this.state.errors.event_name && (
+														<div className="invalid-feedback">{this.state.errors.event_name}</div>
+													)}
+												</div>
 											</div>
-										)}
-										<div className="col-md-12">
-											<div className="form-group">
-												<label className="form-label" htmlFor="event_name">Event Name</label>
-												<input
-													type="text"
-													className={`form-control ${this.state.errors.event_name ? "is-invalid" : ""}`}
-													name='event_name'
-													id='event_name'
-													value={this.state.event_name}
-													onChange={this.handleInputChangeForAddEvent}
-												/>
-												{this.state.errors.event_name && (
-													<div className="invalid-feedback">{this.state.errors.event_name}</div>
-												)}
-											</div>
-										</div>
-										<div className="col-md-12">
-											<div className="form-group">
-												<label className="form-label" htmlFor="event_date">Event Date</label>
-												<input
-													type="date"
-													className={`form-control ${this.state.errors.event_date ? "is-invalid" : ""}`}
-													name='event_date'
-													id='event_date'
-													value={this.state.event_date}
-													onChange={this.handleInputChangeForAddEvent}
-												/>
-												{this.state.errors.event_date && (
-													<div className="invalid-feedback">{this.state.errors.event_date}</div>
-												)}
+											<div className="col-md-12">
+												<div className="form-group">
+													<label className="form-label" htmlFor="event_date">Event Date</label>
+													<input
+														type="date"
+														className={`form-control ${this.state.errors.event_date ? "is-invalid" : ""}`}
+														name='event_date'
+														id='event_date'
+														value={this.state.event_date}
+														onChange={this.handleInputChangeForAddEvent}
+													/>
+													{this.state.errors.event_date && (
+														<div className="invalid-feedback">{this.state.errors.event_date}</div>
+													)}
+												</div>
 											</div>
 										</div>
 									</div>
-								</div>
-								<div className="modal-footer">
-									<button type="button" className="btn btn-secondary" onClick={this.closeAddEventModal}>
-										Close
-									</button>
-									<button
-										type="submit"
-										className="btn btn-primary"
-									>
-										Add Event
-									</button>
-								</div>
-							</form>
+									<div className="modal-footer">
+										<button type="button" className="btn btn-secondary" onClick={this.closeAddEventModal}>
+											Close
+										</button>
+										<button
+											type="submit"
+											className="btn btn-primary"
+										>
+											Add Event
+										</button>
+									</div>
+								</form>
+							</div>
 						</div>
 					</div>
-				</div>
 				)}
             </>
         )

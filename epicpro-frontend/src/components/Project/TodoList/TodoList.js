@@ -286,7 +286,7 @@ class TodoList extends Component {
 
     render() {
         const { fixNavbar } = this.props;
-        const { title, due_date, priority, todoStatus, todos, loading, logged_in_employee_id, logged_in_employee_role, selectedEmployeeId, employees } = this.state;
+        const { title, due_date, priority, todoStatus, todos, loading, logged_in_employee_role, selectedEmployeeId, employees } = this.state;
         return (
             <>
                 {this.renderAlertMessages()} {/* Show Toast Messages */}

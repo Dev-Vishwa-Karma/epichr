@@ -338,7 +338,4 @@
                 exit;
         }
     }
-
-    // Close the connection
-    $conn->close();
 ?>

@@ -585,7 +585,7 @@ class departments extends Component {
                     </div>
 
                     {/* Edit Department Modal */}
-                    <div className="modal fade" id="editDepartmentModal" tabIndex={-1} role="dialog" aria-labelledby="editDepartmentModalLabel" /* aria-hidden="true" */>
+                    <div className="modal fade" id="editDepartmentModal" tabIndex={-1} role="dialog" aria-labelledby="editDepartmentModalLabel" data-backdrop="static" data-keyboard="false">
                         <div className="modal-dialog" role="document">
                             <div className="modal-content">
                                 <div className="modal-header">

@@ -169,7 +169,7 @@ class ProjectList extends Component {
 
     // Validate Add Project Form
 	validateAddProjectForm = (e) => {
-		const { projectName, projectDescription, projectTechnology, selectedClient, teamMembers, projectStartDate, projectEndDate} = this.state;
+		const { projectName, projectDescription, projectTechnology, teamMembers, projectStartDate, projectEndDate} = this.state;
         let errors = {};
         let isValid = true;
 
@@ -390,7 +390,7 @@ class ProjectList extends Component {
     };
 
     render() {
-        const { fixNavbar, boxOpen, box2Open, box3Open, box4Open, box5Open, box6Open } = this.props;
+        const { fixNavbar, boxOpen } = this.props;
         const { projectName, projectDescription, projectTechnology, projectStartDate, projectEndDate, clients, selectedClient, teamMembers, employees, projects, message, logged_in_employee_role} = this.state;
 
         return (

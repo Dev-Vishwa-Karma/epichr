@@ -9,7 +9,6 @@ class Report extends Component {
         super(props);
         this.state = {
             reports: [],
-            error: null,
             selectedReport: null,
             isModalOpen: false,
             selectedEmployee: "",
@@ -635,23 +634,10 @@ class Report extends Component {
 			isValid = false;
 		}
 
-		if (start_time && end_time) {
-            let start = start_time;
-            let end = end_time;
-
-            // Convert to Date objects if they are strings (e.g., "18:10:00")
-            if (typeof start_time === "string") {
-                const [sh, sm, ss] = start_time.split(":");
-                start = new Date();
-                start.setHours(parseInt(sh), parseInt(sm), parseInt(ss || 0), 0);
-            }
-
-            if (typeof end_time === "string") {
-                const [eh, em, es] = end_time.split(":");
-                end = new Date();
-                end.setHours(parseInt(eh), parseInt(em), parseInt(es || 0), 0);
-            }
-
+        if (start_time && end_time) {
+            let start = typeof start_time === "string" ? new Date(start_time) : start_time;
+            let end = typeof end_time === "string" ? new Date(end_time) : end_time;
+        
             if (start.getTime() === end.getTime()) {
                 error.start_time = "Start and end time cannot be the same.";
                 error.end_time = "Start and end time cannot be the same.";
@@ -661,7 +647,7 @@ class Report extends Component {
                 error.end_time = "End time must be after start time.";
                 isValid = false;
             }
-		}
+        }
 
         // Break duration validation
 		if (todays_total_hours) {
@@ -936,7 +922,7 @@ class Report extends Component {
                     </div>
                     {/* Modal for viewing report details */}
                     <div className="modal fade" id="viewpunchOutReportModal" tabIndex={-1} role="dialog" aria-labelledby="viewpunchOutReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="break">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="viewpunchOutReportModal">Report Details</h5>
@@ -982,7 +968,7 @@ class Report extends Component {
 
                     {/* Edit Report Modal for employees */}
                     <div className="modal fade" id="editpunchOutReportModal" tabIndex={-1} role="dialog" aria-labelledby="editpunchOutReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="break">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="editpunchoutReportModalLabel">Update Report</h5>
@@ -1110,7 +1096,7 @@ class Report extends Component {
     
                     {/* Modal for deleting report details */}
                     <div className="modal fade" id="deleteReportModal" tabIndex={-1} role="dialog" aria-labelledby="deleteReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="break">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="deleteReportModal">Delete</h5>
@@ -1130,7 +1116,7 @@ class Report extends Component {
                     </div>
                     {/* Add Break Modal */}
                     <div className="modal fade" id="addReportModal" tabIndex={-1} role="dialog" aria-labelledby="addReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="report">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="addReportModalLabel">Register Employee Punch-In/Out</h5>
@@ -1192,7 +1178,7 @@ class Report extends Component {
 
                     {/* Modal for edit report details */}
                     <div className="modal fade" id="editReportModal" tabIndex={-1} role="dialog" aria-labelledby="editReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="break">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="editReportModal">Edit Report</h5>
