@@ -301,7 +301,8 @@ if (isset($action)) {
             $end_time = $_POST['end_time'] ?? null;
             $todays_working_hours = $_POST['todays_working_hours'] ?? null;
             $todays_total_hours = $_POST['todays_total_hours'] ?? null;
-            // date_default_timezone_set('Asia/Kolkata');
+            $created_at = date('Y-m-d H:i:s');
+            $updated_at = $created_at;
 
             // Validate the data (you can add additional validation as needed)
             if (empty($employee_id) || empty($report) || empty($start_time) || empty($end_time)) {
@@ -310,10 +311,10 @@ if (isset($action)) {
             }
 
             // Prepare the insert query
-            $stmt = $conn->prepare("INSERT INTO reports (employee_id, report, start_time, end_time, break_duration_in_minutes, total_working_hours, total_hours) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $conn->prepare("INSERT INTO reports (employee_id, report, start_time, end_time, break_duration_in_minutes, total_working_hours, total_hours, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             
             // Bind the parameters
-            $stmt->bind_param("issssss", $employee_id, $report, $start_time, $end_time, $break_duration_in_minutes, $todays_working_hours, $todays_total_hours);
+            $stmt->bind_param("issssssss", $employee_id, $report, $start_time, $end_time, $break_duration_in_minutes, $todays_working_hours, $todays_total_hours, $created_at, $updated_at);
 
             // Execute the query
             if ($stmt->execute()) {
@@ -323,11 +324,12 @@ if (isset($action)) {
                     'id' => $id,
                     'employee_id' => $employee_id,
                     'report' => $report,
-                    'start_time' => $start_time,  
+                    'start_time' => $start_time,
                     'end_time' => $end_time,
                     'break_duration_in_minutes' => $break_duration_in_minutes,
                     'total_working_hours' => $todays_working_hours,
                     'total_hours' => $todays_total_hours,
+                    'created_at' => $created_at
                 ];
                 // If successful, send success response
                 sendJsonResponse('success', $reportsData, "Report has been submitted successfully.");

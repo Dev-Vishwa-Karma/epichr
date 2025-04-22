@@ -40,9 +40,7 @@ class Report extends Component {
                 report: '',
 				start_time: '',
 				end_time: '',
-				todays_working_hours: '',
-				break_duration_in_minutes: '',
-				todays_total_hours: '',
+                break_duration_in_minutes: ''
 			},
             loading: true,
         };
@@ -118,13 +116,35 @@ class Report extends Component {
             clearTimeout(this.reportMessageTimeout);
         }
     }
-    
+
     handleReportMessage = (event) => {
-        this.setState({ reportSuccess: event.detail });
-    
-        this.reportMessageTimeout = setTimeout(() => {
-            this.setState({ reportSuccess: "" });
-        }, 3000);
+        const { message, report } = event.detail;
+
+        // Clone the report to avoid mutating the original
+        const clonedReport = { ...report };
+
+        // Add formatted time fields only if the original fields exist
+        if (clonedReport.total_hours) {
+            clonedReport.todays_total_hours = clonedReport.total_hours.split(" ")[1];
+        }
+        if (clonedReport.total_working_hours) {
+            clonedReport.todays_working_hours = clonedReport.total_working_hours.split(" ")[1];
+        }
+
+        if (report) {
+            this.setState(prevState => ({
+                reports: [clonedReport, ...prevState.reports],
+                reportSuccess: message
+            }));
+        }
+
+        this.setState({ reportSuccess: message });
+
+        if (message || report) {
+            this.reportMessageTimeout = setTimeout(() => {
+                this.setState({ reportSuccess: "" });
+            }, 3000);
+        }
     };
 
     /* setActivityIdState = (report) => {
@@ -395,9 +415,36 @@ class Report extends Component {
             });
     };
 
+    parseTimeStringToDate = (timeString) => {
+        // Handles both "10:30 AM" and "2025-04-21 10:30"
+        const ampmMatch = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+        if (!ampmMatch) return null;
+        let hours = parseInt(ampmMatch[1]);
+
+        const minutes = parseInt(ampmMatch[2]);
+        const ampm = ampmMatch[3]?.toUpperCase();
+
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+
+        const date = new Date();
+        date.setHours(hours);
+        date.setMinutes(minutes);
+        date.setSeconds(0);
+        date.setMilliseconds(0);
+
+        return date;
+    };
+
     // Format date and time
     formatDateTimeAMPM = (timeString) => {
         if (!timeString || typeof timeString !== 'string') return '';
+
+        // If input is in format "YYYY-MM-DD HH:mm" or "YYYY-MM-DD HH:mm:ss"
+        if (timeString.includes(' ')) {
+            const parts = timeString.split(' ');
+            timeString = parts[1]; // Extract the time part
+        }
 
         const [hours, minutes, seconds = '00'] = timeString.split(':');
         const now = new Date();
@@ -421,25 +468,40 @@ class Report extends Component {
 
     getTimeAsDate = (time) => {
         if (!time) return null;
-
-        if (typeof time === 'string') {
-            const [hours, minutes, seconds] = time.split(':');
     
-            const now = new Date(); // today's date
-            now.setHours(parseInt(hours));
-            now.setMinutes(parseInt(minutes));
-            now.setSeconds(parseInt(seconds || 0));
+        // Handle "2025-04-21 19:30" or just "10:30 AM"
+        if (typeof time === 'string') {
+            // If it includes date part, extract just the time
+            if (time.includes(' ')) {
+                const parts = time.split(' ');
+                const timePart = parts.length === 2 ? parts[1] : parts[0];
+                time = timePart;
+            }
+    
+            // Handle AM/PM
+            const ampmMatch = time.match(/(\d{1,2}):(\d{2})(?:\s*(AM|PM))?/i);
+            if (!ampmMatch) return null;
+    
+            let hours = parseInt(ampmMatch[1]);
+            const minutes = parseInt(ampmMatch[2]);
+            const ampm = ampmMatch[3]?.toUpperCase();
+    
+            if (ampm === 'PM' && hours < 12) hours += 12;
+            if (ampm === 'AM' && hours === 12) hours = 0;
+    
+            const now = new Date();
+            now.setHours(hours);
+            now.setMinutes(minutes);
+            now.setSeconds(0);
             now.setMilliseconds(0);
     
             return now;
         }
-
-        if (time instanceof Date) {
-            return time;
-        }
-
+    
+        if (time instanceof Date) return time;
+    
         return null;
-    };
+    };    
 
     openReportModal = (report) => {
         this.setState({ 
@@ -456,7 +518,7 @@ class Report extends Component {
     };
 
     closeReportModal = () => {
-        this.setState({ selectedReport: null }); // Reset selectedReport when closing the modal
+        this.setState({ selectedReport: null });
     };
 
     handleChange = (field, value) => {
@@ -473,26 +535,10 @@ class Report extends Component {
         const breakMinutes = field === 'break_duration_in_minutes'
             ? parseInt(value || 0, 10)
             : parseInt(break_duration_in_minutes || 0, 10);
-    
-        // Convert start to Date
-	    let startDate = null;
-        if (rawStart instanceof Date && !isNaN(rawStart)) {
-            startDate = new Date(rawStart);
-        } else if (typeof rawStart === "string" && rawStart.includes(":")) {
-            const [h, m, s] = rawStart.split(":").map(Number);
-            startDate = new Date();
-            startDate.setHours(h || 0, m || 0, s || 0, 0);
-        }
-    
-        // Convert end to Date
-        let endDate = null;
-        if (rawEnd instanceof Date && !isNaN(rawEnd)) {
-            endDate = new Date(rawEnd);
-        } else if (typeof rawEnd === "string" && rawEnd.includes(":")) {
-            const [h, m, s] = rawEnd.split(":").map(Number);
-            endDate = new Date();
-            endDate.setHours(h || 0, m || 0, s || 0, 0);
-        }
+
+        // Parse using consistent utility
+        const startDate = this.getTimeAsDate(rawStart);
+        const endDate = this.getTimeAsDate(rawEnd);
     
         if (startDate && endDate) {
             const workingDuration = this.calculateWorkingHours(startDate, endDate, breakMinutes);
@@ -507,6 +553,9 @@ class Report extends Component {
 
     calculateWorkingHours = (start, end, breakMinutes) => {
 		try {
+            start = this.getTimeAsDate(start);
+            end = this.getTimeAsDate(end);
+
 			if (!(start instanceof Date) || isNaN(start)) return "00:00";
 			if (!(end instanceof Date) || isNaN(end)) return "00:00";
 	
@@ -537,16 +586,29 @@ class Report extends Component {
         const pad = (n) => n.toString().padStart(2, '0');
         let date;
     
-        if (input instanceof Date) {
+        if (input instanceof Date && !isNaN(input)) {
             date = input;
-        } else if (typeof input === 'string' && input.includes(':')) {
-            // Assume format is "HH:mm:ss" or "HH:mm"
-            const [hours, minutes] = input.split(':').map(Number);
-            date = new Date();
-            date.setHours(hours);
-            date.setMinutes(minutes);
-            date.setSeconds(0);
-            date.setMilliseconds(0);
+        } else if (typeof input === 'string') {
+            if (input.includes(' ')) {
+                // Handle full datetime string: "2025-04-21 12:00"
+                const [, timePart] = input.split(' ');
+                const [hours, minutes] = timePart.split(':').map(Number);
+                date = new Date();
+                date.setHours(hours || 0);
+                date.setMinutes(minutes || 0);
+                date.setSeconds(0);
+                date.setMilliseconds(0);
+            } else if (input.includes(':')) {
+                // Handle "HH:mm" or "HH:mm:ss"
+                const [hours, minutes] = input.split(':').map(Number);
+                date = new Date();
+                date.setHours(hours || 0);
+                date.setMinutes(minutes || 0);
+                date.setSeconds(0);
+                date.setMilliseconds(0);
+            } else {
+                return null;
+            }
         } else {
             return null;
         }
@@ -554,10 +616,77 @@ class Report extends Component {
         return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
     };    
 
-    updateReport = (e) => {
-        e.preventDefault();
-        const { report_id, report, start_time, break_duration_in_minutes, end_time, todays_working_hours, todays_total_hours, selectedReport } = this.state;
+    validateUpdateReportForm = () => {
+		const { report, start_time, end_time, break_duration_in_minutes, todays_total_hours } = this.state;
+		let error = {};
+		let isValid = true;
 
+		if (!report || report.trim() === "") {
+			error.report = "Report is required.";
+			isValid = false;
+		}
+
+		if (!start_time) {
+			error.start_time = "Start time is required.";
+			isValid = false;
+		}
+
+		if (!end_time) {
+			error.end_time = "End time is required.";
+			isValid = false;
+		}
+
+		if (start_time && end_time) {
+            let start = start_time;
+            let end = end_time;
+        
+            // Convert to Date objects if they are strings (e.g., "18:10:00")
+            if (typeof start_time === "string") {
+                const [sh, sm, ss] = start_time.split(":");
+                start = new Date();
+                start.setHours(parseInt(sh), parseInt(sm), parseInt(ss || 0), 0);
+            }
+        
+            if (typeof end_time === "string") {
+                const [eh, em, es] = end_time.split(":");
+                end = new Date();
+                end.setHours(parseInt(eh), parseInt(em), parseInt(es || 0), 0);
+            }
+            
+            if (start.getTime() === end.getTime()) {
+                error.start_time = "Start and end time cannot be the same.";
+                error.end_time = "Start and end time cannot be the same.";
+                isValid = false;
+            } else if (start > end) {
+                error.start_time = "Start time must be before end time.";
+                error.end_time = "End time must be after start time.";
+                isValid = false;
+            }
+		}
+
+        // Break duration validation
+		if (todays_total_hours) {
+			const [hrs, mins] = todays_total_hours.split(":").map(Number);
+			const totalMinutes = hrs * 60 + mins;
+			const breakMinutes = parseInt(break_duration_in_minutes || 0, 10);
+
+			if (breakMinutes > totalMinutes) {
+				error.break_duration_in_minutes = "Break duration cannot exceed the total hours.";
+				isValid = false;
+			}
+		}
+	
+		this.setState({ error });
+		return isValid;
+	};
+
+    updateReport = () => {
+        // e.preventDefault();
+        if (!this.validateUpdateReportForm()) {
+            return;
+        }
+
+        const { report_id, report, start_time, break_duration_in_minutes, end_time, todays_working_hours, todays_total_hours, selectedReport } = this.state;
 		const formData = new FormData();
         const finalStartTime = start_time || selectedReport.start_time;
         const finalEndTime = end_time || selectedReport.end_time;
@@ -869,13 +998,17 @@ class Report extends Component {
                                             <div className="col-md-12">
                                                 <div className="form-group">
                                                     <textarea
-                                                        className="form-control"
+                                                        className={`form-control ${this.state.error.report ? "is-invalid" : ""}`}
+                                                        name='report'
                                                         placeholder="Please provide the report."
                                                         value={report}
                                                         onChange={(e) => this.handleChange('report', e.target.value)}
                                                         rows="20"
                                                         cols="50"
                                                     />
+                                                    {this.state.error.report && (
+                                                        <div className="invalid-feedback">{this.state.error.report}</div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="col-md-6">
@@ -894,7 +1027,7 @@ class Report extends Component {
                                                         className={`form-control ${this.state.error.start_time ? "is-invalid" : ""}`}
                                                     />
                                                     {this.state.error.start_time && (
-                                                        <div className="invalid-feedback">{this.state.error.start_time}</div>
+                                                        <div className="invalid-feedback d-block">{this.state.error.start_time}</div>
                                                     )}
                                                 </div>
                                             </div>
@@ -908,7 +1041,7 @@ class Report extends Component {
                                                         name="break_duration_in_minutes"
                                                         id="break_duration_in_minutes"
                                                         placeholder="Add break duration in minutes"
-                                                        value={break_duration_in_minutes || ''}
+                                                        value={break_duration_in_minutes || 0}
                                                         onChange={(e) => this.handleChange('break_duration_in_minutes', e.target.value)}
                                                     />
                                                     {this.state.error.break_duration_in_minutes && (
@@ -932,7 +1065,7 @@ class Report extends Component {
                                                         className={`form-control ${this.state.error.end_time ? "is-invalid" : ""}`}
                                                     />
                                                     {this.state.error.end_time && (
-                                                        <div className="invalid-feedback">{this.state.error.end_time}</div>
+                                                        <div className="invalid-feedback d-block">{this.state.error.end_time}</div>
                                                     )}
                                                 </div>
                                             </div>
@@ -941,16 +1074,13 @@ class Report extends Component {
                                                     <label className="form-label" htmlFor="todays_working_hours">Todays working hours</label>
                                                     <input
                                                         type="text"
-                                                        className={`form-control ${this.state.error.todays_working_hours ? "is-invalid" : ""}`}
+                                                        className="form-control"
                                                         name="todays_working_hours"
                                                         id="todays_working_hours"
                                                         placeholder="Add break duration in minutes"
                                                         value={todays_working_hours?.slice(0, 5) || ''}
                                                         readOnly
                                                     />
-                                                    {this.state.error.todays_working_hours && (
-                                                        <div className="invalid-feedback">{this.state.error.todays_working_hours}</div>
-                                                    )}
                                                 </div>
                                             </div>
                                             <div className="col-md-6">
@@ -958,16 +1088,13 @@ class Report extends Component {
                                                     <label className="form-label" htmlFor="todays_working_hours">Todays total hours</label>
                                                     <input
                                                         type="text"
-                                                        className={`form-control ${this.state.error.todays_total_hours ? "is-invalid" : ""}`}
+                                                        className="form-control"
                                                         name="todays_total_hours"
                                                         id="todays_total_hours"
                                                         placeholder="Add break duration in minutes"
                                                         value={todays_total_hours?.slice(0, 5) || ''}
                                                         readOnly
                                                     />
-                                                    {this.state.error.todays_total_hours && (
-                                                        <div className="invalid-feedback">{this.state.error.todays_total_hours}</div>
-                                                    )}
                                                 </div>
                                             </div>
                                         </div>

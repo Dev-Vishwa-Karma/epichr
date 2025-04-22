@@ -21,11 +21,10 @@ class Header extends Component {
 			break_duration_in_minutes: 0,
 			todays_total_hours: '',
 			error: {
+				report: '',
 				start_time: '',
 				end_time: '',
-				todays_working_hours: '',
-				break_duration_in_minutes: '',
-				todays_total_hours: '',
+				break_duration_in_minutes: ''
 			},
 			user: null,
 			userId: null,
@@ -70,14 +69,37 @@ class Header extends Component {
 				}, 5000);
 			});
 
-		fetch(`${process.env.REACT_APP_API_URL}/reports.php?user_id=${window.user.id}`)
-		.then(response => response.json())
-		.then(data => {
-			if (data.status === 'success') {
-				this.setState({ reports: data.data });
-			}
-		});
+		this.fetchReports();
 	}
+
+	fetchReports = (callback) => {
+		fetch(`${process.env.REACT_APP_API_URL}/reports.php?user_id=${window.user.id}`)
+			.then(response => response.json())
+			.then(data => {
+				if (data.status === 'success') {
+					this.setState({ reports: data.data }, () => {
+						if (typeof callback === 'function') {
+							callback(data.data); // Always pass the data
+						}
+					});
+				} else {
+					console.warn("API returned non-success:", data);
+					this.setState({ reports: [] }, () => {
+						if (typeof callback === 'function') {
+							callback([]); // Still run callback even if no success
+						}
+					});
+				}
+			})
+			.catch(err => {
+				console.error("Failed to fetch reports:", err);
+				this.setState({ reports: [] }, () => {
+					if (typeof callback === 'function') {
+						callback([]);
+					}
+				});
+			});
+	};		
 
 	handlePunchIn = () => {
 
@@ -245,38 +267,97 @@ class Header extends Component {
 
 	// Handle add report button click
 	handleReportClick = () => {
-		const { reports } = this.state;
-		const today = new Date().toISOString().split("T")[0];
+		this.fetchReports((reports) => {
 	
-		const todayReportExists = reports.some(report => {
-			const reportDate = new Date(report.created_at).toISOString().split("T")[0];
-			return reportDate === today;
-		});
+			const today = new Date().toISOString().split("T")[0];
+			const todayReportExists = reports.some(report => {
+				const reportDate = new Date(report.created_at).toISOString().split("T")[0];
+				return reportDate === today;
+			});
 	
-		if (todayReportExists) {
-			// Check if already on /hr-report
-			if (this.props.location.pathname === "/hr-report") {
-				window.dispatchEvent(new CustomEvent("reportMessage", {
-					detail: "You have already submitted today's report."
-				}));
+			if (todayReportExists) {
+				const messagePayload = {
+					detail: { message: "You have already submitted today's report." }
+				};
+
+				if (this.props.location.pathname === "/hr-report") {
+					window.dispatchEvent(new CustomEvent("reportMessage", messagePayload));
+				} else {
+					this.props.history.push({
+						pathname: "/hr-report",
+						state: { message: messagePayload.detail.message }
+					});
+				}
 			} else {
-				// Redirect to /hr-report with message
-				this.props.history.push({
-					pathname: "/hr-report",
-					state: { message: "You have already submitted today's report." }
-				});
+				// Open modal
+				const modalEl = document.getElementById('addReportModal');
+				if (modalEl) {
+					const modal = new window.bootstrap.Modal(modalEl);
+					modal.show();
+				} else {
+					console.warn("Modal element not found.");
+				}
 			}
-		} else {
-			// To show modal:
-			const modalEl = document.getElementById('addReportModal');
-			if (modalEl) {
-			  const modal = new window.bootstrap.Modal(modalEl);
-			  modal.show();
-			}
-		}
+		});
 	};
+
+	validateReportForm = () => {
+		const { report, start_time, end_time, break_duration_in_minutes, todays_total_hours } = this.state;
+		let error = {};
+		let isValid = true;
+
+		if (!report || report.trim() === "") {
+			error.report = "Report is required.";
+			isValid = false;
+		}
+
+		if (!start_time) {
+			error.start_time = "Start time is required.";
+			isValid = false;
+		}
+
+		if (!end_time) {
+			error.end_time = "End time is required.";
+			isValid = false;
+		}
+
+		if (start_time && end_time) {
+            let start = start_time;
+            let end = end_time;
+        
+            // Convert to Date objects if they are strings (e.g., "18:10:00")
+            if (typeof start_time === "string") {
+                const [sh, sm, ss] = start_time.split(":");
+                start = new Date();
+                start.setHours(parseInt(sh), parseInt(sm), parseInt(ss || 0), 0);
+            }
+        
+            if (typeof end_time === "string") {
+                const [eh, em, es] = end_time.split(":");
+                end = new Date();
+                end.setHours(parseInt(eh), parseInt(em), parseInt(es || 0), 0);
+            }
+            
+            if (start.getTime() === end.getTime()) {
+                error.start_time = "Start and end time cannot be the same.";
+                error.end_time = "Start and end time cannot be the same.";
+                isValid = false;
+            } else if (start > end) {
+                error.start_time = "Start time must be before end time.";
+                error.end_time = "End time must be after start time.";
+                isValid = false;
+            }
+		}
 	
+		this.setState({ error });
+		return isValid;
+	};
+
 	handleAddReport = () => {
+		if (!this.validateReportForm()) {
+			return;
+		}
+
 		const { report, start_time, break_duration_in_minutes, end_time, todays_working_hours, todays_total_hours } = this.state;
 
 		const formData = new FormData();
@@ -296,8 +377,22 @@ class Header extends Component {
 			.then((response) => response.json())
 			.then((data) => {
 				if (data.status === "success") {
-					this.setState({ punchSuccess: data.message, isPunchedIn: false, showModal: false, report: '' });
+					const newReport = data.data; // assume API returns the new report
+
+					// Dispatch the custom event with new report
+					window.dispatchEvent(new CustomEvent("reportMessage", {
+						detail: { report: newReport }
+					}));
+
+					this.setState({
+						punchSuccess: data.message,
+						isPunchedIn: false,
+						showModal: false,
+						report: ''
+					});
+
 					document.querySelector("#addReportModal .close").click();
+
 					setTimeout(() => {
 						this.setState({ punchSuccess: null });
 					}, 5000);
@@ -728,13 +823,16 @@ class Header extends Component {
 										<div className="col-md-12">
 											<div className="form-group">
 												<textarea
-													className="form-control"
+													className={`form-control ${this.state.error.report ? "is-invalid" : ""}`}
 													placeholder="Please provide the report."
 													value={report}
 													onChange={(e) => this.handleChange('report', e.target.value)}
 													rows="20"
 													cols="50"
 												/>
+												{this.state.error.report && (
+													<div className="invalid-feedback">{this.state.error.report}</div>
+												)}
 											</div>
 										</div>
 										<div className="col-md-6">
@@ -742,7 +840,7 @@ class Header extends Component {
 												<label className="form-label" htmlFor="event_name">Start time</label>
 												<DatePicker
 													selected={start_time}
-													// name="start_time"
+													name="start_time"
 													onChange={(time) => this.handleChange('start_time', time)}
 													showTimeSelect
 													showTimeSelectOnly
@@ -753,7 +851,7 @@ class Header extends Component {
 													className={`form-control ${this.state.error.start_time ? "is-invalid" : ""}`}
 												/>
 												{this.state.error.start_time && (
-													<div className="invalid-feedback">{this.state.error.start_time}</div>
+													<div className="invalid-feedback d-block">{this.state.error.start_time}</div>
 												)}
 											</div>
 										</div>
@@ -767,7 +865,7 @@ class Header extends Component {
 													name="break_duration_in_minutes"
 													id="break_duration_in_minutes"
 													placeholder="Add break duration in minutes"
-													value={break_duration_in_minutes || ''}
+													value={break_duration_in_minutes || 0}
 													onChange={(e) => this.handleChange('break_duration_in_minutes', e.target.value)}
 												/>
 												{this.state.error.break_duration_in_minutes && (
@@ -780,7 +878,7 @@ class Header extends Component {
 												<label className="form-label" htmlFor="event_name">End time</label>
 												<DatePicker
 													selected={end_time}
-													// name="end_time"
+													name="end_time"
 													onChange={(time) => this.handleChange('end_time', time)}
 													showTimeSelect
 													showTimeSelectOnly
@@ -790,8 +888,8 @@ class Header extends Component {
 													placeholderText="Select End time"
 													className={`form-control ${this.state.error.end_time ? "is-invalid" : ""}`}
 												/>
-												{this.state.error.end_time && (
-													<div className="invalid-feedback">{this.state.error.end_time}</div>
+												{this.state.error?.end_time && (
+													<div className="invalid-feedback d-block">{this.state.error.end_time}</div>
 												)}
 											</div>
 										</div>
@@ -808,12 +906,9 @@ class Header extends Component {
 													timeCaption="Working hours"
 													dateFormat="h:mm"
 													placeholderText="Select today working hours"
-													className={`form-control ${this.state.error.todays_working_hours ? "is-invalid" : ""}`}
+													className="form-control"
 													disabled
 												/>
-												{this.state.error.todays_working_hours && (
-													<div className="invalid-feedback">{this.state.error.todays_working_hours}</div>
-												)}
 											</div>
 										</div>
 										<div className="col-md-6">
@@ -828,12 +923,9 @@ class Header extends Component {
 													timeIntervals={15}
 													timeCaption="total hours"
 													dateFormat="h:mm"
-													className={`form-control ${this.state.error.todays_total_hours ? "is-invalid" : ""}`}
+													className="form-control"
 													disabled
 												/>
-												{this.state.error.todays_total_hours && (
-													<div className="invalid-feedback">{this.state.error.todays_total_hours}</div>
-												)}
 											</div>
 										</div>
 									</div>

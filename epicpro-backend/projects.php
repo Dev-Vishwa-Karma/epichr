@@ -5,6 +5,7 @@
     header("Access-Control-Allow-Credentials: true");
 
     include 'db_connection.php';
+    require_once 'helpers.php';
 
     // Set the header for JSON response
     header('Content-Type: application/json');
@@ -78,14 +79,12 @@
                         }
                 
                         if (!empty($projects)) {
-                            http_response_code(200); // Success
-                            echo json_encode(['status' => 'success', 'data' => array_values($projects)]);
+                            echo sendJsonResponse(['success', 'data' => array_values($projects), null]);
                         } else {
-                            http_response_code(404); // Not found
-                            echo json_encode(['status' => 'error', 'message' => 'No records found']);
+                            echo sendJsonResponse(['error', null, 'No records found']);
                         }
                     } else {
-                        echo json_encode(['status' => 'error', 'message' => 'Failed to execute query', 'query_error' => $stmt->error]);
+                        echo sendJsonResponse(['error', null, 'Failed to execute query', 'query_error' => $stmt->error]);
                     }
                 } else {
                     $logged_in_employee_id = $_GET['logged_in_employee_id'] ?? null;
@@ -163,14 +162,11 @@
                         $conn->close();
                     
                         if (!empty($projects)) {
-                            http_response_code(200); // Success
                             echo json_encode(['status' => 'success', 'data' => array_values($projects)]);
                         } else {
-                            http_response_code(404); // Not found
                             echo json_encode(['status' => 'error', 'message' => 'No records found']);
                         }
                     } else {
-                        http_response_code(500); // Server error
                         echo json_encode(['status' => 'error', 'message' => 'Query execution failed', 'query_error' => $stmt->error]);
                     }
                 }
@@ -268,11 +264,9 @@
 
                         echo json_encode(['success' => 'Project added successfully', 'newProject' => $newProjectData]);
                     } else {
-                        http_response_code(500);
                         echo json_encode(['error' => 'Failed to add project', 'details' => $stmt->error]);
                     }
                 } else {
-                    http_response_code(400);
                     echo json_encode(['error' => 'Missing required fields']);
                 }
                 break;
@@ -313,12 +307,10 @@
                             echo json_encode(['error' => 'Failed to update department']);
                         }
                     } else {
-                        http_response_code(400);
                         echo json_encode(['error' => 'Missing required fields']);
                     }
                     exit;
                 } else {
-                    http_response_code(400);
                     echo json_encode(['error' => 'Invalid department ID']);
                     exit;
                 }
@@ -332,19 +324,16 @@
                     if ($stmt->execute()) {
                         echo json_encode(['success' => 'Record deleted successfully']);
                     } else {
-                        http_response_code(500);
                         echo json_encode(['error' => 'Failed to delete record']);
                     }
                     exit;
                 } else {
-                    http_response_code(400);
                     echo json_encode(['error' => 'Invalid department ID']);
                     exit;
                 }
                 break;
 
             default:
-                http_response_code(400);
                 echo json_encode(['error' => 'Invalid action']);
                 exit;
         }
