@@ -9,9 +9,13 @@ class EditEmployee extends Component {
             employeeId: '',
             firstName: '',
             lastName: '',
+            username: '',
             email: '',
+            selectedDepartment: "",
+            departments: [],
             gender: '',
             photo: null,
+            photoUrl: '',
             dob: '',
             joiningDate: '',
             mobile1: '',
@@ -31,23 +35,116 @@ class EditEmployee extends Component {
             salaryDetails: [],
             aadharCardNumber: '',
             aadharCardFile: '',
+            aadharCardFileUrl: '',
             drivingLicenseNumber: '',
             drivingLicenseFile: '',
+            drivingLicenseFileUrl: '',
             panCardNumber: '',
             panCardFile: '',
+            panCardFileUrl: '',
             facebook: '',
             twitter: '',
             linkedin: '',
             instagram: '',
             upworkProfile: '',
             resume: '',
-            selectedEmployee: ''
+            resumeUrl: '',
+            selectedEmployee: '',
+            successMessage: "",
+            showSuccess: false,
+            errorMessage: "",
+            showError: false,
         };
     }
 
+    // Function to dismiss messages
+    dismissMessages = () => {
+        this.setState({
+            showSuccess: false,
+            successMessage: "",
+            showError: false,
+            errorMessage: "",
+        });
+    };
+
     componentDidMount() {
-        const { employee, selectedSalaryDetails = [], employeeId } = this.props.location.state || {}; // Retrieve employee data
+        const { selectedSalaryDetails = [], employeeId } = this.props.location.state || {}; // Retrieve employee data
         this.setState({employeeId});
+        if (!employeeId) {
+            console.error("No employee ID found in location state.");
+            return;
+        }
+
+        // Fetch latest employee data from API
+        fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=view&user_id=${employeeId}`, {
+            method: "GET",
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success" && data.data) {
+                const employee = data.data;
+
+                const skillsFrontend = this.parseSkills(employee.frontend_skills);
+                const skillsBackend = this.parseSkills(employee.backend_skills);
+
+                // Remove duplicates between frontend and backend
+                const uniqueFrontendSkills = skillsFrontend.filter(skill => !skillsBackend.includes(skill));
+                const uniqueBackendSkills = skillsBackend.filter(skill => !skillsFrontend.includes(skill));
+
+                this.setState({
+                    selectedDepartment: employee.department_id,
+                    firstName: employee.first_name,
+                    lastName: employee.last_name,
+                    username: employee.username,
+                    email: employee.email,
+                    gender: employee.gender,
+                    photo: employee.profile,
+                    dob: employee.dob,
+                    joiningDate: employee.joining_date,
+                    mobile1: employee.mobile_no1,
+                    mobile2: employee.mobile_no2,
+                    address1: employee.address_line1,
+                    address2: employee.address_line2,
+                    emergencyContact1: employee.emergency_contact1,
+                    emergencyContact2: employee.emergency_contact2,
+                    emergencyContact3: employee.emergency_contact3,
+                    bankAccountName: employee.account_holder_name,
+                    bankAccountNo: employee.account_number,
+                    bankName: employee.bank_name,
+                    ifscCode: employee.ifsc_code,
+                    bankAddress: employee.bank_address,
+                    aadharCardNumber: employee.aadhar_card_number,
+                    aadharCardFile: employee.aadhar_card_file,
+                    drivingLicenseNumber: employee.driving_license_number,
+                    drivingLicenseFile: employee.driving_license_file,
+                    panCardNumber: employee.pan_card_number,
+                    panCardFile: employee.pan_card_file,
+                    facebook: employee.facebook_url,
+                    twitter: employee.twitter_url,
+                    linkedin: employee.linkedin_url,
+                    instagram: employee.instagram_url,
+                    upworkProfile: employee.upwork_profile_url,
+                    resume: employee.resume,
+                    skillsFrontend: uniqueFrontendSkills,
+                    skillsBackend: uniqueBackendSkills
+                });
+            } else {
+                console.error("Failed to fetch employee data.");
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching employee details:", error);
+        });
+
+        // Get department data from departments table
+		fetch(`${process.env.REACT_APP_API_URL}/departments.php`, {
+            method: "GET"
+        })
+        .then(response => response.json())
+        .then(data => {
+			this.setState({ departments: data.data });
+        })
+        .catch(error => console.error("Error fetching departments:", error));
 
         if (selectedSalaryDetails) {
             // Transform salaryDetails if necessary
@@ -64,96 +161,16 @@ class EditEmployee extends Component {
         } else {
             console.error("No salary details found in location state.");
         }
+    }
 
-        if (employee) {
-            if (typeof employee.frontend_skills === 'string') {
-                const frontendSkillsArray = employee.frontend_skills
-                .replace(/["\[\]]/g, '') // Remove quotes and square brackets
-                .split(',') // Split by commas
-                .map(skill => skill.trim()); // Trim each skill
-                this.setState({
-                    skillsFrontend: frontendSkillsArray, // Set as an array
-                }, () => {
-                    console.log('Updated skillsFrontend:', this.state.skillsFrontend);
-                });
-            } else if (Array.isArray(employee.frontend_skills)) {
-                this.setState({
-                    skillsFrontend: employee.frontend_skills, // Already an array
-                }, () => {
-                    console.log('Updated skillsFrontend:', this.state.skillsFrontend);
-                });
-            }
-
-            // Handle Backend Skills
-            if (typeof employee.backend_skills === 'string') {
-                const backendSkillsArray = employee.backend_skills
-                    .replace(/["\[\]]/g, '') // Remove quotes and square brackets
-                    .split(',') // Split by commas
-                    .map(skill => skill.trim()); // Trim each skill
-                this.setState({
-                    skillsBackend: backendSkillsArray, // Set as an array
-                }, () => {
-                    console.log('Updated skillsBackend:', this.state.skillsBackend);
-                });
-            } else if (Array.isArray(employee.backend_skills)) {
-                this.setState({
-                    skillsBackend: employee.backend_skills, // Already an array
-                }, () => {
-                    console.log('Updated skillsBackend:', this.state.skillsBackend);
-                });
-            }
+    /**
+     * Parses skills data from string or array.
+     */
+    parseSkills(skills) {
+        if (typeof skills === 'string') {
+            return skills.replace(/["[\]]/g, '').split(',').map(skill => skill.trim());
         }
-
-        // Remove duplicates between frontend and backend
-        this.setState((prevState) => {
-            const uniqueFrontendSkills = [...new Set(prevState.skillsFrontend)];
-            const uniqueBackendSkills = [...new Set(prevState.skillsBackend)];
-
-            // If the same skill is in both frontend and backend, decide where to keep it
-            const filteredFrontendSkills = uniqueFrontendSkills.filter(skill => !uniqueBackendSkills.includes(skill));
-            const filteredBackendSkills = uniqueBackendSkills.filter(skill => !uniqueFrontendSkills.includes(skill));
-
-            return {
-                skillsFrontend: filteredFrontendSkills,
-                skillsBackend: filteredBackendSkills,
-            };
-        });
-
-        this.setState((prevState) => ({
-            firstName: employee.first_name,
-            lastName: employee.last_name,
-            email: employee.email,
-            gender: employee.gender,
-            photo: employee.profile,
-            dob: employee.dob,
-            joiningDate: employee.joining_date,
-            mobile1: employee.mobile_no1,
-            mobile2: employee.mobile_no2,
-            address1: employee.address_line1,
-            address2: employee.address_line2,
-            emergencyContact1: employee.emergency_contact1,
-            emergencyContact2: employee.emergency_contact2,
-            emergencyContact3: employee.emergency_contact3,
-            // skillsFrontend: employee.frontend_skills,
-            // skillsBackend: employee.backend_skills,
-            bankAccountName: employee.account_holder_name,
-            bankAccountNo: employee.account_number,
-            bankName: employee.bank_name,
-            ifscCode: employee.ifsc_code,
-            bankAddress: employee.bank_address,
-            aadharCardNumber: employee.aadhar_card_number,
-            aadharCardFile: employee.aadhar_card_file,
-            drivingLicenseNumber: employee.driving_license_number,
-            drivingLicenseFile: employee.driving_license_file,
-            panCardNumber: employee.pan_card_number,
-            panCardFile: employee.pan_card_file,
-            facebook: employee.facebook_url,
-            twitter: employee.twitter_url,
-            linkedin: employee.linkedin_url,
-            instagram: employee.instagram_url,
-            upworkProfile: employee.upwork_profile_url,
-            resume: employee.resume,
-        }));
+        return Array.isArray(skills) ? skills : [];
     }
 
     handleChange = (event) => {
@@ -177,9 +194,14 @@ class EditEmployee extends Component {
 
     handleFileChange = (e) => {
         const { name, files } = e.target;
-        this.setState((prevState) => ({
-            [name]: files[0],
-        }));
+        const file = files[0];
+    
+        if (file) {
+            this.setState((prevState) => ({
+                [name]: file, // Store the File object for form submission
+                [`${name}Url`]: URL.createObjectURL(file), // Create a temporary preview URL
+            }));
+        }
     };
 
     handleSkillChange = (event, fieldName) => {
@@ -201,7 +223,7 @@ class EditEmployee extends Component {
                 updatedSkills = updatedSkills.filter((skill) => skill !== value);
             }
     
-            // Return the updated state for the specific field
+            // Return the updatdepartmented state for the specific field
             return {
                 [fieldName === 'frontend' ? 'skillsFrontend' : 'skillsBackend']: updatedSkills,
             };
@@ -215,11 +237,14 @@ class EditEmployee extends Component {
     };
 
     updateEmployee  = () => {
+        const {id, role} = window.user;
         const {salaryDetails } = this.state;
         const { 
             employeeId,
+            selectedDepartment,
             firstName,
             lastName,
+            username,
             email,
             gender,
             photo,
@@ -254,8 +279,10 @@ class EditEmployee extends Component {
         } = this.state;
 
 		const updateEmployeeData = new FormData();
+        updateEmployeeData.append('department_id', selectedDepartment)
         updateEmployeeData.append('first_name', firstName);
         updateEmployeeData.append('last_name', lastName);
+        updateEmployeeData.append('username', username);
         updateEmployeeData.append('email', email);
         updateEmployeeData.append('gender', gender);
         updateEmployeeData.append('photo', photo);
@@ -268,20 +295,22 @@ class EditEmployee extends Component {
         updateEmployeeData.append('emergency_contact1', emergencyContact1);
         updateEmployeeData.append('emergency_contact2', emergencyContact2);
         updateEmployeeData.append('emergency_contact3', emergencyContact3);
-        updateEmployeeData.append('frontend_skills', skillsFrontend);
-        updateEmployeeData.append('backend_skills', skillsBackend);
+        updateEmployeeData.append('frontend_skills', JSON.stringify(skillsFrontend));
+        updateEmployeeData.append('backend_skills', JSON.stringify(skillsBackend));
         updateEmployeeData.append('account_holder_name', bankAccountName);
         updateEmployeeData.append('account_number', bankAccountNo);
         updateEmployeeData.append('bank_name', bankName);
         updateEmployeeData.append('ifsc_code', ifscCode);
         updateEmployeeData.append('bank_address', bankAddress);
-        salaryDetails.forEach((detail, index) => {
-            updateEmployeeData.append(`salaryDetails[${index}][id]`, detail.salaryId);
-            updateEmployeeData.append(`salaryDetails[${index}][source]`, detail.salarySource);
-            updateEmployeeData.append(`salaryDetails[${index}][amount]`, detail.salaryAmount);
-            updateEmployeeData.append(`salaryDetails[${index}][from_date]`, detail.fromDate);
-            updateEmployeeData.append(`salaryDetails[${index}][to_date]`, detail.toDate);
-        });        
+        if (salaryDetails && Array.isArray(salaryDetails)) {
+            salaryDetails.forEach((detail, index) => {
+                updateEmployeeData.append(`salaryDetails[${index}][id]`, detail.salaryId);
+                updateEmployeeData.append(`salaryDetails[${index}][source]`, detail.salarySource);
+                updateEmployeeData.append(`salaryDetails[${index}][amount]`, detail.salaryAmount);
+                updateEmployeeData.append(`salaryDetails[${index}][from_date]`, detail.fromDate);
+                updateEmployeeData.append(`salaryDetails[${index}][to_date]`, detail.toDate);
+            });
+        }
         updateEmployeeData.append('aadhar_card_number', aadharCardNumber);
         updateEmployeeData.append('aadhar_card_file', aadharCardFile);
         updateEmployeeData.append('driving_license_number', drivingLicenseNumber);
@@ -294,43 +323,127 @@ class EditEmployee extends Component {
         updateEmployeeData.append('instagram_url', instagram);
         updateEmployeeData.append('upwork_profile_url', upworkProfile);
         updateEmployeeData.append('resume', resume);
-
+        updateEmployeeData.append("logged_in_employee_id", id);
+        updateEmployeeData.append('logged_in_employee_role', role); // Logged-in employee role
         fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=edit&user_id=${employeeId}`, {
             method: "POST",
             body: updateEmployeeData,
         })
-        .then((response) => response.json())
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json(); // Convert response to JSON
+        })
         .then((data) => {
-            if (data.status === "success") {
-                // Update the department list
+            console.log('update employee data === ', data);
+            if (data && data.status === "success") {
                 this.setState((prevState) => {
-                    console.log('updatedEmployeeData = ', data.data);
-                    // Update the existing department in the array
                     /* const updatedEmployeeData = prevState.users.map((user) =>
-                        user.id === selectedUser.id ? { ...user, ...data.updatedSalaryData } : user
-                    );
-                
+                        user.id === employeeId ? { ...user, ...data.data } : user
+                    ); */
+    
                     return {
-                        users: updatedEmployeeData,
-                    }; */
+                        ...prevState,
+                        ...data.data,
+                        // users: updatedEmployeeData,
+                        showSuccess: true,
+                        successMessage: "Employee updated successfully!",
+                        errorMessage: "",
+                        showError: false,
+                    };
                 });
+    
+                setTimeout(this.dismissMessages, 5000);
             } else {
-                console.log("Failed to add department");
+                console.error("Failed to update employee. Response:", data);
+                this.setState({
+                    errorMessage: data.message || "Failed to update employee.",
+                    showError: true,
+                    showSuccess: false,
+                });
             }
         })
-        .catch((error) => console.error("Error:", error));
+        .catch(error => {
+            console.error("Error updating employee:", error);
+            this.setState({
+                errorMessage: "An error occurred while updating the employee.",
+                showError: true,
+                showSuccess: false,
+            });
+
+            // setTimeout(this.dismissMessages, 3000);
+        });
     }
+
+    // Render function for Bootstrap toast messages
+    renderAlertMessages = () => {
+        return (
+            
+            <>
+                {/* Add the alert for success messages */}
+                <div 
+                    className={`alert alert-success alert-dismissible fade show ${this.state.showSuccess ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-circle-check me-2"></i>
+                    {this.state.successMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showSuccess: false })}
+                    >
+                    </button>
+                </div>
+
+                {/* Add the alert for error messages */}
+                <div 
+                    className={`alert alert-danger alert-dismissible fade show ${this.state.showError ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                    {this.state.errorMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showError: false })}
+                    >
+                    </button>
+                </div>
+            </>
+        );
+    };
 
     render() {
         const { fixNavbar } = this.props;
-        const { firstName, lastName, email, gender, dob, joiningDate, mobile1, mobile2, address1, address2, emergencyContact1, emergencyContact2, emergencyContact3, skillsFrontend, skillsBackend,  bankAccountName, bankAccountNo, bankName, ifscCode, bankAddress, salaryDetails, aadharCardNumber,
-        drivingLicenseNumber, panCardNumber, facebook, twitter, linkedin, instagram, upworkProfile} = this.state;
+        const { firstName, lastName, username, email, gender, photo, photoUrl, dob, joiningDate, mobile1, mobile2, address1, address2, emergencyContact1, emergencyContact2, emergencyContact3, skillsFrontend, skillsBackend,  bankAccountName, bankAccountNo, bankName, ifscCode, bankAddress, salaryDetails, aadharCardNumber, aadharCardFile, aadharCardFileUrl, drivingLicenseNumber, drivingLicenseFile, drivingLicenseFileUrl, panCardNumber, panCardFile, panCardFileUrl, facebook, twitter, linkedin, instagram, upworkProfile, resume, resumeUrl} = this.state;
         // Frontend and Backend Skill Options
         const frontendSkills = ["HTML", "CSS", "JavaScript", "React", "Angular", "Vue"];
         const backendSkills = ["PHP", "Laravel", "Python", "Node.js", "Symfony", "Django", "Ruby on Rails"];
-
+        console.log('aadhar file === ', aadharCardFile);
+        console.log('aadhar file url =====', aadharCardFileUrl);
         return (
             <>
+                {/* Show success and error Messages */}
+                {this.renderAlertMessages()}
                 <div>
                     <div className={`section-body ${fixNavbar ? "marginTop" : ""}`}>
                         <div className="container-fluid">
@@ -372,6 +485,20 @@ class EditEmployee extends Component {
                                                 </div>
                                                 <div className="col-sm-6 col-md-4">
                                                     <div className="form-group">
+                                                        <label className="form-label">User Name</label>
+                                                        <input
+                                                            type="text"
+                                                            name="username"
+                                                            id='username'
+                                                            className="form-control"
+                                                            placeholder="Enter User Name"
+                                                            value={username}
+                                                            onChange={this.handleChange}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="col-sm-6 col-md-4">
+                                                    <div className="form-group">
                                                         <label className="form-label">Email address</label>
                                                         <input
                                                             type="email"
@@ -402,18 +529,24 @@ class EditEmployee extends Component {
                                                         </select>
                                                     </div>
                                                 </div>
-                                                <div className="col-sm-6 col-md-4">
-                                                    <div className="form-group">
-                                                        <label className="form-label">Photo</label>
-                                                        <input
-                                                            type="file"
-                                                            name="photo"
-                                                            className="form-control"
-                                                            onChange={this.handleFileChange}
-                                                            accept="image/*"
-                                                        />
-                                                    </div>
-                                                </div>
+                                                <div className="col-md-4 col-sm-12">
+                                                    <label className="form-label">Select Department</label>
+													<div className="form-group">
+														<select
+															className="form-control show-tick"
+															value={this.state.selectedDepartment}
+															onChange={this.handleChange}
+															name="selectedDepartment"
+														>
+															<option value="">Select Department</option>
+															{this.state.departments.map((dept) => (
+																<option key={dept.id} value={dept.id}>
+																	{dept.department_name}
+																</option>
+															))}
+														</select>
+													</div>
+												</div>
                                                 <div className="col-sm-6 col-md-4">
                                                     <div className="form-group">
                                                         <label className="form-label">DOB</label>
@@ -442,7 +575,37 @@ class EditEmployee extends Component {
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="col-sm-6 col-md-6">
+                                                <div className="col-sm-6 col-md-4">
+                                                    <div className="form-group">
+                                                        <label className="form-label">Photo</label>
+                                                        <input
+                                                            type="file"
+                                                            name="photo"
+                                                            className="form-control"
+                                                            onChange={this.handleFileChange}
+                                                            accept="image/*"
+                                                        />
+
+                                                        {photo ? (
+                                                            <div className="d-inline-block">
+                                                                <a
+                                                                    href={
+                                                                        photoUrl ? photoUrl : `${process.env.REACT_APP_API_URL}/${photo.name || photo}`
+                                                                    }
+                                                                    className="text-primary small"
+                                                                    style={{ fontWeight: "500", display: "inline-block" }}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    {photo instanceof File ? this.state.photo.name : this.state.photo.split('/').pop().replace(/^\w+-/, '')}
+                                                                </a>
+                                                            </div>
+                                                        ) : (
+                                                            <small>Profile not uploaded</small>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="col-sm-6 col-md-4">
                                                     <div className="form-group">
                                                         <label className="form-label">Mobile No (1)</label>
                                                         <input
@@ -456,7 +619,7 @@ class EditEmployee extends Component {
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="col-sm-6 col-md-6">
+                                                <div className="col-sm-6 col-md-4">
                                                     <div className="form-group">
                                                         <label className="form-label">Mobile No (2)</label>
                                                         <input
@@ -541,18 +704,6 @@ class EditEmployee extends Component {
                                                     <div className="col-sm-6 col-md-12">
                                                         <label className="form-label">Frontend</label>
                                                         <div className="d-flex flex-wrap">
-                                                            {/* {frontendSkills.map((skill) => (
-                                                                <label key={skill} className="mr-3 mb-2">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    // defaultValue={`${this.getColor(skill)}`}
-                                                                    value={skill}
-                                                                    checked={skillsFrontend.includes(skill)}
-                                                                    onChange={(e) => this.handleSkillChange(e, "skillsFrontend")}
-                                                                />{" "}
-                                                                <span className={`tag tag-${this.getColor(skill)} py-1 px-2`}>{skill}</span>
-                                                                </label>
-                                                            ))} */}
                                                             {frontendSkills.map((skill) => (
                                                                 <label key={skill} className="colorinput mr-3 mb-2">
                                                                     <input
@@ -574,17 +725,6 @@ class EditEmployee extends Component {
                                                     <div className="col-sm-6 col-md-12">
                                                         <label className="form-label">Backend</label>
                                                         <div className="d-flex flex-wrap">
-                                                            {/* {backendSkills.map((skill) => (
-                                                                <label key={skill} className="mr-3 mb-2">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    value={skill}
-                                                                    checked={skillsBackend.includes(skill)}
-                                                                    onChange={(e) => this.handleSkillChange(e, "skillsBackend")}
-                                                                />{" "}
-                                                                <span className={`tag tag-${this.getColor(skill)} py-1 px-2`}>{skill}</span>
-                                                                </label>
-                                                            ))} */}
                                                             {backendSkills.map((skill) => (
                                                                 <label key={skill} className="colorinput mr-3 mb-2">
                                                                     <input
@@ -754,6 +894,8 @@ class EditEmployee extends Component {
                                                     <div className="col-sm-6 col-md-4">
                                                         <div className="form-group">
                                                             <label className="form-label">Aadhar Card</label>
+                                                            
+                                                            {/* Aadhaar Card Number Input */}
                                                             <input
                                                                 type="text"
                                                                 name="aadharCardNumber"
@@ -763,13 +905,33 @@ class EditEmployee extends Component {
                                                                 value={aadharCardNumber}
                                                                 onChange={this.handleChange}
                                                             />
+
+                                                            {/* File Upload */}
                                                             <input
                                                                 type="file"
                                                                 name="aadharCardFile"
                                                                 className="form-control"
-                                                                placeholder="Aadhar Card"
                                                                 onChange={this.handleFileChange}
                                                             />
+
+                                                            {/* File Preview Link */}
+                                                            {aadharCardFile && aadharCardFile !== "" ? (
+                                                                <div className="d-inline-block" style={{ display: "inline-block" }}>
+                                                                    <a
+                                                                        href={
+                                                                            aadharCardFileUrl ? aadharCardFileUrl : `${process.env.REACT_APP_API_URL}/${aadharCardFile.name || aadharCardFile}`
+                                                                        }
+                                                                        className="text-primary small"
+                                                                        style={{ fontWeight: "500", display: "inline-block" }}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                    >
+                                                                        {aadharCardFile instanceof File ? aadharCardFile.name : aadharCardFile.split('/').pop().replace(/^\w+-/, '')}
+                                                                    </a>
+                                                                </div>
+                                                            ) : (
+                                                                <small className="text-primary small" style={{ fontWeight: "500" }}>Aadhaar card not uploaded</small>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="col-sm-6 col-md-4">
@@ -791,6 +953,24 @@ class EditEmployee extends Component {
                                                                 placeholder="Driving License"
                                                                 onChange={this.handleFileChange}
                                                             />
+                                                            {/* File Preview Link */}
+                                                            {drivingLicenseFile ? (
+                                                                <div className="d-inline-block">
+                                                                    <a
+                                                                        href={
+                                                                            drivingLicenseFileUrl ? drivingLicenseFileUrl : `${process.env.REACT_APP_API_URL}/${drivingLicenseFile.name || drivingLicenseFile}`
+                                                                        }
+                                                                        className="text-primary small"
+                                                                        style={{ fontWeight: "500", display: "inline-block" }}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                    >
+                                                                        {drivingLicenseFile instanceof File ? drivingLicenseFile.name : drivingLicenseFile.split('/').pop().replace(/^\w+-/, '')}
+                                                                    </a>
+                                                                </div>
+                                                            ) : (
+                                                                <small className="text-primary small" style={{ fontWeight: "500" }}>Driving license not uploaded</small>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="col-sm-6 col-md-4">
@@ -812,6 +992,25 @@ class EditEmployee extends Component {
                                                                 placeholder="Pan Card"
                                                                 onChange={this.handleFileChange}
                                                             />
+
+                                                            {/* File Preview Link */}
+                                                            {panCardFile ? (
+                                                                <div className="d-inline-block">
+                                                                    <a
+                                                                        href={
+                                                                            panCardFileUrl ? panCardFileUrl : `${process.env.REACT_APP_API_URL}/${panCardFile.name || panCardFile}`
+                                                                        }
+                                                                        className="text-primary small"
+                                                                        style={{ fontWeight: "500", display: "inline-block" }}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                    >
+                                                                        {panCardFile instanceof File ? panCardFile.name : panCardFile.split('/').pop().replace(/^\w+-/, '')}
+                                                                    </a>
+                                                                </div>
+                                                            ) : (
+                                                                <small className="text-primary small" style={{ fontWeight: "500" }}>Pan card not uploaded</small>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -899,6 +1098,24 @@ class EditEmployee extends Component {
                                                             placeholder="Select your resume"
                                                             onChange={this.handleFileChange}
                                                         />
+                                                        {/* Resume Preview Link */}
+                                                        {resume ? (
+                                                            <div className="d-inline-block">
+                                                                <a
+                                                                    href={
+                                                                        resumeUrl ? resumeUrl : `${process.env.REACT_APP_API_URL}/${resume.name || resume}`
+                                                                    }
+                                                                    className="text-primary small"
+                                                                    style={{ fontWeight: "500", display: "inline-block" }}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    {resume instanceof File ? resume.name : resume.split('/').pop().replace(/^\w+-/, '')}
+                                                                </a>
+                                                            </div>
+                                                        ) : (
+                                                            <small className="text-primary small" style={{ fontWeight: "500" }}>Resume not uploaded</small>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

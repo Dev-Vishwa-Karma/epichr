@@ -1,7 +1,7 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow React app
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");   // Allow HTTP methods
-header("Access-Control-Allow-Headers: Content-Type");         // Allow headers like JSON content
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
 
 // Include the database connection
@@ -21,31 +21,42 @@ function sendJsonResponse($status, $data = null, $message = null) {
     exit;
 }
 
-// SQL query to get all dapartments
-$sql = "SELECT * FROM employee_leaves";
-
 $action = !empty($_GET['action']) ? $_GET['action'] : 'view';
 
 if (isset($action)) {
     switch ($action) {
         case 'view':
-            if (isset($_GET['id']) && is_numeric($_GET['id']) && $_GET['id'] > 0) {
-                // Prepare SELECT statement with WHERE clause using parameter binding
-                $stmt = $conn->prepare("SELECT * FROM employee_leaves WHERE id = ?");
-                $stmt->bind_param("i", $_GET['id']); // Bind the id as an integer
+            if (isset($_GET['employee_id']) && is_numeric($_GET['employee_id']) && $_GET['employee_id'] > 0) {
+                // Fetch leaves only for the specific employee
+                $stmt = $conn->prepare("SELECT 
+                employee_leaves.id,
+                employee_leaves.employee_id, 
+                employee_leaves.from_date, 
+                employee_leaves.to_date,
+                employee_leaves.reason, 
+                employee_leaves.status,
+                employee_leaves.approved_by,
+                employee_leaves.created_at, 
+                employees.first_name, 
+                employees.last_name, 
+                employees.email
+                FROM employee_leaves
+                INNER JOIN employees ON employee_leaves.employee_id = employees.id
+                WHERE employee_leaves.employee_id = ?");
+                $stmt->bind_param("i", $_GET['employee_id']);
+
                 if ($stmt->execute()) {
                     $result = $stmt->get_result();
                     if ($result) {
                         $employee_leaves = $result->fetch_all(MYSQLI_ASSOC);
-                        sendJsonResponse('success', $employee_leaves, null);
+                        sendJsonResponse('success', $employee_leaves);
                     } else {
-                        sendJsonResponse('error', null, "No leaves found : $conn->error");
+                        sendJsonResponse('error', null, "No leaves found: $conn->error");
                     }
                 } else {
-                    sendJsonResponse('error', null, "Failed to execute query : $stmt->error");
+                    sendJsonResponse('error', null, "Failed to execute query: $stmt->error");
                 }
             } else {
-                // $result = $conn->query("SELECT * FROM employee_leaves");
                 $result = $conn->query("SELECT 
                         employee_leaves.id,
                         employee_leaves.employee_id, 
@@ -71,8 +82,7 @@ if (isset($action)) {
 
         case 'add':
             // Get form data
-            // $employee_id = isset($_POST['employee_id']) ? $_POST['employee_id'] : null;
-            $employee_id = 6;
+            $employee_id = isset($_POST['employee_id']) ? $_POST['employee_id'] : null;
             $from_date = $_POST['from_date'];
             $to_date = $_POST['to_date'];
             $reason = $_POST['reason'];
@@ -121,9 +131,9 @@ if (isset($action)) {
                     'status' => $status,
                 ];
                 // If successful, send success response
-                sendJsonResponse('success', $addEmployeeLeaveData, "Leave request added successfully");
+                sendJsonResponse('success', $addEmployeeLeaveData, "Leave added successfully");
             } else {
-                sendJsonResponse('error', null, "Failed to add leave request $stmt->error");
+                sendJsonResponse('error', null, "Failed to add leave $stmt->error");
             }
             break;
 
@@ -131,8 +141,7 @@ if (isset($action)) {
             if (isset($_GET['id']) && is_numeric($_GET['id']) && $_GET['id'] > 0) {
                 $id = $_GET['id'];
                 // Validate and get POST data
-                // $employee_id = isset($_POST['employee_id']) ? $_POST['employee_id'] : null;
-                $employee_id = 7;
+                $employee_id = isset($_POST['employee_id']) ? $_POST['employee_id'] : null;
                 $from_date = $_POST['from_date'];
                 $to_date = $_POST['to_date'];
                 $reason = $_POST['reason'];
@@ -172,7 +181,7 @@ if (isset($action)) {
                         'status' => $status,
                         'updated_at' => $updated_at
                     ];
-                    sendJsonResponse('success', $updatedEmployeeLeaveData, 'Employee Leave updated successfully');
+                    sendJsonResponse('success', $updatedEmployeeLeaveData, 'Leave updated successfully');
                 } else {
                     sendJsonResponse('error', null, 'Failed to update employee leave');
                 }
@@ -190,10 +199,10 @@ if (isset($action)) {
                 $stmt = $conn->prepare("DELETE FROM employee_leaves WHERE id = ?");
                 $stmt->bind_param('i', $_GET['id']);
                 if ($stmt->execute()) {
-                    sendJsonResponse('success', null, 'Record deleted successfully');
+                    sendJsonResponse('success', null, 'Leave deleted successfully');
                 } else {
                     http_response_code(500);
-                    sendJsonResponse('error', null, 'Failed to delete record');
+                    sendJsonResponse('error', null, 'Failed to delete leave');
                 }
                 exit;
             } else {

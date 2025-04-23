@@ -4,7 +4,7 @@ export default class Footer extends Component {
 	render() {
 		return (
 			<>
-				<div>
+				{/* <div>
 					<div className="section-body">
 						<footer className="footer">
 							<div className="container-fluid">
@@ -33,7 +33,7 @@ export default class Footer extends Component {
 							</div>
 						</footer>
 					</div>
-				</div>
+				</div> */}
 			</>
 		);
 	}

@@ -34,4 +34,70 @@ div.rtl{
     white-space: pre-line;
     word-wrap: break-word;
     overflow-wrap: break-word;
-  }
+}
+
+/* Holiday Styling */
+.holiday-event {
+    background-color: #fdecea !important; /* Light Red */
+    border-left: 6px solid #d9534f !important; /* Dark Red */
+    color: #d9534f !important;
+}
+
+/* Regular Events (Birthdays, Anniversaries, etc.) */
+.regular-event {
+    background-color: #e9f7df !important; /* Light Green */
+    border-left: 6px solid #28a745 !important; /* Dark Green */
+    color: #28a745 !important;
+}
+
+/* Other Event Styling */
+.other-event {
+    background-color: #e8f4fc !important;
+    border-left: 6px solid #007bff !important;
+    color: #007bff !important;
+}
+
+
+/* Dashboard component css */
+@media (min-width: 1200px) { 
+    .col-xl-1_7 {
+        flex: 0 0 14.2857%;
+        max-width: 14.2857%;
+    }
+}
+
+/* Add this css for projectlist.js file */
+.avatar-list-stacked .avatar.add-space {
+    margin-right: 3px !important;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #E0E7FF;
+    border-radius: 50%;
+    border: 1px solid #C7D2FE
+}
+
+/* Employee section css */
+.custom-col {
+    flex: 1 1 20%; /* Ensures five equal sections */
+    max-width: 20%;
+}
+  
+@media (max-width: 1200px) {
+    .custom-col {
+      flex: 1 1 33%; /* Adjust for smaller screens */
+      max-width: 33%;
+    }
+}
+  
+@media (max-width: 768px) {
+    .custom-col {
+        flex: 1 1 50%;
+        max-width: 50%;
+    }
+}
+  

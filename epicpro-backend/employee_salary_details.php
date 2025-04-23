@@ -26,7 +26,6 @@
                     // Prepare SELECT statement with WHERE clause
                     $sql .= " WHERE employee_id = ?";
                     $stmt = $conn->prepare($sql);
-                    // Bind the employee_id parameter
                     $stmt->bind_param("i", $_GET['employee_id']);
                     $stmt->execute();
                     $result = $stmt->get_result();

@@ -21,9 +21,10 @@ class Employee extends Component {
 			employeeLeavesData: [],
 			selectedSalaryDetails: [],
 			totalLeaves: 0,
-			pendingLeaves: 0,
 			approvedLeaves: 0,
 			rejectedLeaves: 0,
+			cancelledLeaves: 0,
+			pendingLeaves: 0,
 			message: null,
 			deleteUser: null,
 			// Initialize all fields with empty string or null
@@ -68,12 +69,23 @@ class Employee extends Component {
 			},
 			// Set state for add employee leave
 			employee_id: '',
+			logged_in_employee_id: '',
+			logged_in_employee_role: '',
 			from_date: '',
 			to_date: '',
 			reason: '',
 			status: '',
 			selectedEmployeeLeave: '',
 			deleteEmployeeLeave: '',
+			searchQuery: "",
+			currentPageEmployees: 1,
+			currentPageLeaves: 1,
+            dataPerPage: 10,
+			loading: true,
+			showSuccess: false,
+			successMessage: '',
+			showError: false,
+			errorMessage: ''
 		};
 	}
 	handleStatistics(e) {
@@ -84,67 +96,107 @@ class Employee extends Component {
 	}
 
 	calculateLeaveCounts = (employeeLeavesData) => {
-		console.log('employeeLeavesData = ', employeeLeavesData);
 		let totalLeaves = 0;
 		let pendingLeaves = 0;
 		let approvedLeaves = 0;
 		let rejectedLeaves = 0;
-	
+		let cancelledLeaves = 0;
 		// Iterate over the employee leaves data and calculate counts
 		employeeLeavesData.forEach((leave) => {
 			if (leave) {
-			totalLeaves += 1;
-			switch (leave.status) {
-				case 'pending':
-					pendingLeaves += 1;
-					break;
-				case 'approved':
-					approvedLeaves += 1;
-					break;
-				case 'rejected':
-					rejectedLeaves += 1;
-					break;
-				default:
-					break;
-			}
+				totalLeaves += 1;
+				switch (leave.status) {
+					case 'pending':
+						pendingLeaves += 1;
+						break;
+					case 'approved':
+						approvedLeaves += 1;
+						break;
+					case 'rejected':
+						rejectedLeaves += 1;
+						break;
+					case 'cancelled':
+						cancelledLeaves += 1;
+						break;
+					default:
+						break;
+				}
 			}
 		});
 	
-		return { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves };
-	};	
+		return { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves };
+	};
 
 	componentDidMount() {
-		const apiUrl = process.env.REACT_APP_API_URL;
-
-		// Make the GET API call when the component is mounted
-		Promise.all([
-            fetch(`${apiUrl}/get_employees.php?action=view&role=employee`).then((res) => res.json()),
-            fetch(`${apiUrl}/employee_leaves.php`).then((res) => res.json()),
-        ])
-		.then(([employeesData, employeeLeavesData]) => {
-			// Calculate leaves
-			const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(employeeLeavesData.data);
-
+		if (window.user) {
+			const { id, role } = window.user;
 			this.setState({
-				employeeData: employeesData.data,
-				employeeLeavesData: employeeLeavesData.data,
-				totalLeaves: totalLeaves,
-				pendingLeaves: pendingLeaves,
-				approvedLeaves: approvedLeaves,
-				rejectedLeaves: rejectedLeaves
+				employee_id: id || null,
+				logged_in_employee_role: role || null,
 			});
+	
+			const apiUrl = process.env.REACT_APP_API_URL;
+			let employeesUrl = "";
+			let leavesUrl = "";
+	
+			// Role-based API selection
+			if (role === "admin" || role === "super_admin") {
+				employeesUrl = `${apiUrl}/get_employees.php?action=view&role=employee`; // Fetch all employees
+				leavesUrl = `${apiUrl}/employee_leaves.php`; // Fetch all leaves
+			} else if (role === "employee") {
+				employeesUrl = `${apiUrl}/get_employees.php?action=view&user_id=${id}`; // Fetch only logged-in employee
+				leavesUrl = `${apiUrl}/employee_leaves.php?employee_id=${id}`; // Fetch only logged-in employee's leaves
+			} else {
+				console.warn("Invalid role or role not found.");
+				return;
+			}
+	
+			// Fetch employees & leaves based on role
+			Promise.all([
+				fetch(employeesUrl, {
+					method: "GET"
+				}).then(res => res.json()),
+				fetch(leavesUrl, {
+					method: "GET"
+				}).then(res => res.json()),
+			])
+			.then(([employeesData, employeeLeavesData]) => {
+				// If only a single employee is returned, convert it to an array
+				let employeesArray = Array.isArray(employeesData.data) ? employeesData.data : [employeesData.data];
 
-		})
-		.catch(err => {
-			this.setState({ message: 'Failed to fetch data' });
-			console.error(err);
-		});
+				let employeesLeaveArray = Array.isArray(employeeLeavesData.data) ? employeeLeavesData.data : [employeeLeavesData.data];
+
+				// Calculate leaves
+				const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves } = 
+					this.calculateLeaveCounts(employeeLeavesData.data);
+	
+				this.setState({
+					employeeData: employeesArray,
+					filterEmployeesData: employeesArray,
+					employeeLeavesData: employeesLeaveArray,
+					totalLeaves,
+					pendingLeaves,
+					approvedLeaves,
+					rejectedLeaves,
+					cancelledLeaves,
+					loading: false
+				});
+			})
+			.catch(err => {
+				this.setState({ message: "Failed to fetch data", loading: false });
+				console.error(err);
+			});
+		} else {
+			console.warn("window.user is undefined");
+		}
 	}
+		
 
 	goToEditEmployee(employee, employeeId) {
-		console.log(employee)
 		// Fetch salary details based on employee_id
-		fetch(`${process.env.REACT_APP_API_URL}/employee_salary_details.php?action=view&employee_id=${employeeId}`)
+		fetch(`${process.env.REACT_APP_API_URL}/employee_salary_details.php?action=view&employee_id=${employeeId}`,{
+			method: "POST",
+		})
         .then((res) => res.json())
         .then((salaryDetails) => {
             if (salaryDetails.data) {
@@ -165,8 +217,14 @@ class Employee extends Component {
         });
 	}
 
-	viewEmployee() {
-		this.props.history.push("/view-employee");
+	viewEmployee(employee, employeeId) {
+		this.props.history.push({
+			pathname: `/view-employee`,
+			state: { 
+				employee, 
+				employeeId,
+			}
+		});
 	}
 
 	// Function to handle tab change
@@ -198,27 +256,57 @@ class Employee extends Component {
     };
 
 	confirmDelete = () => {
-        const { deleteUser } = this.state;
-      
-        if (!deleteUser) return;
-      
-        // fetch(`http://localhost/react/epicpro-backend/users.php?action=delete&user_id=${deleteUser}`, {
-		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=delete&user_id=${deleteUser}`, {
-          	method: 'DELETE'
-        })
-        .then((response) => response.json())
-        .then((data) => {
+		const { deleteUser, currentPageEmployees, employeeData, dataPerPage } = this.state;
+		const {id, role} = window.user;
+		const loggedInUserId = id; // Get logged-in user ID
+		const loggedInUserRole = role; // Get logged-in user role
+	
+		if (!deleteUser) return;
+	
+		fetch(`${process.env.REACT_APP_API_URL}/get_employees.php?action=delete`, {
+			method: "POST",  // Change method from DELETE to POST
+			headers: {
+				"Content-Type": "application/json",
+				method: "POST",
+			},
+			body: JSON.stringify({
+				user_id: deleteUser,
+				logged_in_employee_id: loggedInUserId,
+				logged_in_employee_role: loggedInUserRole,
+			}),
+		})
+		.then((response) => response.json())
+		.then((data) => {
 			if (data.status === "success") {
-				this.setState((prevState) => ({
-					employeeData: prevState.employeeData.filter((d) => d.id !== deleteUser),
-				}));
+				// Update users state after deletion
+				const updatedEmployees = employeeData.filter((d) => d.id !== deleteUser);
+
+				// Calculate the total pages after deletion
+				const totalPages = Math.ceil(updatedEmployees.length / dataPerPage);
+	
+				// Adjust currentPageEmployees if necessary (if we're on a page that no longer has data)
+				let newPage = currentPageEmployees;
+				if (updatedEmployees.length === 0) {
+					newPage = 1;
+				} else if (currentPageEmployees > totalPages) {
+					newPage = totalPages;
+				}
+
+				this.setState({
+					employeeData: updatedEmployees,
+					successMessage: "Employee deleted successfully",
+					showSuccess: true,
+					currentPageEmployees: newPage, // Update currentPageEmployees to the new page
+					deleteUser: null,  // Clear the deleteUser state
+				});
 				document.querySelector("#deleteEmployeeModal .close").click();
 			} else {
-				alert('Failed to delete department.');
+				alert("Failed to delete employee.");
 			}
-        })
-        .catch((error) => console.error('Error:', error));
-    };
+		})
+		.catch((error) => console.error("Error:", error));
+	};
+	
 
 	// Function to close the modal
     closeModal = () => {
@@ -232,7 +320,7 @@ class Employee extends Component {
     };
 
 	handleLeaveStatus = (event) => {
-		const { name, value } = event.target;
+		const { value } = event.target;
 		this.setState({
             status: value, // Update selectedRole in state
         });
@@ -249,21 +337,30 @@ class Employee extends Component {
 	}
 
 	// API endpoint to add employee leave data
-    addLeave = () => {
-        const { employee_id, from_date, to_date, reason, status} = this.state;
+    addLeave = (event) => {
+		event.preventDefault();
+
+        const { employee_id, from_date, to_date, reason, status, logged_in_employee_role} = this.state;
 
         // Validate form inputs
         if (!from_date || !to_date || !reason) {
-            alert("Please fill in all fields");
+            console.log("Please fill in all fields");
             return;
         }
 
+		// If role is 'employee', force status to 'pending'
+		// const finalStatus = logged_in_employee_role === "employee" ? "pending" : status;
+		const finalStatus = status || "pending"; 
+
+		// Ensure correct employee_id is sent
+		const selectedEmployeeId = logged_in_employee_role === "employee" ? window.user.id : employee_id;
+
         const addEmployeeLeaveData = new FormData();
-        addEmployeeLeaveData.append('employee_id', employee_id);
+        addEmployeeLeaveData.append('employee_id', selectedEmployeeId);
         addEmployeeLeaveData.append('from_date', from_date);
         addEmployeeLeaveData.append('to_date', to_date);
         addEmployeeLeaveData.append('reason', reason);
-        addEmployeeLeaveData.append('status', status);
+        addEmployeeLeaveData.append('status', finalStatus);
 
         // API call to add employee leave
         fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=add`, {
@@ -277,7 +374,7 @@ class Employee extends Component {
 					const updatedEmployeeLeavesData = [...(prevState.employeeLeavesData || []), data.data];
 					
 					// Calculate the leave counts
-					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
+					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
 					
 					// Return the updated state
 					return {
@@ -286,20 +383,34 @@ class Employee extends Component {
 						pendingLeaves,
 						approvedLeaves,
 						rejectedLeaves,
-						
+						cancelledLeaves,
 						// Clear form fields after submission
 						from_date: "",
 						to_date: "",
 						reason: "",
-						status: ""
+						status: "",
+						showSuccess: true,
+						successMessage: data.message
 					};
 				});
 				document.querySelector("#addLeaveRequestModal .close").click();
+				setTimeout(() => this.setState({ showSuccess: false }), 3000);
             } else {
-                console.log("Failed to employee leave");
+				this.setState({
+					showError: true,
+					errorMessage: data.message,
+				});
+				setTimeout(() => this.setState({ showError: false }), 3000);
             }
         })
-        .catch((error) => console.error("Error:", error));
+        .catch((error) => {
+			console.error("Error:", error);
+			this.setState({
+				showError: true,
+				errorMessage: "An error occurred. Please try again later.",
+			});
+			setTimeout(() => this.setState({ showError: false }), 3000);
+		});
     };
 
 	
@@ -327,7 +438,7 @@ class Employee extends Component {
 		})
 		.then((response) => response.json())
 		.then((data) => {
-			if (data.status == "success") {
+			if (data.status === "success") {
 				this.setState((prevState) => {
 					// Update the employee leave data with the new data
 					const updatedEmployeeLeavesData = prevState.employeeLeavesData.map((leave) => {
@@ -338,7 +449,7 @@ class Employee extends Component {
 					});
 	
 					// Calculate the leave counts, excluding the totalLeaves count
-					const { pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
+					const { pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
 					
 					// Return the updated state
 					return {
@@ -346,16 +457,30 @@ class Employee extends Component {
 						pendingLeaves,
 						approvedLeaves,
 						rejectedLeaves,
+						cancelledLeaves,
+						showSuccess: true,
+						successMessage: data.message
 					};
 				});
 
 				document.querySelector("#editLeaveRequestModal .close").click();
-				// Optionally reload the department data here
+				setTimeout(() => this.setState({ showSuccess: false }), 3000);
 			} else {
-				console.log('Failed to update employee leave!');
+				this.setState({
+					showError: true,
+					errorMessage: data.message,
+				});
+				setTimeout(() => this.setState({ showError: false }), 3000);
 			}
 		})
-		.catch((error) => console.error('Error updating user:', error));
+		.catch((error) => {
+			console.error("Error:", error);
+			this.setState({
+				showError: true,
+				errorMessage: "An error occurred. Please try again later.",
+			});
+			setTimeout(() => this.setState({ showError: false }), 3000);
+		});
 	};
 
 	// Delete Employee leave
@@ -366,13 +491,15 @@ class Employee extends Component {
     };
 
 	confirmDeleteForEmployeeLeave = () => {
-        const { deleteEmployeeLeave } = this.state;
+        const { deleteEmployeeLeave, currentPageLeaves, dataPerPage } = this.state;
       
-        if (!deleteEmployeeLeave) return;
-      
-        // fetch(`http://localhost/react/epicpro-backend/users.php?action=delete&user_id=${deleteUser}`, {
-		fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=delete&id=${deleteEmployeeLeave}`, {
-          	method: 'DELETE'
+        if (!deleteEmployeeLeave) {
+			console.error("Employee leave ID is not found for deletion.");
+			return;
+		}
+
+        fetch(`${process.env.REACT_APP_API_URL}/employee_leaves.php?action=delete&id=${deleteEmployeeLeave}`, {
+          	method: 'DELETE',
         })
         .then((response) => response.json())
         .then((data) => {
@@ -382,7 +509,18 @@ class Employee extends Component {
 					const updatedEmployeeLeavesData = prevState.employeeLeavesData.filter((d) => d.id !== deleteEmployeeLeave);
 			
 					// Calculate the leave counts
-					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
+					const { totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves } = this.calculateLeaveCounts(updatedEmployeeLeavesData);
+
+					// Calculate the total pages after deletion
+					const totalPages = Math.ceil(updatedEmployeeLeavesData.length / dataPerPage);
+		
+					// Adjust currentPage if necessary (if we're on a page that no longer has data)
+					let newPage = currentPageLeaves;
+					if (updatedEmployeeLeavesData.length === 0) {
+						newPage = 1;
+					} else if (currentPageLeaves > totalPages) {
+						newPage = totalPages;
+					}
 			
 					// Return the updated state
 					return {
@@ -390,24 +528,148 @@ class Employee extends Component {
 						totalLeaves,
 						pendingLeaves,
 						approvedLeaves,
-						rejectedLeaves
+						rejectedLeaves,
+						cancelledLeaves,
+						currentPageLeaves: newPage,
+						showSuccess: true,
+						successMessage: data.message
 					};
 				});
 				// Close the modal after deletion
 				document.querySelector("#deleteLeaveRequestModal .close").click();
+				setTimeout(() => this.setState({ showSuccess: false }), 3000);
 			} else {
-				console.log('Failed to delete employee leave.');
+				this.setState({
+					showError: true,
+					errorMessage: data.message,
+				});
+				setTimeout(() => this.setState({ showError: false }), 3000);
 			}
         })
-        .catch((error) => console.error('Error:', error));
+		.catch((error) => {
+			console.error("Error:", error);
+			this.setState({
+				showError: true,
+				errorMessage: "An error occurred. Please try again later.",
+			});
+			setTimeout(() => this.setState({ showError: false }), 3000);
+		});
     };
 
+	// Handle Pagination of employee listing and employee leaves listing
+	handlePageChange = (newPage, listType) => {
+		if (listType === 'employees') {
+			const totalPages = Math.ceil(this.state.employeeData.length / this.state.dataPerPage);
+			if (newPage >= 1 && newPage <= totalPages) {
+				this.setState({ currentPageEmployees: newPage });
+			}
+		} else if (listType === 'leaves') {
+			const totalPages = Math.ceil(this.state.employeeLeavesData.length / this.state.dataPerPage);
+			if (newPage >= 1 && newPage <= totalPages) {
+				this.setState({ currentPageLeaves: newPage });
+			}
+		}
+	};	
+
+	// Add searching user by name and email
+	handleSearch = (event) => {
+        const query = event.target.value.toLowerCase(); // Get search input
+        this.setState({ searchQuery: query }, () => {
+			if (query === "") {
+				// If search is empty, reset users to the original list
+				this.setState({ employeeData: this.state.filterEmployeesData, currentPageEmployees: 1 });
+			} else {
+				const filtered = this.state.filterEmployeesData.filter(employee => {
+					return (
+						employee.first_name.toLowerCase().includes(query) ||
+						employee.last_name.toLowerCase().includes(query) ||
+						`${employee.first_name.toLowerCase()} ${employee.last_name.toLowerCase()}`.includes(query) ||  
+						employee.email.toLowerCase().includes(query)
+					);
+				});
+				this.setState({ employeeData: filtered, currentPageEmployees: 1});
+			}
+        });
+    };
+
+	// Render function for success and error messages
+    renderAlertMessages = () => {
+        return (
+            <>
+                {/* Add the alert for success messages */}
+                <div 
+                    className={`alert alert-success alert-dismissible fade show ${this.state.showSuccess ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-circle-check me-2"></i>
+                    {this.state.successMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showSuccess: false })}
+                    >
+                    </button>
+                </div>
+
+                {/* Add the alert for error messages */}
+                <div 
+                    className={`alert alert-danger alert-dismissible fade show ${this.state.showError ? "d-block" : "d-none"}`} 
+                    role="alert" 
+                    style={{ 
+                        position: "fixed", 
+                        top: "20px", 
+                        right: "20px", 
+                        zIndex: 1050, 
+                        minWidth: "250px", 
+                        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)" 
+                    }}
+                >
+                    <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                    {this.state.errorMessage}
+                    <button
+                        type="button"
+                        className="close"
+                        aria-label="Close"
+                        onClick={() => this.setState({ showError: false })}
+                    >
+                    </button>
+                </div>
+            </>
+        );
+    };
 
 	render() {
 		const { fixNavbar, /* statisticsOpen, statisticsClose */ } = this.props;
-		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, message, selectedEmployeeLeave } = this.state;
+		const { activeTab, showAddLeaveRequestModal, employeeData, employeeLeavesData, totalLeaves, pendingLeaves, approvedLeaves, rejectedLeaves, cancelledLeaves, message, selectedEmployeeLeave, currentPageEmployees,  currentPageLeaves, dataPerPage, loading } = this.state;
+
+		// Handle empty employee data safely
+		const employeeList = (employeeData || []).length > 0 ? employeeData : [];
+		const leaveList = (employeeLeavesData || []).length > 0 ? employeeLeavesData : [];
+
+		// Pagination Logic for Employees
+		const indexOfLastEmployee = this.state.currentPageEmployees * dataPerPage;
+		const indexOfFirstEmployee = indexOfLastEmployee - dataPerPage;
+		const currentEmployees = employeeList.slice(indexOfFirstEmployee, indexOfLastEmployee);
+		const totalPagesEmployees = Math.ceil(employeeList.length / dataPerPage);
+
+		// Pagination logic for employee leaves
+		const indexOfLastLeave = this.state.currentPageLeaves * dataPerPage;
+		const indexOfFirstLeave = indexOfLastLeave - dataPerPage;
+		const currentEmployeeLeaves = leaveList.slice(indexOfFirstLeave, indexOfLastLeave);
+		const totalPagesLeaves = Math.ceil(leaveList.length / dataPerPage);
+
 		return (
 			<>
+				{this.renderAlertMessages()} {/* Show Messages */}
 				<div>
 					<div>
 						<div className={`section-body ${fixNavbar ? "marginTop" : ""} `}>
@@ -450,85 +712,36 @@ class Employee extends Component {
 											</button>
 									</div>
 								</div>
+								{/* Show leave count */}
 								<div className="row">
-									<div className="col-lg-3 col-md-6">
-										<div className="card">
-											<div className="card-body w_sparkline">
-												<div className="details">
-													<span>Total Leaves</span>
-													<h3 className="mb-0">
-														<span className="counter">	<CountUp end={totalLeaves} /></span>
-													</h3>
-												</div>
-												<div className="w_chart">
-													<div id="mini-bar-chart1" className="mini-bar-chart" />
-												</div>
-											</div>
-										</div>
-										{/* 
-											<div className="w_chart">
-													<span
-														ref={this.sparkline1}
-														id="mini-bar-chart1"
-														className="mini-bar-chart"
-													></span>
-												</div>
-										*/}
-									</div>
-									<div className="col-lg-3 col-md-6">
-										<div className="card">
-											<div className="card-body w_sparkline">
-												<div className="details">
-													<span>Approved Leaves</span>
-													<h3 className="mb-0">
-														<CountUp end={approvedLeaves} />
-														{/* <span >124</span> */}
-													</h3>
-												</div>
-												<div className="w_chart">
-													<span
-														ref={this.sparkline2}
-														id="mini-bar-chart2"
-														className="mini-bar-chart"
-													/>
+									{[
+										{ label: "Total Leaves", value: totalLeaves },
+										{ label: "Approved Leaves", value: approvedLeaves },
+										{ label: "Rejected Leaves", value: rejectedLeaves },
+										{ label: "Pending Leaves", value: pendingLeaves },
+										{ label: "Cancelled Leaves", value: cancelledLeaves}
+									].map((item, index) => (
+										<div className="col-lg-2 custom-col col-md-6" key={index}>
+											<div className="card">
+												<div className="card-body w_sparkline">
+													<div className="details">
+														<span>{item.label}</span>
+														{loading ? (
+															<div className="d-flex" style={{ height: "20px" }}>
+																<div className="spinner-border" role="status" style={{ width: "20px", height: "20px", borderWidth: "2px" }}>
+																<span className="sr-only">Loading...</span>
+																</div>
+															</div>
+														) : (
+															<h3 className="mb-0 counter">
+																<CountUp end={item.value} />
+															</h3>
+														)}
+													</div>
 												</div>
 											</div>
 										</div>
-									</div>
-									<div className="col-lg-3 col-md-6">
-										<div className="card">
-											<div className="card-body w_sparkline">
-												<div className="details">
-													<span>Rejected Leaves</span>
-													<h3 className="mb-0 counter">	<CountUp end={rejectedLeaves} /></h3>
-												</div>
-												<div className="w_chart">
-													<span
-														ref={this.sparkline3}
-														id="mini-bar-chart3"
-														className="mini-bar-chart"
-													/>
-												</div>
-											</div>
-										</div>
-									</div>
-									<div className="col-lg-3 col-md-6">
-										<div className="card">
-											<div className="card-body w_sparkline">
-												<div className="details">
-													<span>Pending Leaves</span>
-													<h3 className="mb-0 counter">	<CountUp end={pendingLeaves} /></h3>
-												</div>
-												<div className="w_chart">
-													<span
-														ref={this.sparkline4}
-														id="mini-bar-chart4"
-														className="mini-bar-chart"
-													/>
-												</div>
-											</div>
-										</div>
-									</div>
+									))}
 								</div>
 							</div>
 						</div>
@@ -540,215 +753,276 @@ class Employee extends Component {
 											<div className="card-header">
 												<h3 className="card-title">Employee List</h3>
 												<div className="card-options">
-													<form>
-														<div className="input-group">
+													<div className="input-group">
+														<div className="input-icon ml-2">
+															<span className="input-icon-addon">
+																<i className="fe fe-search" />
+															</span>
 															<input
 																type="text"
-																className="form-control form-control-sm"
-																placeholder="Search something..."
-																name="s"
+																className="form-control"
+																placeholder="Search employee..."
+																// name="s"
+																value={this.state.searchQuery}
+																onChange={this.handleSearch}
 															/>
-															<span className="input-group-btn ml-2">
-																<button className="btn btn-icon btn-sm" type="submit">
-																	<span className="fe fe-search" />
-																</button>
-															</span>
 														</div>
-													</form>
+													</div>
 												</div>
 											</div>
 											<div className="card-body">
-												<div className="table-responsive">
-													<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
-														<thead>
-															<tr>
-																<th>#</th>
-																<th>Name</th>
-																<th>Employee ID</th>
-																<th>Phone</th>
-																<th>Join Date</th>
-																<th>Role</th>
-																<th>Action</th>
-															</tr>
-														</thead>
-														<tbody>
-															{employeeData.length > 0 ? (
-																employeeData.map((employee, index) => (
-																	<tr key={index}>
-																		<td className="w40">
-																			<label className="custom-control custom-checkbox">
-																				<input
-																					type="checkbox"
-																					className="custom-control-input"
-																					name="example-checkbox1"
-																					defaultValue="option1"
-																				/>
-																				<span className="custom-control-label">
-																					&nbsp;
+												{loading ? (
+													<div className="card-body">
+														<div className="dimmer active">
+															<div className="loader" />
+														</div>
+													</div>
+                                                ) : ( // Show Table after loading is false
+													<div className="table-responsive">
+														<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
+															<thead>
+																<tr>
+																	<th>#</th>
+																	<th>Name</th>
+																	<th>Employee ID</th>
+																	<th>Phone</th>
+																	<th>Join Date</th>
+																	<th>Role</th>
+																	<th>Action</th>
+																</tr>
+															</thead>
+															<tbody>
+																{currentEmployees.length > 0 ? (
+																	currentEmployees.map((employee, index) => (
+																		<tr key={index}>
+																			<td className="w40">
+																				{((this.state.currentPageEmployees - 1) * dataPerPage + index + 1)
+																				.toString()
+																				.padStart(2, '0')}
+																			</td>
+																			<td className="d-flex">
+																				<span
+																					className="avatar avatar-blue"
+																					data-toggle="tooltip"
+																					data-original-title="Avatar Name"
+																				>
+																					{employee.first_name.charAt(0).toUpperCase()}{employee.last_name.charAt(0).toUpperCase()}
 																				</span>
-																			</label>
-																		</td>
-																		<td className="d-flex">
-																			<span
-																				className="avatar avatar-blue"
-																				data-toggle="tooltip"
-																				data-original-title="Avatar Name"
-																			>
-																				{employee.first_name.charAt(0).toUpperCase()}{employee.last_name.charAt(0).toUpperCase()}
-																			</span>
-																			<div className="ml-3">
-																				<h6 className="mb-0">
-																					{`${employee.first_name} ${employee.last_name}`}
-																				</h6>
-																				<span className="text-muted">
-																					{employee.email}
-																				</span>
-																			</div>
-																		</td>
-																		<td>
-																			<span>{employee.code}</span>
-																		</td>
-																		<td>
-																			<span>{employee.mobile_no1}</span>
-																		</td>
-																		<td>
-																			{new Intl.DateTimeFormat('en-US', {
-																				day: '2-digit',
-																				month: 'short',
-																				year: 'numeric',
-																			}).format(new Date(employee.joining_date))}
-																		</td>
-																		<td>{employee.job_role}</td>
-																		<td>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="View"
-																				onClick={() => this.viewEmployee()}
-																			>
-																				<i className="fa fa-eye" />
-																			</button>
-																			<button
-																				onClick={() => this.goToEditEmployee(employee, employee.id)}
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="Edit"
-																			>
-																				<i className="fa fa-edit" />
-																			</button>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm js-sweetalert"
-																				title="Delete"
-																				data-type="confirm"
-																				data-toggle="modal"
-																				data-target="#deleteEmployeeModal"
-																				onClick={() => this.openDeleteModal(employee.id)}
-																			>
-																				<i className="fa fa-trash-o text-danger" />
-																			</button>
-																		</td>
-																	</tr>
-																))
-															): (
-																!message && <tr><td>No employees found</td></tr>
-															)}
-														</tbody>
-													</table>
-												</div>
+																				<div className="ml-3">
+																					<h6 className="mb-0">
+																						{`${employee.first_name} ${employee.last_name}`}
+																					</h6>
+																					<span className="text-muted">
+																						{employee.email}
+																					</span>
+																				</div>
+																			</td>
+																			<td>
+																				<span>{employee.code}</span>
+																			</td>
+																			<td>
+																				<span>{employee.mobile_no1}</span>
+																			</td>
+																			<td>
+																				{new Intl.DateTimeFormat('en-US', {
+																					day: '2-digit',
+																					month: 'short',
+																					year: 'numeric',
+																				}).format(new Date(employee.joining_date))}
+																			</td>
+																			<td>{employee.department_name}</td>
+																			<td>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="View"
+																					onClick={() => this.viewEmployee(employee, employee.id)}
+																				>
+																					<i className="fa fa-eye" />
+																				</button>
+																				<button
+																					onClick={() => this.goToEditEmployee(employee, employee.id)}
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="Edit"
+																				>
+																					<i className="fa fa-edit" />
+																				</button>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm js-sweetalert"
+																					title="Delete"
+																					data-type="confirm"
+																					data-toggle="modal"
+																					data-target="#deleteEmployeeModal"
+																					onClick={() => this.openDeleteModal(employee.id)}
+																				>
+																					<i className="fa fa-trash-o text-danger" />
+																				</button>
+																			</td>
+																		</tr>
+																	))
+																): (
+																	!message && <tr><td>No employees found</td></tr>
+																)}
+															</tbody>
+														</table>
+													</div>
+												)}
 											</div>
 										</div>
+
+										{/* Only show pagination if there are employees */}
+										{totalPagesEmployees > 1 && (
+											<nav aria-label="Page navigation">
+												<ul className="pagination mb-0 justify-content-end">
+													<li className={`page-item ${currentPageEmployees === 1 ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageEmployees - 1, 'employees')}>
+															Previous
+														</button>
+													</li>
+													{[...Array(totalPagesEmployees)].map((_, i) => (
+														<li key={i} className={`page-item ${currentPageEmployees === i + 1 ? 'active' : ''}`}>
+															<button className="page-link" onClick={() => this.handlePageChange(i + 1, 'employees')}>
+																{i + 1}
+															</button>
+														</li>
+													))}
+													<li className={`page-item ${currentPageEmployees === totalPagesEmployees ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageEmployees + 1, 'employees')}>
+															Next
+														</button>
+													</li>
+												</ul>
+											</nav>
+										)}
 									</div>
 									<div className="tab-pane fade" id="Employee-Request" role="tabpanel">
 										<div className="card">
+											<div className="card-header">
+												<h3 className="card-title">Leave List</h3>
+											</div>
 											<div className="card-body">
-												<div className="table-responsive">
-													<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
-														<thead>
-															<tr>
-																<th>#</th>
-																<th>Name</th>
-																<th>Date</th>
-																<th>Reason</th>
-																<th>Status</th>
-																<th>Action</th>
-															</tr>
-														</thead>
-														<tbody>
-															{employeeLeavesData.length > 0 ? (
-																employeeLeavesData.map((leave, index) => (
-																	<tr key={index}>
-																		<td className="width45">
-																			<span
-																				className="avatar avatar-orange"
-																				data-toggle="tooltip"
-																				title="Avatar Name"
-																			>
-																				{leave.first_name.charAt(0).toUpperCase()}{leave.last_name.charAt(0).toUpperCase()}
-																			</span>
-																		</td>
-																		<td>
-																			<div className="font-15">
-																				{`${leave.first_name} ${leave.last_name}`}
-																			</div>
-																		</td>
-																		<td>
-																		{`${new Intl.DateTimeFormat('en-US', {
-																			day: '2-digit',
-																			month: 'short',
-																			year: 'numeric',
-																			}).format(new Date(leave.from_date))} to ${new Intl.DateTimeFormat('en-US', {
-																			day: '2-digit',
-																			month: 'short',
-																			year: 'numeric',
-																			}).format(new Date(leave.to_date))}`}
-																		</td>
-																		<td>{leave.reason}</td>
-																		<td>
-																			<span className={
-																				`tag ${
-																				leave.status === 'approved'
-																				  ? 'tag-success'
-																				  : leave.status === 'pending'
-																				  ? 'tag-warning'
-																				  : 'tag-danger'
-																			  	}`}>
-																					{leave.status}
-																			</span>
-																		</td>
-																		<td>
-																			<button 
-																				type="button"
-																				className="btn btn-icon btn-sm"
-																				title="Edit"
-																				data-toggle="modal"
-																				data-target="#editLeaveRequestModal"
-																				onClick={() => this.handleEditClickForEmployeeLeave(leave)}
-																			>
-																				<i className="fa fa-edit" />
-																			</button>
-																			<button
-																				type="button"
-																				className="btn btn-icon btn-sm js-sweetalert"
-																				title="Delete"
-																				data-type="confirm"
-																				data-toggle="modal"
-																				data-target="#deleteLeaveRequestModal"
-																				onClick={() => this.openDeleteLeaveModal(leave.id)}
-																			>
-																				<i className="fa fa-trash-o text-danger" />
-																			</button>
-																		</td>
-																	</tr>
-																))
-															): (
-																!message && <tr><td>No leaves found</td></tr>
-															)}
-														</tbody>
-													</table>
-												</div>
+												{loading ? (
+													<div className="card-body">
+														<div className="dimmer active">
+															<div className="loader" />
+														</div>
+													</div>
+                                                ) : ( // Show Table after loading is false
+													<div className="table-responsive">
+														<table className="table table-hover table-striped table-vcenter text-nowrap mb-0">
+															<thead>
+																<tr>
+																	<th>#</th>
+																	<th>Name</th>
+																	<th>Date</th>
+																	<th>Reason</th>
+																	<th>Status</th>
+																	<th>Action</th>
+																</tr>
+															</thead>
+															<tbody>
+																{currentEmployeeLeaves.length > 0 ? (
+																	currentEmployeeLeaves.map((leave, index) => (
+																		<tr key={index}>
+																			<td className="width45">
+																				<span
+																					className="avatar avatar-orange"
+																					data-toggle="tooltip"
+																					title="Avatar Name"
+																				>
+																					{leave.first_name.charAt(0).toUpperCase()}{leave.last_name.charAt(0).toUpperCase()}
+																				</span>
+																			</td>
+																			<td>
+																				<div className="font-15">
+																					{`${leave.first_name} ${leave.last_name}`}
+																				</div>
+																			</td>
+																			<td>
+																			{`${new Intl.DateTimeFormat('en-US', {
+																				day: '2-digit',
+																				month: 'short',
+																				year: 'numeric',
+																				}).format(new Date(leave.from_date))} to ${new Intl.DateTimeFormat('en-US', {
+																				day: '2-digit',
+																				month: 'short',
+																				year: 'numeric',
+																				}).format(new Date(leave.to_date))}`}
+																			</td>
+																			<td>{leave.reason}</td>
+																			<td>
+																				<span className={
+																					`tag ${
+																					leave.status === 'approved'
+																					? 'tag-success'
+																					: leave.status === 'pending'
+																					? 'tag-warning'
+																					: 'tag-danger'
+																					}`}>
+																						{leave.status}
+																				</span>
+																			</td>
+																			<td>
+																				<button 
+																					type="button"
+																					className="btn btn-icon btn-sm"
+																					title="Edit"
+																					data-toggle="modal"
+																					data-target="#editLeaveRequestModal"
+																					onClick={() => this.handleEditClickForEmployeeLeave(leave)}
+																				>
+																					<i className="fa fa-edit" />
+																				</button>
+																				<button
+																					type="button"
+																					className="btn btn-icon btn-sm js-sweetalert"
+																					title="Delete"
+																					data-type="confirm"
+																					data-toggle="modal"
+																					data-target="#deleteLeaveRequestModal"
+																					onClick={() => this.openDeleteLeaveModal(leave.id)}
+																				>
+																					<i className="fa fa-trash-o text-danger" />
+																				</button>
+																			</td>
+																		</tr>
+																	))
+																): (
+																	!message && <tr><td>No leaves found</td></tr>
+																)}
+															</tbody>
+														</table>
+													</div>
+												)}
 											</div>
 										</div>
+
+										{/* Only show pagination if there are employee leaves */}
+										{totalPagesLeaves > 1 && (
+											<nav aria-label="Page navigation">
+												<ul className="pagination mb-0 justify-content-end">
+													<li className={`page-item ${currentPageLeaves === 1 ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageLeaves - 1, 'leaves')}>
+															Previous
+														</button>
+													</li>
+													{[...Array(totalPagesLeaves)].map((_, i) => (
+														<li key={i} className={`page-item ${currentPageLeaves === i + 1 ? 'active' : ''}`}>
+															<button className="page-link" onClick={() => this.handlePageChange(i + 1, 'leaves')}>
+																{i + 1}
+															</button>
+														</li>
+													))}
+													<li className={`page-item ${currentPageLeaves === totalPagesLeaves ? 'disabled' : ''}`}>
+														<button className="page-link" onClick={() => this.handlePageChange(currentPageLeaves + 1, 'leaves')}>
+															Next
+														</button>
+													</li>
+												</ul>
+											</nav>
+										)}
 									</div>
 								</div>
 							</div>
@@ -774,9 +1048,30 @@ class Employee extends Component {
 										className="form-control"
 										placeholder="employeeId"
 										name='employeeId'
-										value={this.state.employee_id || 6}
+										value={this.state.employee_id}
 										onChange={this.handleInputChangeForAddLeaves}
 									/>
+									{(this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin") && (
+										<div className="col-md-12">
+											<div className="form-group">
+												<label className="form-label">Select Employee</label>
+												<select 
+													name="employee_id"
+													className="form-control"
+													onChange={this.handleInputChangeForAddLeaves}
+													value={this.state.employee_id}
+												>
+													<option value="">Select Employee</option>
+													{this.state.employeeData.map((emp) => (
+														<option key={emp.id} value={emp.id}>
+															{emp.first_name} {emp.last_name}
+														</option>
+													))}
+												</select>
+											</div>
+										</div>
+									)}
+
 									<div className="col-md-6">
 										<div className="form-group">
 											<label className="form-label">From Date</label>
@@ -814,23 +1109,25 @@ class Employee extends Component {
 											/>
 										</div>
 									</div>
-									<div className="col-sm-6 col-md-6">
-										<div className="form-group">
-											<label className="form-label">Status</label>
-											<select 
-												name="status"
-												className="form-control"
-												id='status'
-												onChange={this.handleLeaveStatus}
-												value={this.state.status}
-											>
-												<option value="">Select Status</option>
-												<option value="approved" >Approved</option>
-												<option value="pending" >Pending</option>
-												<option value="rejected" >Rejected</option>
-											</select>
+									{(this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin") && (
+										<div className="col-sm-6 col-md-6">
+											<div className="form-group">
+												<label className="form-label">Status</label>
+												<select 
+													name="status"
+													className="form-control"
+													id="status"
+													onChange={this.handleLeaveStatus}
+													value={this.state.status}
+												>
+													<option value="pending">Pending</option>
+													<option value="cancelled">Cancelled</option> 
+													<option value="approved">Approved</option>
+													<option value="rejected">Rejected</option>
+												</select>
+											</div>
 										</div>
-									</div>
+									)}
 								</div>
 							</div>
 							<div className="modal-footer">
@@ -915,10 +1212,23 @@ class Employee extends Component {
 														value={selectedEmployeeLeave?.status || ""}
 														onChange={this.handleInputChangeForEditEmployeeLeave}
 													>
-														<option value="">Select Status</option>
-														<option value="approved" >Approved</option>
-														<option value="pending" >Pending</option>
-														<option value="rejected" >Rejected</option>
+														{/* Instead of "Select Status", show the assigned status */}
+														<option value={selectedEmployeeLeave?.status}>
+															{selectedEmployeeLeave?.status.charAt(0).toUpperCase() + selectedEmployeeLeave?.status.slice(1)}
+														</option>
+														{this.state.logged_in_employee_role === "admin" || this.state.logged_in_employee_role === "super_admin" ? (
+															<>
+																{selectedEmployeeLeave?.status !== "approved" && <option value="approved">Approved</option>}
+																{selectedEmployeeLeave?.status !== "pending" && <option value="pending">Pending</option>}
+																{selectedEmployeeLeave?.status !== "rejected" && <option value="rejected">Rejected</option>}
+															</>
+														) : (
+															<>
+																{this.state.logged_in_employee_role === "employee" && selectedEmployeeLeave?.status === "pending" && (
+																	<option value="cancelled">Cancelled</option>
+																)}
+															</>
+														)}
 													</select>
 												</div>
 											</div>

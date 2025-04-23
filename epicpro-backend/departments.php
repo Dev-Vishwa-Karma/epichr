@@ -13,9 +13,6 @@
 
     // Set the header for JSON response
     header('Content-Type: application/json');
-    
-    // SQL query to get all dapartments
-    $sql = "SELECT * FROM departments";
 
     $action = !empty($_GET['action']) ? $_GET['action'] : 'view';
 
@@ -24,8 +21,13 @@
             case 'view':
                 if (isset($_GET['id']) && is_numeric($_GET['id']) && $_GET['id'] > 0) {
                     // Prepare SELECT statement with WHERE clause using parameter binding
-                    $stmt = $conn->prepare("SELECT * FROM departments WHERE id = ?");
-                    $stmt->bind_param("i", $_GET['id']); // Bind the id as an integer
+                    $stmt = $conn->prepare("
+                        SELECT d.*, 
+                            (SELECT COUNT(*) FROM employees e WHERE e.department_id = d.department_id AND e.deleted_at IS NULL) AS total_employee
+                        FROM departments d
+                        WHERE d.id = ?
+                    ");
+                    $stmt->bind_param("i", $_GET['id']);
                     if ($stmt->execute()) {
                         $result = $stmt->get_result();
                         if ($result) {
@@ -41,7 +43,11 @@
                         echo json_encode(['error' => 'Failed to execute query', 'query_error' => $stmt->error]);
                     }
                 } else {
-                    $result = $conn->query("SELECT * FROM departments");
+                    $result = $conn->query("
+                        SELECT d.*, 
+                            (SELECT COUNT(*) FROM employees e WHERE e.department_id = d.id AND e.deleted_at IS NULL) AS total_employee
+                        FROM departments d
+                    ");
                     if ($result) {
                         $departments = $result->fetch_all(MYSQLI_ASSOC);
                         echo json_encode([
@@ -58,8 +64,8 @@
                 // Validate and get POST data
                 $department_name = isset($_POST['department_name']) ? $_POST['department_name'] : null;
                 $department_head = isset($_POST['department_head']) ? $_POST['department_head'] : null;
-                $created_at = date('Y-m-d H:i:s'); // Current timestamp for `created_at`
-                $updated_at = $created_at;        // Same timestamp for `updated_at`
+                $created_at = date('Y-m-d H:i:s');
+                $updated_at = $created_at;
             
                 if ($department_name && $department_head) {
                     // Prepare the SQL insert statement
@@ -91,10 +97,6 @@
             case 'edit':
                 if (isset($_GET['id']) && is_numeric($_GET['id']) && $_GET['id'] > 0) {
                     $id = $_GET['id'];
-                    // Validate and get POST data
-                    /* $department_name = isset($_POST['department_name']) ? $_POST['department_name'] : null;
-                    $department_head = isset($_POST['department_head']) ? $_POST['department_head'] : null; */
-
                     // Read the raw POST data
                     $inputData = json_decode(file_get_contents('php://input'), true);
 

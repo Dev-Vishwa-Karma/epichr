@@ -1,9 +1,8 @@
 <?php
-header("Access-Control-Allow-Origin: *");  // Temporarily allow all origins for development
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");  // Allow HTTP methods
-header("Access-Control-Allow-Headers: Content-Type, X-Requested-With"); // Allow specific headers
-//echo json_encode(['status' => 'error', 'message' => '']);
-//exit();
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, X-Requested-With");
+
 // Handle preflight (OPTIONS) requests
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     // Respond with 200 status code for OPTIONS requests
@@ -42,7 +41,7 @@ if (isset($action)) {
                 FROM users 
                 INNER JOIN employees ON users.id = employees.user_id 
                 WHERE users.id = ?");
-                $stmt->bind_param('i', $_GET['user_id']);  // Bind user_id parameter to the prepared statement
+                $stmt->bind_param('i', $_GET['user_id']);
                 $stmt->execute();
                 $result = $stmt->get_result();    
                 if ($result->num_rows > 0) {
@@ -75,7 +74,7 @@ if (isset($action)) {
             $last_name = $_POST['last_name'] ?? null;
             $email = $_POST['email'] ?? null;
             $mobile = $_POST['mobile_no'] ?? null;
-            $role = $_POST['selected_role'] ?? null;  // Assume role is part of user table
+            $role = $_POST['selected_role'] ?? null;
             $username = $_POST['username'] ?? null;
             $password = $_POST['password'] ?? null;
 
@@ -85,9 +84,6 @@ if (isset($action)) {
                 $stmt->bind_param('ss', $employee_id, $role);
                 if ($stmt->execute()) {
                     $user_id = $stmt->insert_id;
-
-                    // Hash the password before storing
-                    /* $hashed_password = password_hash($password, PASSWORD_BCRYPT); */
 
                     // Insert into employees table
                     $stmt = $conn->prepare("INSERT INTO employees (user_id, employee_id, first_name, last_name, username, email, mobile_no1, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");

@@ -6,20 +6,51 @@ import Login from './components/Authentication/login';
 import ForgotPassword from './components/Authentication/forgotpassword';
 import NotFound from './components/Authentication/404';
 import InternalServer from './components/Authentication/500';
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
+import authService from "./components/Authentication/authService";
+import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 
 class App extends Component {
+	constructor(props) {
+        super(props);
+        this.state = {
+            user: authService.getUser(), // Load user from authService
+        };
+    }
+
+	componentDidMount() {
+        // Listen for login/logout updates
+        authService.subscribe((user) => {
+            this.setState({ user });
+        });
+    }
+
+	handleLogin = (userData) => {
+        authService.setUser(userData);  // Save user to localStorage
+        this.setState({ user: userData });  // Update state
+    };
+
+    handleLogout = () => {
+        authService.logout();  // Remove user from localStorage
+        this.setState({ user: null });
+    };
 	render() {
+		const { user } = this.state;
 		const { darkMode, boxLayout, darkSidebar, iconColor, gradientColor, rtl, fontType } = this.props
 		return (
 			<div className={`${darkMode ? "dark-mode" : ""}${darkSidebar ? "sidebar_dark" : ""} ${iconColor ? "iconcolor" : ""} ${gradientColor ? "gradient" : ""} ${rtl ? "rtl" : ""} ${fontType ? fontType : ""}${boxLayout ? "boxlayout" : ""}`}>
 				<Router>
 					<Switch>
-						<Route path="/login" component={Login} />
+						<Route path="/login">
+							{user ? <Redirect to="/" /> : <Login onLogin={this.handleLogin} />}
+						</Route>
+						{/* <Route path="/login" component={Login} /> */}
 						<Route path="/forgotpassword" component={ForgotPassword} />
 						<Route path="/notfound" component={NotFound} />
 						<Route path="/internalserver" component={InternalServer} />
-						<Route component={Layout} />
+						<Route path="/">
+							{user ? <Route component={Layout} /> : <Redirect to="/login" />}
+						</Route>
+						{/* <Route component={Layout} /> */}
 					</Switch>
 				</Router>
 			</div>
