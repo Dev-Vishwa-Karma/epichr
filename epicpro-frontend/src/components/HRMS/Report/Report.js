@@ -9,7 +9,6 @@ class Report extends Component {
         super(props);
         this.state = {
             reports: [],
-            error: null,
             selectedReport: null,
             isModalOpen: false,
             selectedEmployee: "",
@@ -36,6 +35,8 @@ class Report extends Component {
 			todays_working_hours: '',
 			break_duration_in_minutes: 0,
 			todays_total_hours: '',
+			currentPageReports: 1,
+            dataPerPage: 10,
 			error: {
                 report: '',
 				start_time: '',
@@ -325,7 +326,6 @@ class Report extends Component {
                 }, 5000);
             });
     };
-
 
     // Handle dropdown change for employee
     handleEmployeeChange = (event) => {
@@ -636,23 +636,10 @@ class Report extends Component {
 			isValid = false;
 		}
 
-		if (start_time && end_time) {
-            let start = start_time;
-            let end = end_time;
+        if (start_time && end_time) {
+            let start = typeof start_time === "string" ? new Date(start_time) : start_time;
+            let end = typeof end_time === "string" ? new Date(end_time) : end_time;
         
-            // Convert to Date objects if they are strings (e.g., "18:10:00")
-            if (typeof start_time === "string") {
-                const [sh, sm, ss] = start_time.split(":");
-                start = new Date();
-                start.setHours(parseInt(sh), parseInt(sm), parseInt(ss || 0), 0);
-            }
-        
-            if (typeof end_time === "string") {
-                const [eh, em, es] = end_time.split(":");
-                end = new Date();
-                end.setHours(parseInt(eh), parseInt(em), parseInt(es || 0), 0);
-            }
-            
             if (start.getTime() === end.getTime()) {
                 error.start_time = "Start and end time cannot be the same.";
                 error.end_time = "Start and end time cannot be the same.";
@@ -662,7 +649,7 @@ class Report extends Component {
                 error.end_time = "End time must be after start time.";
                 isValid = false;
             }
-		}
+        }
 
         // Break duration validation
 		if (todays_total_hours) {
@@ -675,7 +662,7 @@ class Report extends Component {
 				isValid = false;
 			}
 		}
-	
+
 		this.setState({ error });
 		return isValid;
 	};
@@ -749,11 +736,31 @@ class Report extends Component {
             inputDate.getMonth() === today.getMonth() &&
             inputDate.getDate() === today.getDate()
         );
-    };    
+    };
+
+    // Handle Pagination of employee listing and employee leaves listing
+	handlePageChange = (newPage, listType) => {
+		if (listType === 'reports') {
+			const totalPages = Math.ceil(this.state.reports.length / this.state.dataPerPage);
+			if (newPage >= 1 && newPage <= totalPages) {
+				this.setState({ currentPageReports: newPage });
+			}
+		}
+	};
 
     render() {
         const { fixNavbar } = this.props;
-        const { reports, error, employeeData, selectedStatus, selectedEmployee, punchOutReport, reportError, reportSuccess, addReportByAdminError, existingFullName, existingActivityType, existingActivityDescription, existingActivityInTime, existingActivityOutTime, existingActivitySatus, editReportByAdminError, selectedReport, loading, report, start_time, todays_total_hours, break_duration_in_minutes, todays_working_hours, end_time, punchError, punchSuccess } = this.state;
+        const { reports, error, employeeData, selectedStatus, selectedEmployee, punchOutReport, reportError, reportSuccess, addReportByAdminError, existingFullName, existingActivityType, existingActivityDescription, existingActivityInTime, existingActivityOutTime, existingActivitySatus, editReportByAdminError, selectedReport, loading, report, start_time, todays_total_hours, break_duration_in_minutes, todays_working_hours, end_time, punchError, punchSuccess, currentPageReports, dataPerPage } = this.state;
+
+        // Handle empty employee data safely
+		const reportList = (reports || []).length > 0 ? reports : [];
+
+		// Pagination Logic for Reports
+		const indexOfLastReport = currentPageReports * dataPerPage;
+		const indexOfFirstReport = indexOfLastReport - dataPerPage;
+		const currentReports = reportList.slice(indexOfFirstReport, indexOfLastReport);
+		const totalPagesReports = Math.ceil(reportList.length / dataPerPage);
+
         return (
             <>
                 <div>
@@ -812,8 +819,8 @@ class Report extends Component {
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            {reports.length > 0 ? (
-                                                                reports.map((report, index) => (
+                                                            {currentReports.length > 0 ? (
+                                                                currentReports.map((report, index) => (
                                                                     <tr key={index}>
                                                                         {window.user && window.user.role !== 'employee' && (
                                                                             <td>{report.full_name}</td>
@@ -931,13 +938,38 @@ class Report extends Component {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Only show pagination if there are reports */}
+                                    {totalPagesReports > 1 && (
+                                        <nav aria-label="Page navigation">
+                                            <ul className="pagination mb-0 justify-content-end">
+                                                <li className={`page-item ${currentPageReports === 1 ? 'disabled' : ''}`}>
+                                                    <button className="page-link" onClick={() => this.handlePageChange(currentPageReports - 1, 'reports')}>
+                                                        Previous
+                                                    </button>
+                                                </li>
+                                                {[...Array(totalPagesReports)].map((_, i) => (
+                                                    <li key={i} className={`page-item ${currentPageReports === i + 1 ? 'active' : ''}`}>
+                                                        <button className="page-link" onClick={() => this.handlePageChange(i + 1, 'reports')}>
+                                                            {i + 1}
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                                <li className={`page-item ${currentPageReports === totalPagesReports ? 'disabled' : ''}`}>
+                                                    <button className="page-link" onClick={() => this.handlePageChange(currentPageReports + 1, 'reports')}>
+                                                        Next
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </div>
                     {/* Modal for viewing report details */}
                     <div className="modal fade" id="viewpunchOutReportModal" tabIndex={-1} role="dialog" aria-labelledby="viewpunchOutReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="break">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="viewpunchOutReportModal">Report Details</h5>
@@ -983,7 +1015,7 @@ class Report extends Component {
 
                     {/* Edit Report Modal for employees */}
                     <div className="modal fade" id="editpunchOutReportModal" tabIndex={-1} role="dialog" aria-labelledby="editpunchOutReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="break">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="editpunchoutReportModalLabel">Update Report</h5>
@@ -1111,7 +1143,7 @@ class Report extends Component {
     
                     {/* Modal for deleting report details */}
                     <div className="modal fade" id="deleteReportModal" tabIndex={-1} role="dialog" aria-labelledby="deleteReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="break">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="deleteReportModal">Delete</h5>
@@ -1131,7 +1163,7 @@ class Report extends Component {
                     </div>
                     {/* Add Break Modal */}
                     <div className="modal fade" id="addReportModal" tabIndex={-1} role="dialog" aria-labelledby="addReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="report">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="addReportModalLabel">Register Employee Punch-In/Out</h5>
@@ -1193,7 +1225,7 @@ class Report extends Component {
 
                     {/* Modal for edit report details */}
                     <div className="modal fade" id="editReportModal" tabIndex={-1} role="dialog" aria-labelledby="editReportModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                        <div className="modal-dialog" role="break">
+                        <div className="modal-dialog" role="dialog">
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title" id="editReportModal">Edit Report</h5>

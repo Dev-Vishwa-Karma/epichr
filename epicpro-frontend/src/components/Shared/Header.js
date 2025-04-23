@@ -4,7 +4,6 @@ import { withRouter, NavLink } from 'react-router-dom';
 import authService from '../Authentication/authService';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import $ from 'jquery'
 
 class Header extends Component {
 
@@ -291,6 +290,9 @@ class Header extends Component {
 			} else {
 				// Open modal
 				const modalEl = document.getElementById('addReportModal');
+				this.setState({
+					error: {},
+				});
 				if (modalEl) {
 					const modal = new window.bootstrap.Modal(modalEl);
 					modal.show();
@@ -302,7 +304,7 @@ class Header extends Component {
 	};
 
 	validateReportForm = () => {
-		const { report, start_time, end_time, break_duration_in_minutes, todays_total_hours } = this.state;
+		const { report, start_time, end_time } = this.state;
 		let error = {};
 		let isValid = true;
 
@@ -322,32 +324,19 @@ class Header extends Component {
 		}
 
 		if (start_time && end_time) {
-            let start = start_time;
-            let end = end_time;
-        
-            // Convert to Date objects if they are strings (e.g., "18:10:00")
-            if (typeof start_time === "string") {
-                const [sh, sm, ss] = start_time.split(":");
-                start = new Date();
-                start.setHours(parseInt(sh), parseInt(sm), parseInt(ss || 0), 0);
-            }
-        
-            if (typeof end_time === "string") {
-                const [eh, em, es] = end_time.split(":");
-                end = new Date();
-                end.setHours(parseInt(eh), parseInt(em), parseInt(es || 0), 0);
-            }
-            
-            if (start.getTime() === end.getTime()) {
-                error.start_time = "Start and end time cannot be the same.";
-                error.end_time = "Start and end time cannot be the same.";
-                isValid = false;
-            } else if (start > end) {
-                error.start_time = "Start time must be before end time.";
-                error.end_time = "End time must be after start time.";
-                isValid = false;
-            }
-		}
+			let start = typeof start_time === "string" ? new Date(start_time) : start_time;
+			let end = typeof end_time === "string" ? new Date(end_time) : end_time;
+		
+			if (start.getTime() === end.getTime()) {
+				error.start_time = "Start and end time cannot be the same.";
+				error.end_time = "Start and end time cannot be the same.";
+				isValid = false;
+			} else if (start > end) {
+				error.start_time = "Start time must be before end time.";
+				error.end_time = "End time must be after start time.";
+				isValid = false;
+			}
+		}			
 	
 		this.setState({ error });
 		return isValid;
@@ -425,7 +414,7 @@ class Header extends Component {
 
 	render() {
 		const { fixNavbar, darkHeader } = this.props;
-		const { /* isPunchedIn, */userRole, report, punchError, punchSuccess, punchErrorModel, userId, user, start_time, end_time, todays_working_hours, break_duration_in_minutes, todays_total_hours, reports } = this.state;
+		const { /* isPunchedIn, */userRole, report, punchError, punchSuccess, punchErrorModel, userId, user, start_time, end_time, todays_working_hours, break_duration_in_minutes, todays_total_hours } = this.state;
 		const currentTab = this.props.location?.state?.tab;
 		return (
 			<div>
@@ -454,16 +443,6 @@ class Header extends Component {
 								</div> */}
 							</div>
 							<div className="right">
-								{/* {(userRole === 'employee') && (
-									<button
-										className="btn btn-primary"
-										data-toggle="modal" 
-										data-target="#addReportModal"
-									>
-										Report
-									</button>
-								)} */}
-
 								{(userRole === 'employee') && (
 									<button
 										className="btn btn-primary"
@@ -949,4 +928,3 @@ const mapStateToProps = state => ({
 const mapDispatchToProps = dispatch => ({})
 // export default connect(mapStateToProps, mapDispatchToProps)(Header);
 export default withRouter(connect(mapStateToProps, mapDispatchToProps)(Header));
-

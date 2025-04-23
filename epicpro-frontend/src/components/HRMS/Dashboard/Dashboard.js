@@ -12,7 +12,8 @@ class Dashboard extends Component {
 			totalEvents: 0,
 			totalHolidays: 0,
 			user: authService.getUser(),
-			projects: []
+			projects: [],
+			loading: true,
 		};
 	}
 
@@ -72,7 +73,7 @@ class Dashboard extends Component {
 
 	render() {
 		const { fixNavbar } = this.props;
-		const { totalUsers, totalEmployees, totalHolidays, totalEvents, user, projects, message } = this.state;
+		const { totalUsers, totalEmployees, totalHolidays, totalEvents, user, projects, message, loading } = this.state;
 		return (
 			<>
 				<div>
@@ -211,48 +212,54 @@ class Dashboard extends Component {
 											<h3 className="card-title">Project Summary</h3>
 										</div>
 										<div className="card-body">
-											<div className="table-responsive">
-												<table className="table table-hover table-striped text-nowrap table-vcenter mb-0">
-													<thead>
-														<tr>
-															<th>#</th>
-															<th>Client Name</th>
-															<th>Team</th>
-															<th>Project Name</th>
-															<th>Technology</th>
-														</tr>
-													</thead>
-													<tbody>
-														{projects && projects.length > 0 ? (
-                                    						projects.map((project, index) => (
-																<tr key={project.id || index}>
-																	<td>{(index + 1).toString().padStart(2, '0')}</td>
-																	<td>{project.client_name}</td>
-																	<td>
-																		<ul className="list-unstyled team-info sm margin-0 w150">
-																			{project.team_members.map((member, index) => (
-																				<li key={index} data-toggle="tooltip" data-placement="top" title={`${member.first_name} ${member.last_name}`}
-																				style={{
-																					marginLeft:"3px"
-																				}}
-																				>
-																					<span className="avatar avatar-blue add-space">
-																						{member.first_name.charAt(0).toUpperCase()}{member.last_name.charAt(0).toUpperCase()}
-																					</span>
-																				</li>
-																			))}
-																		</ul>
-																	</td>
-																	<td>{project.project_name}</td>
-																	<td>{project.project_technology}</td>
-																</tr>
-															))
-														): (
-															!message && <tr><td>projects not available.</td></tr>
-														)}
-													</tbody>
-												</table>
-											</div>
+											{loading ? (
+													<div className="dimmer active p-3">
+														<div className="loader" />
+													</div>
+											) : (
+												<div className="table-responsive">
+													<table className="table table-hover table-striped text-nowrap table-vcenter mb-0">
+														<thead>
+															<tr>
+																<th>#</th>
+																<th>Client Name</th>
+																<th>Team</th>
+																<th>Project Name</th>
+																<th>Technology</th>
+															</tr>
+														</thead>
+														<tbody>
+															{projects && projects.length > 0 ? (
+																projects.map((project, index) => (
+																	<tr key={project.id || index}>
+																		<td>{(index + 1).toString().padStart(2, '0')}</td>
+																		<td>{project.client_name}</td>
+																		<td>
+																			<ul className="list-unstyled team-info sm margin-0 w150">
+																				{project.team_members.map((member, index) => (
+																					<li key={index} data-toggle="tooltip" data-placement="top" title={`${member.first_name} ${member.last_name}`}
+																					style={{
+																						marginLeft:"3px"
+																					}}
+																					>
+																						<span className="avatar avatar-blue add-space">
+																							{member.first_name.charAt(0).toUpperCase()}{member.last_name.charAt(0).toUpperCase()}
+																						</span>
+																					</li>
+																				))}
+																			</ul>
+																		</td>
+																		<td>{project.project_name}</td>
+																		<td>{project.project_technology}</td>
+																	</tr>
+																))
+															): (
+																!message && <tr><td>projects not available.</td></tr>
+															)}
+														</tbody>
+													</table>
+												</div>
+											)}
 										</div>
 									</div>
 								</div>
