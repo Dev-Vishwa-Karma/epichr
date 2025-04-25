@@ -23,12 +23,23 @@ class ProjectList extends Component {
             employees: [],
             clients: [],
             projects: [],
+            allProjects: '',
             selectedClient: "",
             logged_in_employee_id: null,
             logged_in_employee_role: null,
+			searchQuery: "",
             errors: {},
+            collapsedCards: {},
         }
     }
+    handleBoxToggle = (index) => {
+        this.setState((prevState) => ({
+            collapsedCards: {
+                ...prevState.collapsedCards,
+                [index]: !prevState.collapsedCards[index], // toggle only the clicked card
+            },
+        }));
+    };
     handleBox(e) {
         this.props.boxAction(e)
     }
@@ -87,6 +98,7 @@ class ProjectList extends Component {
             if (data.status === 'success') {
                 this.setState({
                     projects: data.status === 'success' ? data.data : [],
+                    allProjects: data.status === 'success' ? data.data: [],
                     loading: false
                 });
             } else {
@@ -333,6 +345,25 @@ class ProjectList extends Component {
         });
     };
 
+    // Add searching functionalit for project search
+	handleSearch = (event) => {
+        const query = event.target.value.toLowerCase(); // Get search input
+        this.setState({ searchQuery: query }, () => {
+			if (query === "") {
+				// If search is empty, reset projects to the original list
+				this.setState({ projects: this.state.allProjects });
+			} else {
+				const filtered = this.state.allProjects.filter(project => {
+					return (
+						project.project_name.toLowerCase().includes(query) ||
+						project.project_technology.toLowerCase().includes(query)
+					);
+				});
+				this.setState({ projects: filtered });
+			}
+        });
+    };
+
     // Render function for Bootstrap toast messages
     renderAlertMessages = () => {
         return (
@@ -390,7 +421,7 @@ class ProjectList extends Component {
     };
 
     render() {
-        const { fixNavbar, boxOpen } = this.props;
+        const { fixNavbar/* , boxOpen */ } = this.props;
         const { projectName, projectDescription, projectTechnology, projectStartDate, projectEndDate, clients, selectedClient, teamMembers, employees, projects, message, logged_in_employee_role} = this.state;
 
         return (
@@ -405,7 +436,14 @@ class ProjectList extends Component {
                             </ul>
                             <div className="header-action d-md-flex">
                                 <div className="input-group mr-2">
-                                    <input type="text" className="form-control" placeholder="Search..." />
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Search project..."
+                                        name="s"
+                                        value={this.state.searchQuery}
+                                        onChange={this.handleSearch}
+                                    />
                                 </div>
                                 {(logged_in_employee_role === 'admin' || logged_in_employee_role === 'super_admin') && (
                                     <button type="button" className="btn btn-primary" data-toggle="modal" data-target="#addProjectModal"><i className="fe fe-plus mr-2" />Add</button>
@@ -422,7 +460,7 @@ class ProjectList extends Component {
                                 {projects && projects.length > 0 ? (
                                     projects.map((project, index) => (
                                             <div className="col-lg-4 col-md-12" key={index}>
-                                                <div className={`card ${!boxOpen ? 'card-collapsed' : ""}`}>
+                                                <div className={`card ${this.state.collapsedCards[index] ? 'card-collapsed' : ""}`}>
                                                     <div className="card-header">
                                                         <h3 className="card-title">{project.project_name}</h3>
                                                         <div className="card-options">
@@ -430,7 +468,7 @@ class ProjectList extends Component {
                                                                 <input type="checkbox" defaultValue={1} className="custom-switch-input" defaultChecked />
                                                                 <span className="custom-switch-indicator" />
                                                             </label>
-                                                            <span className="card-options-collapse" data-toggle="card-collapse" onClick={() => this.handleBox(!boxOpen)}
+                                                            <span className="card-options-collapse" data-toggle="card-collapse" onClick={() => this.handleBoxToggle(index)}
                                                             ><i className="fe fe-chevron-up" /></span>
                                                         </div>
                                                     </div>
